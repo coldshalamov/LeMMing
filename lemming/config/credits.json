@@ -1,0 +1,27 @@
+{
+  "manager": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": 100.0
+  },
+  "planner": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": 100.0
+  },
+  "hr": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": 100.0
+  },
+  "coder_01": {
+    "model": "gpt-4.1",
+    "cost_per_action": 0.03,
+    "credits_left": 200.0
+  },
+  "janitor": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.005,
+    "credits_left": 50.0
+  }
+}
