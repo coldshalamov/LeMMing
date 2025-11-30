@@ -421,6 +421,12 @@ def main() -> None:
     topup_parser.add_argument("agent", help="Agent name")
     topup_parser.add_argument("amount", type=float, help="Amount of credits to add")
 
+    # API server command
+    api_parser = sub.add_parser("serve", help="Start the API server and dashboard")
+    api_parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
+    api_parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+    api_parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
+
     args = parser.parse_args()
     base_path = Path(__file__).resolve().parent.parent
 
@@ -444,6 +450,21 @@ def main() -> None:
         inspect_agent(base_path, args.agent)
     elif args.command == "top-up":
         top_up_credits(base_path, args.agent, args.amount)
+    elif args.command == "serve":
+        try:
+            import uvicorn
+        except ImportError:
+            print("❌ FastAPI and uvicorn are required for the API server.")
+            print("Install with: pip install -e '.[api]'")
+            return
+
+        from .api import app
+
+        print(f"🚀 Starting LeMMing API server on http://{args.host}:{args.port}")
+        print(f"📊 Dashboard: http://{args.host}:{args.port}/dashboard")
+        print(f"📚 API docs: http://{args.host}:{args.port}/docs")
+
+        uvicorn.run("lemming.api:app", host=args.host, port=args.port, reload=args.reload)
 
 
 if __name__ == "__main__":

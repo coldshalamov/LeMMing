@@ -89,6 +89,29 @@ Add credits to an agent:
 python -m lemming.cli top-up manager 100.0
 ```
 
+### API Server & Dashboard
+
+Start the API server and live dashboard:
+```bash
+python -m lemming.cli serve
+```
+
+Access the dashboard at `http://localhost:8000/dashboard` and API docs at `http://localhost:8000/docs`.
+
+Custom host/port:
+```bash
+python -m lemming.cli serve --host 127.0.0.1 --port 8080
+```
+
+The API provides endpoints for:
+- `/api/agents` - List all agents
+- `/api/agents/{name}` - Get agent details
+- `/api/messages` - List messages
+- `/api/org-chart` - Get organization chart
+- `/api/credits` - Get credits information
+- `/api/status` - System status
+- `/ws` - WebSocket for real-time updates
+
 ## Project Layout
 ```
 LeMMing/
@@ -100,12 +123,15 @@ LeMMing/
 │   ├── models.py          # Model registry + OpenAI wrapper
 │   ├── org.py             # Org chart, config, credits
 │   ├── memory.py          # Agent memory system
+│   ├── api.py             # FastAPI backend server
 │   ├── file_dispatcher.py # Filesystem helpers
 │   └── config/            # Default configs
 ├── agents/                # Agent folders (resume, outbox, memory, logs)
 │   └── human/             # Special human agent for user interaction
 ├── tests/                 # Comprehensive test suite
-├── ui/lemming_dashboard.html # Static dashboard placeholder
+├── ui/                    # Dashboard UIs
+│   ├── lemming_dashboard.html       # Static dashboard
+│   └── lemming_dashboard_live.html  # Live dashboard with API
 ├── Makefile               # Common development commands
 └── pyproject.toml
 ```
