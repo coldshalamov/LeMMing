@@ -1,6 +1,6 @@
 [project]
 name = "lemming"
-version = "0.5.0"
+version = "1.0.0"
 description = "LeMMing: Lightweight Multi-Model Engine for local multi-agent orchestration"
 authors = [{name = "LeMMing Maintainers"}]
 requires-python = ">=3.11"

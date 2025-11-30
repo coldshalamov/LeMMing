@@ -1,17 +1,31 @@
-# LeMMing: Lightweight Multi-Model Engine
+# 🤖 LeMMing: Lightweight Multi-Model Engine
 
-LeMMing (Lightweight Multi-Model Engine) is a filesystem-first multi-agent orchestration framework. It simulates an organization of LLM workers that communicate solely via permissioned outboxes and run in discrete turns.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-## Features
-- Agents have persistent memory, logs, and resume-driven instructions.
-- Org chart enforces who can read and write to each other.
-- Credits and speed multipliers control execution cost and cadence.
-- Uses the OpenAI API via model registry.
-- CLI for bootstrapping and running the engine.
+LeMMing is a **filesystem-first multi-agent orchestration framework** that simulates an organization of LLM workers communicating via permissioned outboxes in discrete turns.
 
-## Requirements
+## ✨ Key Features
+
+- 🏢 **Org Chart Permissions** - Hierarchical communication via send_to/read_from permissions
+- 💬 **Human-in-the-Loop** - Interactive CLI for chatting with agents and viewing messages
+- 🌐 **Multi-Provider Support** - OpenAI, Anthropic Claude, and Ollama local models
+- 📊 **Live Dashboard** - Real-time web UI with FastAPI and WebSocket updates
+- 💾 **Persistent Memory** - Agent memory system for context retention
+- 💰 **Credit System** - Cost control with per-agent credit tracking
+- ⚡ **Speed Multipliers** - Control agent execution frequency
+- 🧪 **Comprehensive Testing** - 72 tests with high coverage
+- 🐳 **Docker Ready** - Containerized deployment with docker-compose
+- 🔄 **CI/CD** - GitHub Actions for automated testing and builds
+
+## 📋 Requirements
+
 - Python >= 3.11
-- An `OPENAI_API_KEY` environment variable with access to the configured OpenAI models.
+- Optional: API keys for your chosen LLM providers
+  - `OPENAI_API_KEY` for OpenAI models
+  - `ANTHROPIC_API_KEY` for Claude models
+  - Ollama installed for local models
 
 ## Installation
 ```bash
@@ -136,7 +150,49 @@ LeMMing/
 └── pyproject.toml
 ```
 
+## 🐳 Docker Deployment
+
+Run LeMMing with Docker:
+
+```bash
+# Set environment variables
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start with docker-compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+The docker-compose setup runs both the API server (port 8000) and the engine.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+- Run tests: `make test`
+- Format code: `make format`
+- Lint code: `make lint`
+- All checks: `make check-all`
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📚 Documentation
+
+- [ROADMAP.md](ROADMAP.md) - Development roadmap and planned features
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- API Docs: Run `python -m lemming.cli serve` and visit `/docs`
+
 ## Notes
-- Agents only write to their own outboxes. Reading others' outboxes simulates inboxes according to the org chart.
-- Credits are deducted per model call and persisted to `lemming/config/credits.json`.
-- The Manager agent is the primary interface for human interaction and periodic summaries.
+
+- Agents communicate solely via outboxes - reading others' outboxes simulates inboxes
+- Credits are deducted per model call and persisted to `lemming/config/credits.json`
+- The Manager agent is the primary interface for human interaction
+- Turn-based execution ensures deterministic behavior and easy debugging
