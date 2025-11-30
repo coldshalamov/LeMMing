@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,17 +15,17 @@ class Agent:
     path: Path
     model_key: str
     org_speed_multiplier: int
-    send_to: List[str]
-    read_from: List[str]
+    send_to: list[str]
+    read_from: list[str]
     max_credits: float
     resume_text: str
     instructions_text: str
-    config_json: Dict[str, Any]
+    config_json: dict[str, Any]
     role: str
     description: str
 
 
-def parse_resume(resume_path: Path) -> Dict[str, Any]:
+def parse_resume(resume_path: Path) -> dict[str, Any]:
     with resume_path.open("r", encoding="utf-8") as f:
         content = f.read()
     sections = content.split("[INSTRUCTIONS]")
@@ -35,7 +35,7 @@ def parse_resume(resume_path: Path) -> Dict[str, Any]:
     instructions_text = instructions_part.strip()
     config_json = json.loads(config_part.strip())
 
-    header_map: Dict[str, str] = {}
+    header_map: dict[str, str] = {}
     for line in header:
         if ":" in line:
             key, value = line.split(":", 1)
@@ -74,9 +74,9 @@ def load_agent(base_path: Path, name: str) -> Agent:
     )
 
 
-def discover_agents(base_path: Path) -> List[Agent]:
+def discover_agents(base_path: Path) -> list[Agent]:
     agents_dir = base_path / "agents"
-    agents: List[Agent] = []
+    agents: list[Agent] = []
     if not agents_dir.exists():
         return agents
     for child in agents_dir.iterdir():
@@ -93,7 +93,7 @@ def discover_agents(base_path: Path) -> List[Agent]:
     return agents
 
 
-def bootstrap_agent_from_template(base_path: Path, name: str, role_config: Dict[str, Any]) -> Agent:
+def bootstrap_agent_from_template(base_path: Path, name: str, role_config: dict[str, Any]) -> Agent:
     template_dir = base_path / "agents" / "agent_template"
     target_dir = base_path / "agents" / name
     target_dir.mkdir(parents=True, exist_ok=True)

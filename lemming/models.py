@@ -4,7 +4,6 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
 
 from openai import OpenAI
 
@@ -20,7 +19,7 @@ class ModelConfig:
 class ModelRegistry:
     def __init__(self, config_dir: Path | None = None) -> None:
         self.config_dir = config_dir or Path(__file__).parent / "config"
-        self._models: Dict[str, ModelConfig] = {}
+        self._models: dict[str, ModelConfig] = {}
         self._loaded = False
 
     def _load(self) -> None:

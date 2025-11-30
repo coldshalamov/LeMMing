@@ -45,7 +45,10 @@ def bootstrap(base_path: Path) -> None:
 
     defaults = {
         "org_chart.json": {
-            "manager": {"send_to": ["planner", "hr", "coder_01", "janitor"], "read_from": ["planner", "hr", "coder_01", "janitor"]},
+            "manager": {
+                "send_to": ["planner", "hr", "coder_01", "janitor"],
+                "read_from": ["planner", "hr", "coder_01", "janitor"],
+            },
             "planner": {"send_to": ["coder_01", "manager"], "read_from": ["manager", "coder_01"]},
             "hr": {"send_to": ["manager"], "read_from": ["manager"]},
             "coder_01": {"send_to": ["planner", "manager"], "read_from": ["planner"]},

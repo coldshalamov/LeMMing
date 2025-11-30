@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_DIR = Path(__file__).parent / "config"
 
-_org_chart_cache: Dict[str, Any] | None = None
-_org_config_cache: Dict[str, Any] | None = None
-_credits_cache: Dict[str, Any] | None = None
+_org_chart_cache: dict[str, Any] | None = None
+_org_config_cache: dict[str, Any] | None = None
+_credits_cache: dict[str, Any] | None = None
 _config_dir: Path = DEFAULT_CONFIG_DIR
 
 
@@ -24,7 +24,7 @@ def set_config_dir(base_path: Path | None) -> None:
     logger.debug("Config directory set to %s", _config_dir)
 
 
-def _load_json(filename: str) -> Dict[str, Any]:
+def _load_json(filename: str) -> dict[str, Any]:
     path = _config_dir / filename
     if not path.exists():
         raise FileNotFoundError(f"Missing configuration file: {path}")
@@ -32,7 +32,7 @@ def _load_json(filename: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def get_org_chart(base_path: Path | None = None) -> Dict[str, Any]:
+def get_org_chart(base_path: Path | None = None) -> dict[str, Any]:
     global _org_chart_cache
     set_config_dir(base_path)
     if _org_chart_cache is None:
@@ -40,7 +40,7 @@ def get_org_chart(base_path: Path | None = None) -> Dict[str, Any]:
     return _org_chart_cache
 
 
-def get_org_config(base_path: Path | None = None) -> Dict[str, Any]:
+def get_org_config(base_path: Path | None = None) -> dict[str, Any]:
     global _org_config_cache
     set_config_dir(base_path)
     if _org_config_cache is None:
@@ -48,7 +48,7 @@ def get_org_config(base_path: Path | None = None) -> Dict[str, Any]:
     return _org_config_cache
 
 
-def get_credits(base_path: Path | None = None) -> Dict[str, Any]:
+def get_credits(base_path: Path | None = None) -> dict[str, Any]:
     global _credits_cache
     set_config_dir(base_path)
     if _credits_cache is None:
@@ -71,7 +71,7 @@ def get_send_to(agent: str, base_path: Path | None = None) -> list[str]:
     return list(chart.get(agent, {}).get("send_to", []))
 
 
-def get_agent_credits(agent: str, base_path: Path | None = None) -> Dict[str, Any]:
+def get_agent_credits(agent: str, base_path: Path | None = None) -> dict[str, Any]:
     credits = get_credits(base_path)
     return credits.get(agent, {})
 
