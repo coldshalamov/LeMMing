@@ -66,6 +66,13 @@ def bootstrap(base_path: Path) -> None:
         "models.json": {
             "gpt-4.1": {"provider": "openai", "model_name": "gpt-4.1"},
             "gpt-4.1-mini": {"provider": "openai", "model_name": "gpt-4.1-mini"},
+            "claude-sonnet": {"provider": "anthropic", "model_name": "claude-3-5-sonnet-20241022"},
+            "claude-haiku": {"provider": "anthropic", "model_name": "claude-3-5-haiku-20241022"},
+            "ollama-llama": {
+                "provider": "ollama",
+                "model_name": "llama3.2",
+                "provider_config": {"base_url": "http://localhost:11434"},
+            },
         },
     }
 

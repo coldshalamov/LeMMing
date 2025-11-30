@@ -70,7 +70,7 @@ def test_model_registry_caching(temp_base_path, setup_config_files):
     assert config1 is config2  # Same object
 
 
-@patch("lemming.models.OpenAI")
+@patch("openai.OpenAI")
 def test_call_llm_success(mock_openai, temp_base_path, setup_config_files):
     """Test successful LLM call."""
     # Setup mock
@@ -89,7 +89,7 @@ def test_call_llm_success(mock_openai, temp_base_path, setup_config_files):
     mock_client.chat.completions.create.assert_called_once()
 
 
-@patch("lemming.models.OpenAI")
+@patch("openai.OpenAI")
 def test_call_llm_with_temperature(mock_openai, temp_base_path, setup_config_files):
     """Test LLM call with custom temperature."""
     mock_client = MagicMock()
@@ -106,7 +106,7 @@ def test_call_llm_with_temperature(mock_openai, temp_base_path, setup_config_fil
     assert call_args.kwargs["temperature"] == 0.7
 
 
-@patch("lemming.models.OpenAI")
+@patch("openai.OpenAI")
 def test_call_llm_empty_response(mock_openai, temp_base_path, setup_config_files):
     """Test LLM call with None content."""
     mock_client = MagicMock()
@@ -133,11 +133,11 @@ def test_call_llm_unsupported_provider(temp_base_path):
 
     messages = [{"role": "user", "content": "Hello"}]
 
-    with pytest.raises(ValueError, match="Unsupported provider"):
+    with pytest.raises(ValueError, match="Unknown provider"):
         call_llm("custom-model", messages, config_dir=config_dir)
 
 
-@patch("lemming.models.OpenAI")
+@patch("openai.OpenAI")
 def test_call_llm_multiple_messages(mock_openai, temp_base_path, setup_config_files):
     """Test LLM call with multiple messages."""
     mock_client = MagicMock()
