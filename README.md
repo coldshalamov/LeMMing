@@ -29,6 +29,9 @@ export OPENAI_API_KEY=your_api_key_here
 ```
 
 ## Usage
+
+### Core Commands
+
 Bootstrap the org and agents (idempotent):
 ```bash
 python -m lemming.cli bootstrap
@@ -44,6 +47,48 @@ Run a single turn (useful for testing):
 python -m lemming.cli run-once
 ```
 
+### Human Interaction Commands
+
+Send a message to an agent:
+```bash
+python -m lemming.cli send manager "Hello, what's the status?"
+python -m lemming.cli send manager "Urgent task" --importance high
+```
+
+View your inbox:
+```bash
+python -m lemming.cli inbox
+```
+
+Interactive chat with an agent:
+```bash
+python -m lemming.cli chat
+python -m lemming.cli chat --agent planner
+```
+
+### Monitoring Commands
+
+View organization status:
+```bash
+python -m lemming.cli status
+```
+
+View agent logs:
+```bash
+python -m lemming.cli logs manager
+python -m lemming.cli logs coder_01 --lines 50
+```
+
+Inspect agent details:
+```bash
+python -m lemming.cli inspect manager
+```
+
+Add credits to an agent:
+```bash
+python -m lemming.cli top-up manager 100.0
+```
+
 ## Project Layout
 ```
 LeMMing/
@@ -54,10 +99,14 @@ LeMMing/
 │   ├── agents.py          # Agent loading/parsing helpers
 │   ├── models.py          # Model registry + OpenAI wrapper
 │   ├── org.py             # Org chart, config, credits
+│   ├── memory.py          # Agent memory system
 │   ├── file_dispatcher.py # Filesystem helpers
 │   └── config/            # Default configs
 ├── agents/                # Agent folders (resume, outbox, memory, logs)
+│   └── human/             # Special human agent for user interaction
+├── tests/                 # Comprehensive test suite
 ├── ui/lemming_dashboard.html # Static dashboard placeholder
+├── Makefile               # Common development commands
 └── pyproject.toml
 ```
 
