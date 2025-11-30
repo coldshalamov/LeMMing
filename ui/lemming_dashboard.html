@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeMMing Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
+    aside { width: 240px; background: #f5f5f5; border-right: 1px solid #ddd; padding: 16px; }
+    main { flex: 1; padding: 16px; overflow: auto; }
+    h1 { margin-top: 0; }
+    .agent-list { list-style: none; padding: 0; }
+    .agent-list li { margin-bottom: 8px; }
+    .panel { border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 12px; }
+    pre { background: #fafafa; border: 1px solid #eee; padding: 8px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <aside>
+    <h2>Agents</h2>
+    <ul class="agent-list">
+      <li>manager</li>
+      <li>planner</li>
+      <li>hr</li>
+      <li>coder_01</li>
+      <li>janitor</li>
+    </ul>
+    <p style="font-size: 12px; color: #666;">This is a static placeholder. A future backend can populate this list dynamically.</p>
+  </aside>
+  <main>
+    <h1>LeMMing Dashboard</h1>
+    <div class="panel">
+      <h3>Agent Details</h3>
+      <p><strong>Name:</strong> manager</p>
+      <p><strong>Role:</strong> Organization manager and user interface</p>
+      <p><strong>Model:</strong> gpt-4.1-mini</p>
+      <p><strong>Credits Left:</strong> 100.0</p>
+      <p style="font-size: 12px; color: #666;">In a real dashboard, these values would be populated from a JSON endpoint (e.g., /api/agents/manager).</p>
+    </div>
+    <div class="panel">
+      <h3>Recent Messages (Placeholder)</h3>
+      <pre>// Future work: populate with recent message summaries via frontend fetch.
+// Example JSON structure to fetch:
+// GET /api/messages?agent=manager
+// [
+//   {"from": "planner", "importance": "normal", "content": "status update..."}
+// ]
+</pre>
+    </div>
+    <div class="panel">
+      <h3>Org Chart</h3>
+      <pre>{
+  "manager": {"send_to": ["planner", "hr", "coder_01", "janitor"], "read_from": ["planner", "hr", "coder_01", "janitor"]},
+  "planner": {"send_to": ["coder_01", "manager"], "read_from": ["manager", "coder_01"]},
+  "hr": {"send_to": ["manager"], "read_from": ["manager"]},
+  "coder_01": {"send_to": ["planner", "manager"], "read_from": ["planner"]},
+  "janitor": {"send_to": ["manager"], "read_from": ["manager", "planner", "coder_01", "hr"]}
+}
+</pre>
+      <p style="font-size: 12px; color: #666;">This org chart is hard-coded for now. A future implementation can fetch org_chart.json and render it.</p>
+    </div>
+  </main>
+</body>
+</html>

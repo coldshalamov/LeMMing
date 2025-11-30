@@ -1,0 +1,5 @@
+{
+  "base_turn_seconds": 10,
+  "summary_every_n_turns": 12,
+  "max_turns": null
+}
