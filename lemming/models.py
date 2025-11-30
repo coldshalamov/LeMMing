@@ -4,9 +4,8 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
 
-from openai import OpenAI
+from .providers import get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +14,13 @@ logger = logging.getLogger(__name__)
 class ModelConfig:
     provider: str
     model_name: str
+    provider_config: dict | None = None
 
 
 class ModelRegistry:
     def __init__(self, config_dir: Path | None = None) -> None:
         self.config_dir = config_dir or Path(__file__).parent / "config"
-        self._models: Dict[str, ModelConfig] = {}
+        self._models: dict[str, ModelConfig] = {}
         self._loaded = False
 
     def _load(self) -> None:
@@ -32,7 +32,11 @@ class ModelRegistry:
         with models_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         for key, cfg in data.items():
-            self._models[key] = ModelConfig(provider=cfg["provider"], model_name=cfg["model_name"])
+            self._models[key] = ModelConfig(
+                provider=cfg["provider"],
+                model_name=cfg["model_name"],
+                provider_config=cfg.get("provider_config"),
+            )
         self._loaded = True
         logger.debug("Loaded model registry from %s", models_path)
 
@@ -44,18 +48,24 @@ class ModelRegistry:
 
 
 def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, config_dir: Path | None = None) -> str:
+    """
+    Call an LLM using the configured provider.
+
+    Args:
+        model_key: Key from models.json
+        messages: List of message dicts
+        temperature: Sampling temperature
+        config_dir: Config directory path
+
+    Returns:
+        LLM response as string
+    """
     registry = ModelRegistry(config_dir)
     config = registry.get(model_key)
-    if config.provider != "openai":
-        raise ValueError(f"Unsupported provider: {config.provider}")
 
-    client = OpenAI()
-    logger.info("Calling LLM model %s with %d messages", config.model_name, len(messages))
-    response = client.chat.completions.create(
-        model=config.model_name,
-        messages=messages,
-        temperature=temperature,
-    )
-    content = response.choices[0].message.content
-    logger.debug("LLM response content length: %s", len(content) if content else 0)
-    return content or ""
+    # Get provider instance
+    provider_kwargs = config.provider_config or {}
+    provider = get_provider(config.provider, **provider_kwargs)
+
+    # Call the provider
+    return provider.call(config.model_name, messages, temperature)

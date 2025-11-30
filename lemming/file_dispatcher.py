@@ -15,6 +15,8 @@ def ensure_outbox_path(path: Path) -> None:
 
 def cleanup_expired_messages(base_path: Path, current_turn: int) -> None:
     agents_dir = base_path / "agents"
+    if not agents_dir.exists():
+        return
     for agent_dir in agents_dir.iterdir():
         outbox_dir = agent_dir / "outbox"
         if not outbox_dir.exists():

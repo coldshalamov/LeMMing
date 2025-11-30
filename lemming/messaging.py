@@ -3,10 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List
 
 from . import org
 from .file_dispatcher import ensure_outbox_path
@@ -41,8 +40,8 @@ def send_message(base_path: Path, msg: Message) -> None:
     logger.info("Message %s sent from %s to %s", msg.id, msg.sender, msg.receiver)
 
 
-def collect_incoming_messages(base_path: Path, agent_name: str, current_turn: int) -> List[Message]:
-    incoming: List[Message] = []
+def collect_incoming_messages(base_path: Path, agent_name: str, current_turn: int) -> list[Message]:
+    incoming: list[Message] = []
     read_from = org.get_read_from(agent_name, base_path)
     for other in read_from:
         inbox_dir = base_path / "agents" / other / "outbox" / agent_name
@@ -73,12 +72,20 @@ def mark_message_processed(base_path: Path, message: Message) -> None:
     logger.debug("Marked message %s as processed", message.id)
 
 
-def create_message(sender: str, receiver: str, content: str, importance: str = "normal", ttl_turns: int | None = 24, instructions: str | None = None, current_turn: int = 0) -> Message:
+def create_message(
+    sender: str,
+    receiver: str,
+    content: str,
+    importance: str = "normal",
+    ttl_turns: int | None = 24,
+    instructions: str | None = None,
+    current_turn: int = 0,
+) -> Message:
     return Message(
         id=str(uuid.uuid4()),
         sender=sender,
         receiver=receiver,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         importance=importance,
         ttl_turns=ttl_turns,
         content=content,

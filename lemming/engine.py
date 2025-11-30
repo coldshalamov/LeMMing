@@ -5,7 +5,7 @@ import logging
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .agents import Agent, discover_agents
 from .file_dispatcher import cleanup_expired_messages
@@ -28,16 +28,13 @@ SYSTEM_PREAMBLE = (
 )
 
 
-def _build_prompt(agent: Agent, messages: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    prompt_messages: List[Dict[str, str]] = []
+def _build_prompt(agent: Agent, messages: list[dict[str, Any]]) -> list[dict[str, str]]:
+    prompt_messages: list[dict[str, str]] = []
     prompt_messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
     prompt_messages.append({"role": "system", "content": agent.instructions_text})
     if messages:
         formatted = "\n".join(
-            [
-                f"From {m['sender']} -> {m['receiver']} ({m['importance']}): {m['content']}"
-                for m in messages
-            ]
+            [f"From {m['sender']} -> {m['receiver']} ({m['importance']}): {m['content']}" for m in messages]
         )
         prompt_messages.append({"role": "user", "content": f"Incoming messages:\n{formatted}"})
     else:
@@ -45,7 +42,7 @@ def _build_prompt(agent: Agent, messages: List[Dict[str, Any]]) -> List[Dict[str
     return prompt_messages
 
 
-def _parse_llm_output(raw: str) -> Dict[str, Any]:
+def _parse_llm_output(raw: str) -> dict[str, Any]:
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
@@ -60,8 +57,8 @@ def _agent_should_run(agent: Agent, current_turn: int, force: bool = False) -> b
 
 
 def _run_agent(
-    base_path: Path, agent: Agent, current_turn: int, incoming_payloads: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+    base_path: Path, agent: Agent, current_turn: int, incoming_payloads: list[dict[str, Any]]
+) -> dict[str, Any]:
     credits_info = get_agent_credits(agent.name, base_path)
     credits_left = credits_info.get("credits_left", 0.0)
     cost_per_action = credits_info.get("cost_per_action", 0.0)
