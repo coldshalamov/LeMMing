@@ -121,6 +121,69 @@ def append_to_memory_list(base_path: Path, agent_name: str, key: str, item: Any)
     save_memory(base_path, agent_name, key, current)
 
 
+def append_memory_event(
+    base_path: Path,
+    agent_name: str,
+    key: str,
+    event: str,
+    *,
+    max_entries: int | None = 100,
+) -> None:
+    """
+    Append a timestamped event to a list-based memory entry.
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        agent_name: Name of the agent
+        key: Memory key (list of event dicts)
+        event: Event description or payload
+        max_entries: Optional cap to keep only the most recent entries
+    """
+
+    entry = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event}
+    current = load_memory(base_path, agent_name, key)
+
+    if current is None:
+        current = []
+    elif not isinstance(current, list):
+        raise ValueError(f"Memory key '{key}' is not a list")
+
+    current.append(entry)
+    if max_entries and len(current) > max_entries:
+        current = current[-max_entries:]
+
+    save_memory(base_path, agent_name, key, current)
+
+
+def load_recent_memory_events(
+    base_path: Path, agent_name: str, key: str, limit: int = 5
+) -> list[dict[str, Any]]:
+    """Load up to ``limit`` most recent events from a list-based memory key."""
+
+    events = load_memory(base_path, agent_name, key)
+    if events is None:
+        return []
+    if not isinstance(events, list):
+        raise ValueError(f"Memory key '{key}' is not a list")
+
+    return events[-limit:]
+
+
+def summarize_memory_events(
+    base_path: Path, agent_name: str, key: str, limit: int = 5
+) -> str:
+    """
+    Provide a short, human-readable summary of recent events for an agent.
+    """
+
+    recent = load_recent_memory_events(base_path, agent_name, key, limit=limit)
+    if not recent:
+        return "No recorded events."
+
+    lines = [f"- {item['timestamp']}: {item['event']}" for item in recent if "event" in item and "timestamp" in item]
+    return "\n".join(lines)
+
+
 def get_memory_summary(base_path: Path, agent_name: str) -> dict[str, Any]:
     """
     Get a summary of all memories for an agent.

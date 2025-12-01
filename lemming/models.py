@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from .config_validation import validate_models
 from .providers import get_provider
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class ModelRegistry:
             raise FileNotFoundError(f"Model registry not found at {models_path}")
         with models_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
+        validate_models(data)
         for key, cfg in data.items():
             self._models[key] = ModelConfig(
                 provider=cfg["provider"],

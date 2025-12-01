@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .config_validation import ValidationError, validate_resume_file
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,29 +28,12 @@ class Agent:
 
 
 def parse_resume(resume_path: Path) -> dict[str, Any]:
-    with resume_path.open("r", encoding="utf-8") as f:
-        content = f.read()
-    sections = content.split("[INSTRUCTIONS]")
-    header = sections[0].strip().splitlines()
-    instructions_and_config = sections[1] if len(sections) > 1 else ""
-    instructions_part, config_part = instructions_and_config.split("[CONFIG]")
-    instructions_text = instructions_part.strip()
-    config_json = json.loads(config_part.strip())
-
-    header_map: dict[str, str] = {}
-    for line in header:
-        if ":" in line:
-            key, value = line.split(":", 1)
-            header_map[key.strip().lower()] = value.strip()
-
-    return {
-        "name": header_map.get("name", ""),
-        "role": header_map.get("role", ""),
-        "description": header_map.get("description", ""),
-        "instructions_text": instructions_text,
-        "config_json": config_json,
-        "resume_text": content,
-    }
+    try:
+        return validate_resume_file(resume_path)
+    except ValidationError:
+        raise
+    except Exception as exc:  # pragma: no cover - surfaced to caller
+        raise ValidationError(f"Failed to parse resume {resume_path}: {exc}") from exc
 
 
 def load_agent(base_path: Path, name: str) -> Agent:

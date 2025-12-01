@@ -23,5 +23,10 @@
     "model": "gpt-4.1-mini",
     "cost_per_action": 0.005,
     "credits_left": 50.0
+  },
+  "preference_memory": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.005,
+    "credits_left": 30.0
   }
 }

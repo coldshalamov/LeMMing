@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .engine import run_forever, run_once
 from .org import reset_caches
+from .config_validation import validate_everything
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ def bootstrap(base_path: Path) -> None:
             "hr": {"send_to": ["manager"], "read_from": ["manager"]},
             "coder_01": {"send_to": ["planner", "manager"], "read_from": ["planner"]},
             "janitor": {"send_to": ["manager"], "read_from": ["manager", "planner", "coder_01", "hr"]},
+            "preference_memory": {"send_to": ["manager"], "read_from": ["manager"]},
         },
         "credits.json": {
             "manager": {"model": "gpt-4.1-mini", "cost_per_action": 0.01, "credits_left": 100.0},
@@ -61,6 +63,7 @@ def bootstrap(base_path: Path) -> None:
             "hr": {"model": "gpt-4.1-mini", "cost_per_action": 0.01, "credits_left": 100.0},
             "coder_01": {"model": "gpt-4.1", "cost_per_action": 0.03, "credits_left": 200.0},
             "janitor": {"model": "gpt-4.1-mini", "cost_per_action": 0.005, "credits_left": 50.0},
+            "preference_memory": {"model": "gpt-4.1-mini", "cost_per_action": 0.005, "credits_left": 30.0},
         },
         "org_config.json": {"base_turn_seconds": 10, "summary_every_n_turns": 12, "max_turns": None},
         "models.json": {
@@ -234,6 +237,24 @@ Always respond with JSON containing messages and notes.
                 "priority": "normal",
             },
         },
+        "preference_memory": {
+            "role": "Preference historian",
+            "description": "Captures human feedback and summarizes preferences for the org.",
+            "instructions": """You are a lightweight memory-focused agent.
+When you receive messages from the Manager containing human feedback or decisions, extract concise preference statements.
+Append them to your memory under the key \"preferences\" as short bullet phrases.
+When reporting back, summarize only the most recent preferences and avoid inventing content.
+Always respond with JSON containing messages and notes.
+""",
+            "config": {
+                "model": "gpt-4.1-mini",
+                "org_speed_multiplier": 3,
+                "send_to": ["manager"],
+                "read_from": ["manager"],
+                "max_credits": 25.0,
+                "priority": "low",
+            },
+        },
     }
 
     for name, info in agent_defs.items():
@@ -396,7 +417,10 @@ def top_up_credits(base_path: Path, agent: str, amount: float) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="LeMMing CLI")
+    parser = argparse.ArgumentParser(
+        description="LeMMing CLI - filesystem-first multi-agent orchestrator",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("bootstrap", help="Bootstrap default configs and agents")
@@ -433,6 +457,13 @@ def main() -> None:
     api_parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     api_parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
     api_parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
+
+    validate_parser = sub.add_parser(
+        "validate", help="Validate configs and agent resumes without running the engine"
+    )
+    validate_parser.add_argument(
+        "--quiet", action="store_true", help="Only exit with status, no detailed output"
+    )
 
     args = parser.parse_args()
     base_path = Path(__file__).resolve().parent.parent
@@ -472,6 +503,16 @@ def main() -> None:
         print(f"📚 API docs: http://{args.host}:{args.port}/docs")
 
         uvicorn.run("lemming.api:app", host=args.host, port=args.port, reload=args.reload)
+    elif args.command == "validate":
+        errors = validate_everything(base_path)
+        if errors:
+            if not args.quiet:
+                print("❌ Validation failed:")
+                for err in errors:
+                    print(f" - {err}")
+            raise SystemExit(1)
+        if not args.quiet:
+            print("✅ All configs and resumes look good.")
 
 
 if __name__ == "__main__":
