@@ -202,3 +202,27 @@ def get_memory_summary(base_path: Path, agent_name: str) -> dict[str, Any]:
         summary[key] = load_memory(base_path, agent_name, key)
 
     return summary
+
+
+def get_memory_context(base_path: Path, agent_name: str, max_items: int = 20) -> str:
+    """
+    Return a text block summarizing the agent's memory suitable for prompt injection.
+    May truncate or summarize if there are many keys/values.
+    """
+
+    summary = get_memory_summary(base_path, agent_name)
+    if not summary:
+        return "No memory entries."
+
+    lines: list[str] = []
+    for idx, (key, value) in enumerate(summary.items()):
+        if idx >= max_items:
+            lines.append("... (truncated)")
+            break
+        display = value
+        try:
+            display = json.dumps(value)
+        except Exception:  # pragma: no cover - best effort
+            display = str(value)
+        lines.append(f"{key}: {display}")
+    return "\n".join(lines)
