@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from .config_validation import validate_credits, validate_org_chart, validate_org_config
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_DIR = Path(__file__).parent / "config"
@@ -24,19 +26,22 @@ def set_config_dir(base_path: Path | None) -> None:
     logger.debug("Config directory set to %s", _config_dir)
 
 
-def _load_json(filename: str) -> dict[str, Any]:
+def _load_json(filename: str, validator: Any | None = None) -> dict[str, Any]:
     path = _config_dir / filename
     if not path.exists():
         raise FileNotFoundError(f"Missing configuration file: {path}")
     with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    if validator:
+        validator(data)
+    return data
 
 
 def get_org_chart(base_path: Path | None = None) -> dict[str, Any]:
     global _org_chart_cache
     set_config_dir(base_path)
     if _org_chart_cache is None:
-        _org_chart_cache = _load_json("org_chart.json")
+        _org_chart_cache = _load_json("org_chart.json", validate_org_chart)
     return _org_chart_cache
 
 
@@ -44,7 +49,7 @@ def get_org_config(base_path: Path | None = None) -> dict[str, Any]:
     global _org_config_cache
     set_config_dir(base_path)
     if _org_config_cache is None:
-        _org_config_cache = _load_json("org_config.json")
+        _org_config_cache = _load_json("org_config.json", validate_org_config)
     return _org_config_cache
 
 
@@ -52,7 +57,7 @@ def get_credits(base_path: Path | None = None) -> dict[str, Any]:
     global _credits_cache
     set_config_dir(base_path)
     if _credits_cache is None:
-        _credits_cache = _load_json("credits.json")
+        _credits_cache = _load_json("credits.json", validate_credits)
     return _credits_cache
 
 

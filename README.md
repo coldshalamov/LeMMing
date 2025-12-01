@@ -61,6 +61,11 @@ Run a single turn (useful for testing):
 python -m lemming.cli run-once
 ```
 
+Validate configs and resumes before running (great for CI or new orgs):
+```bash
+python -m lemming.cli validate
+```
+
 ### Human Interaction Commands
 
 Send a message to an agent:
@@ -125,6 +130,30 @@ The API provides endpoints for:
 - `/api/credits` - Get credits information
 - `/api/status` - System status
 - `/ws` - WebSocket for real-time updates
+
+### Resume Format (Agent Contract)
+
+Resumes are the filesystem ABI between humans and agents. Each `resume.txt` must include:
+
+```
+Name: <AGENT_NAME>
+Role: <short role>
+Description: <1–2 line summary>
+
+[INSTRUCTIONS]
+<guidance for the model>
+
+[CONFIG]
+{
+  "model": "gpt-4.1-mini",
+  "org_speed_multiplier": 1,
+  "send_to": ["manager"],
+  "read_from": ["manager"],
+  "max_credits": 100.0
+}
+```
+
+The `[CONFIG]` block is validated for required fields and types when the engine loads or when you run `lemming.cli validate`.
 
 ## Project Layout
 ```
