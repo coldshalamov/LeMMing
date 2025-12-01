@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from lemming import memory
 from lemming.agents import Agent
 from lemming.engine import _build_prompt, _execute_tools

@@ -5,9 +5,10 @@ import json
 import logging
 from pathlib import Path
 
-from .engine import run_forever, run_once
-from .org import reset_caches
 from .config_validation import validate_everything
+from .engine import run_forever, run_once
+from .messaging import collect_incoming_messages, create_message, mark_message_processed, send_message
+from .org import reset_caches
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -241,7 +242,8 @@ Always respond with JSON containing messages and notes.
             "role": "Preference historian",
             "description": "Captures human feedback and summarizes preferences for the org.",
             "instructions": """You are a lightweight memory-focused agent.
-When you receive messages from the Manager containing human feedback or decisions, extract concise preference statements.
+When you receive messages from the Manager containing human feedback or decisions,
+extract concise preference statements.
 Append them to your memory under the key \"preferences\" as short bullet phrases.
 When reporting back, summarize only the most recent preferences and avoid inventing content.
 Always respond with JSON containing messages and notes.
@@ -277,10 +279,8 @@ Always respond with JSON containing messages and notes.
 
 def send_message_cmd(base_path: Path, agent: str, message: str, importance: str = "normal") -> None:
     """Send a message from human to an agent."""
-    from .messaging import create_message, send_message as send_msg
-
     msg = create_message(sender="human", receiver=agent, content=message, importance=importance, current_turn=0)
-    send_msg(base_path, msg)
+    send_message(base_path, msg)
     print(f"✉️  Message sent to {agent}")
 
 
@@ -305,8 +305,6 @@ def view_inbox(base_path: Path) -> None:
 
 def chat_mode(base_path: Path, agent: str = "manager") -> None:
     """Interactive chat mode with an agent."""
-    from .messaging import collect_incoming_messages, create_message, mark_message_processed, send_message as send_msg
-
     print(f"💬 Chat mode with {agent}. Type 'exit' or 'quit' to leave.\n")
 
     while True:
@@ -321,7 +319,7 @@ def chat_mode(base_path: Path, agent: str = "manager") -> None:
 
         # Send message
         msg = create_message(sender="human", receiver=agent, content=message, current_turn=0)
-        send_msg(base_path, msg)
+        send_message(base_path, msg)
 
         # Wait a moment and check for replies
         import time
@@ -495,8 +493,6 @@ def main() -> None:
             print("❌ FastAPI and uvicorn are required for the API server.")
             print("Install with: pip install -e '.[api]'")
             return
-
-        from .api import app
 
         print(f"🚀 Starting LeMMing API server on http://{args.host}:{args.port}")
         print(f"📊 Dashboard: http://{args.host}:{args.port}/dashboard")
