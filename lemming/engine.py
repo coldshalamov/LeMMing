@@ -9,6 +9,7 @@ from typing import Any
 
 from .agents import Agent, discover_agents
 from .file_dispatcher import cleanup_expired_messages
+from .memory import get_memory_context
 from .messaging import (
     Message,
     collect_incoming_messages,
@@ -18,6 +19,7 @@ from .messaging import (
 )
 from .models import call_llm
 from .org import can_send, deduct_credits, get_agent_credits, get_org_config, reset_caches
+from .tools import ToolRegistry, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +30,12 @@ SYSTEM_PREAMBLE = (
 )
 
 
-def _build_prompt(agent: Agent, messages: list[dict[str, Any]]) -> list[dict[str, str]]:
+def _build_prompt(base_path: Path, agent: Agent, messages: list[dict[str, Any]]) -> list[dict[str, str]]:
     prompt_messages: list[dict[str, str]] = []
     prompt_messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
     prompt_messages.append({"role": "system", "content": agent.instructions_text})
+    memory_context = get_memory_context(base_path, agent.name)
+    prompt_messages.append({"role": "user", "content": f"MEMORY CONTEXT:\n{memory_context}"})
     if messages:
         formatted = "\n".join(
             [f"From {m['sender']} -> {m['receiver']} ({m['importance']}): {m['content']}" for m in messages]
@@ -44,10 +48,39 @@ def _build_prompt(agent: Agent, messages: list[dict[str, Any]]) -> list[dict[str
 
 def _parse_llm_output(raw: str) -> dict[str, Any]:
     try:
-        return json.loads(raw)
+        data = json.loads(raw)
     except json.JSONDecodeError:
         logger.error("LLM output was not valid JSON: %s", raw)
-        return {"messages": [], "notes": "Failed to parse response"}
+        return {"messages": [], "notes": "Failed to parse response", "tool_calls": []}
+
+    return {
+        "messages": data.get("messages", []),
+        "notes": data.get("notes", ""),
+        "tool_calls": data.get("tool_calls", []),
+    }
+
+
+def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> list[ToolResult]:
+    results: list[ToolResult] = []
+    allowed_tools = set(agent.config_json.get("tools", []))
+
+    for call in tool_calls:
+        tool_name = call.get("tool")
+        args = call.get("args", {}) or {}
+
+        if tool_name not in allowed_tools:
+            results.append(ToolResult(False, "", f"Tool {tool_name} not permitted"))
+            continue
+
+        tool = ToolRegistry.get(tool_name)
+        if tool is None:
+            results.append(ToolResult(False, "", f"Unknown tool: {tool_name}"))
+            continue
+
+        result = tool.execute(agent.name, base_path, **args)
+        results.append(result)
+
+    return results
 
 
 def _agent_should_run(agent: Agent, current_turn: int, force: bool = False) -> bool:
@@ -67,10 +100,13 @@ def _run_agent(
         logger.warning("Skipping %s; no credits left", agent.name)
         return {}
 
-    prompt = _build_prompt(agent, incoming_payloads)
+    prompt = _build_prompt(base_path, agent, incoming_payloads)
     raw_output = call_llm(agent.model_key, prompt, temperature=0.2, config_dir=base_path / "lemming" / "config")
     parsed = _parse_llm_output(raw_output)
     outgoing = parsed.get("messages", []) or []
+    tool_calls = parsed.get("tool_calls", []) or []
+
+    tool_results = _execute_tools(base_path, agent, tool_calls)
 
     for item in outgoing:
         receiver = item.get("to")
@@ -105,6 +141,8 @@ def _run_agent(
         log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / "activity.log").open("a", encoding="utf-8") as f:
             f.write(f"Turn {current_turn}: {notes}\n")
+
+    parsed["tool_results"] = [asdict(result) for result in tool_results]
 
     return parsed
 

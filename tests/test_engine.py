@@ -13,14 +13,16 @@ def test_build_prompt_no_messages(setup_agent_dirs, temp_base_path):
     from lemming.agents import load_agent
 
     agent = load_agent(temp_base_path, "manager")
-    prompt = _build_prompt(agent, [])
+    prompt = _build_prompt(temp_base_path, agent, [])
 
-    assert len(prompt) == 3
+    assert len(prompt) == 4
     assert prompt[0]["role"] == "system"
     assert "LeMMing agent" in prompt[0]["content"]
     assert prompt[1]["role"] == "system"
     assert prompt[2]["role"] == "user"
-    assert "No new messages" in prompt[2]["content"]
+    assert "MEMORY CONTEXT" in prompt[2]["content"]
+    assert prompt[3]["role"] == "user"
+    assert "No new messages" in prompt[3]["content"]
 
 
 def test_build_prompt_with_messages(setup_agent_dirs, temp_base_path):
@@ -32,12 +34,12 @@ def test_build_prompt_with_messages(setup_agent_dirs, temp_base_path):
         {"sender": "planner", "receiver": "manager", "content": "Hello", "importance": "normal"},
         {"sender": "hr", "receiver": "manager", "content": "Update", "importance": "high"},
     ]
-    prompt = _build_prompt(agent, messages)
+    prompt = _build_prompt(temp_base_path, agent, messages)
 
-    assert len(prompt) == 3
-    assert "Incoming messages:" in prompt[2]["content"]
-    assert "From planner" in prompt[2]["content"]
-    assert "From hr" in prompt[2]["content"]
+    assert len(prompt) == 4
+    assert "Incoming messages:" in prompt[3]["content"]
+    assert "From planner" in prompt[3]["content"]
+    assert "From hr" in prompt[3]["content"]
 
 
 def test_parse_llm_output_valid():

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +25,7 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
     memory_dir.mkdir(parents=True, exist_ok=True)
 
     memory_file = memory_dir / f"{key}.json"
-    entry = {"key": key, "value": value, "timestamp": datetime.now(timezone.utc).isoformat(), "agent": agent_name}
+    entry = {"key": key, "value": value, "timestamp": datetime.now(UTC).isoformat(), "agent": agent_name}
 
     with memory_file.open("w", encoding="utf-8") as f:
         json.dump(entry, f, indent=2)
@@ -140,7 +140,7 @@ def append_memory_event(
         max_entries: Optional cap to keep only the most recent entries
     """
 
-    entry = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event}
+    entry = {"timestamp": datetime.now(UTC).isoformat(), "event": event}
     current = load_memory(base_path, agent_name, key)
 
     if current is None:
@@ -202,3 +202,27 @@ def get_memory_summary(base_path: Path, agent_name: str) -> dict[str, Any]:
         summary[key] = load_memory(base_path, agent_name, key)
 
     return summary
+
+
+def get_memory_context(base_path: Path, agent_name: str, max_items: int = 20) -> str:
+    """
+    Return a text block summarizing the agent's memory suitable for prompt injection.
+    May truncate or summarize if there are many keys/values.
+    """
+
+    summary = get_memory_summary(base_path, agent_name)
+    if not summary:
+        return "No memory entries."
+
+    lines: list[str] = []
+    for idx, (key, value) in enumerate(summary.items()):
+        if idx >= max_items:
+            lines.append("... (truncated)")
+            break
+        display = value
+        try:
+            display = json.dumps(value)
+        except Exception:  # pragma: no cover - best effort
+            display = str(value)
+        lines.append(f"{key}: {display}")
+    return "\n".join(lines)
