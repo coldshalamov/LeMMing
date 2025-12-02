@@ -8,68 +8,125 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .file_dispatcher import cleanup_expired_messages
-from .memory import get_memory_context
-from .messaging import (
-    Message,
-    collect_incoming_messages,
-    create_message,
-    mark_message_processed,
-    send_message,
+from .memory import get_memory_context, save_memory
+from .messages import (
+    OutboxEntry,
+    cleanup_old_outbox_entries,
+    collect_readable_outboxes,
+    format_outbox_context,
+    write_outbox_entry,
 )
 from .models import call_llm
-from .org import can_send, deduct_credits, get_agent_credits, get_org_config, reset_caches
+from .org import deduct_credits, get_agent_credits, get_org_config
 from .tools import ToolRegistry, ToolResult
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PREAMBLE = (
-    "You are a LeMMing agent operating in a virtual organization. "
-    "You receive messages by reading other agents' outboxes according to permissions. "
-    "Respond strictly in JSON as described in your role instructions."
-)
+SYSTEM_PREAMBLE = """You are a LeMMing agent operating in a multi-agent organization.
+You communicate by writing entries to your outbox, which other agents can read.
+You receive information by reading entries from other agents' outboxes.
+
+You MUST respond with valid JSON in this exact format:
+{
+  "outbox_entries": [
+    {
+      "kind": "message|report|request|response|status",
+      "payload": {"text": "...", ...optional additional fields...},
+      "tags": ["optional", "tags"]
+    }
+  ],
+  "tool_calls": [
+    {
+      "tool": "tool_name",
+      "args": {...tool arguments...}
+    }
+  ],
+  "memory_updates": [
+    {
+      "key": "memory_key",
+      "value": {...any JSON value...}
+    }
+  ],
+  "notes": "Optional free-form notes for activity logs"
+}
+
+All fields are optional but the response must be valid JSON.
+If you have nothing to do, respond with: {"notes": "No action needed."}
+"""
 
 
-def _build_prompt(base_path: Path, agent: Agent, messages: list[dict[str, Any]]) -> list[dict[str, str]]:
-    prompt_messages: list[dict[str, str]] = []
-    prompt_messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
-    prompt_messages.append({"role": "system", "content": agent.instructions_text})
+def should_run(agent: Agent, tick: int) -> bool:
+    n = agent.schedule.run_every_n_ticks or 1
+    offset = agent.schedule.phase_offset or 0
+    return (tick % n) == (offset % n)
+
+
+def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = []
+    messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
+    messages.append({"role": "system", "content": f"YOUR ROLE: {agent.title}\n\n{agent.instructions}"})
+
     memory_context = get_memory_context(base_path, agent.name)
-    prompt_messages.append({"role": "user", "content": f"MEMORY CONTEXT:\n{memory_context}"})
-    if messages:
-        formatted = "\n".join(
-            [f"From {m['sender']} -> {m['receiver']} ({m['importance']}): {m['content']}" for m in messages]
-        )
-        prompt_messages.append({"role": "user", "content": f"Incoming messages:\n{formatted}"})
-    else:
-        prompt_messages.append({"role": "user", "content": "No new messages. Provide proactive update or idle."})
-    return prompt_messages
+    if memory_context and memory_context != "No memory entries.":
+        messages.append({"role": "user", "content": f"YOUR MEMORY:\n{memory_context}"})
+
+    incoming = collect_readable_outboxes(
+        base_path,
+        agent.name,
+        agent.permissions.read_outboxes,
+        limit=30,
+    )
+    messages.append({"role": "user", "content": format_outbox_context(incoming)})
+
+    messages.append(
+        {
+            "role": "user",
+            "content": (
+                f"Current tick: {tick}\n"
+                f"Available tools: {', '.join(agent.permissions.tools)}\n"
+                "Provide your response as JSON following the schema."
+            ),
+        }
+    )
+    return messages
 
 
 def _parse_llm_output(raw: str) -> dict[str, Any]:
     try:
+        raw = raw.strip()
+        if raw.startswith("```"):
+            lines = raw.split("\n")
+            body: list[str] = []
+            in_block = False
+            for line in lines:
+                if line.startswith("```"):
+                    in_block = not in_block
+                    continue
+                if in_block:
+                    body.append(line)
+            raw = "\n".join(body)
         data = json.loads(raw)
-    except json.JSONDecodeError:
-        logger.error("LLM output was not valid JSON: %s", raw)
-        return {"messages": [], "notes": "Failed to parse response", "tool_calls": []}
-
-    return {
-        "messages": data.get("messages", []),
-        "notes": data.get("notes", ""),
-        "tool_calls": data.get("tool_calls", []),
-    }
+        return {
+            "outbox_entries": data.get("outbox_entries", []),
+            "tool_calls": data.get("tool_calls", []),
+            "memory_updates": data.get("memory_updates", []),
+            "notes": data.get("notes", ""),
+        }
+    except json.JSONDecodeError as exc:
+        logger.error("LLM output was not valid JSON: %s", exc)
+        logger.debug("Raw response: %s", raw)
+        return {"outbox_entries": [], "tool_calls": [], "memory_updates": [], "notes": ""}
 
 
 def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> list[ToolResult]:
     results: list[ToolResult] = []
-    allowed_tools = set(agent.config_json.get("tools", []))
-
+    allowed = set(agent.permissions.tools)
     for call in tool_calls:
         tool_name = call.get("tool")
         args = call.get("args", {}) or {}
 
-        if tool_name not in allowed_tools:
-            results.append(ToolResult(False, "", f"Tool {tool_name} not permitted"))
+        if tool_name not in allowed:
+            results.append(ToolResult(False, "", f"Tool '{tool_name}' not permitted for {agent.name}"))
             continue
 
         tool = ToolRegistry.get(tool_name)
@@ -79,109 +136,92 @@ def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> lis
 
         result = tool.execute(agent.name, base_path, **args)
         results.append(result)
-
     return results
 
 
-def _agent_should_run(agent: Agent, current_turn: int, force: bool = False) -> bool:
-    if force:
-        return True
-    return current_turn % max(agent.org_speed_multiplier, 1) == 0
-
-
-def _run_agent(
-    base_path: Path, agent: Agent, current_turn: int, incoming_payloads: list[dict[str, Any]]
-) -> dict[str, Any]:
+def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     credits_info = get_agent_credits(agent.name, base_path)
     credits_left = credits_info.get("credits_left", 0.0)
-    cost_per_action = credits_info.get("cost_per_action", 0.0)
+    cost_per_action = credits_info.get("cost_per_action", 0.01)
 
     if credits_left <= 0:
-        logger.warning("Skipping %s; no credits left", agent.name)
-        return {}
+        logger.warning("Agent %s has no credits; skipping", agent.name)
+        return {"skipped": True, "reason": "no_credits"}
 
-    prompt = _build_prompt(base_path, agent, incoming_payloads)
-    raw_output = call_llm(agent.model_key, prompt, temperature=0.2, config_dir=base_path / "lemming" / "config")
+    prompt = _build_prompt(base_path, agent, tick)
+    raw_output = call_llm(
+        agent.model.key,
+        prompt,
+        temperature=agent.model.temperature,
+        config_dir=base_path / "lemming" / "config",
+    )
     parsed = _parse_llm_output(raw_output)
-    outgoing = parsed.get("messages", []) or []
-    tool_calls = parsed.get("tool_calls", []) or []
 
-    tool_results = _execute_tools(base_path, agent, tool_calls)
+    for entry_data in parsed.get("outbox_entries", []):
+        entry = OutboxEntry.create(
+            agent=agent.name,
+            tick=tick,
+            kind=entry_data.get("kind", "message"),
+            payload=entry_data.get("payload", {}),
+            tags=entry_data.get("tags", []),
+            meta=entry_data.get("meta", {}),
+        )
+        write_outbox_entry(base_path, agent.name, entry)
 
-    for item in outgoing:
-        receiver = item.get("to")
-        content = item.get("content", "")
-        importance = item.get("importance", "normal")
-        ttl_turns = item.get("ttl_turns", 24)
-        if receiver and can_send(agent.name, receiver, base_path):
-            msg = create_message(
-                agent.name,
-                receiver,
-                content,
-                importance=importance,
-                ttl_turns=ttl_turns,
-                current_turn=current_turn,
-            )
-            send_message(base_path, msg)
-        else:
-            logger.warning("%s attempted to send to unauthorized receiver %s", agent.name, receiver)
+    tool_results = _execute_tools(base_path, agent, parsed.get("tool_calls", []))
+
+    for update in parsed.get("memory_updates", []):
+        key = update.get("key")
+        if not key:
+            continue
+        save_memory(base_path, agent.name, key, update.get("value"))
 
     deduct_credits(agent.name, cost_per_action, base_path)
-
-    for payload in incoming_payloads:
-        try:
-            msg = Message(**payload)
-            mark_message_processed(base_path, msg)
-        except Exception as exc:  # pragma: no cover
-            logger.error("Failed to mark message processed: %s", exc)
 
     notes = parsed.get("notes")
     if notes:
         log_dir = agent.path / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / "activity.log").open("a", encoding="utf-8") as f:
-            f.write(f"Turn {current_turn}: {notes}\n")
+            f.write(f"[Tick {tick}] {notes}\n")
 
-    parsed["tool_results"] = [asdict(result) for result in tool_results]
+    return {
+        "outbox_entries": len(parsed.get("outbox_entries", [])),
+        "tool_calls": len(parsed.get("tool_calls", [])),
+        "tool_results": [asdict(result) for result in tool_results],
+        "memory_updates": len(parsed.get("memory_updates", [])),
+        "notes": notes,
+    }
 
-    return parsed
 
-
-def run_once(base_path: Path, current_turn: int) -> None:
-    logger.info("Running turn %s", current_turn)
-    reset_caches()
+def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
+    logger.info("=== Tick %s ===", tick)
+    results: dict[str, Any] = {}
     agents = discover_agents(base_path)
-    config = get_org_config(base_path)
-    summary_every = config.get("summary_every_n_turns", 12)
-
     for agent in agents:
-        force_run = agent.name == "manager" and current_turn % max(summary_every, 1) == 0
-        if not _agent_should_run(agent, current_turn, force=force_run):
+        if not should_run(agent, tick):
             continue
+        logger.info("Running agent: %s", agent.name)
+        results[agent.name] = run_agent(base_path, agent, tick)
 
-        incoming_messages = collect_incoming_messages(base_path, agent.name, current_turn)
-        incoming_payloads = [asdict(m) for m in incoming_messages]
-        parsed = _run_agent(base_path, agent, current_turn, incoming_payloads)
+    removed = cleanup_old_outbox_entries(base_path, tick)
+    if removed:
+        logger.info("Cleaned up %s expired outbox entries", removed)
+    return results
 
-        if agent.name == "manager" and force_run:
-            summary = parsed.get("notes", "") if isinstance(parsed, dict) else ""
-            log_dir = agent.path / "logs"
-            log_dir.mkdir(parents=True, exist_ok=True)
-            summary_path = log_dir / f"summary_{current_turn}.txt"
-            summary_path.write_text(summary, encoding="utf-8")
-            print(f"[Manager Summary Turn {current_turn}] {summary}")
 
-    cleanup_expired_messages(base_path, current_turn)
+def run_once(base_path: Path, tick: int = 1) -> dict[str, Any]:
+    return run_tick(base_path, tick)
 
 
 def run_forever(base_path: Path) -> None:
     config = get_org_config(base_path)
     base_turn_seconds = config.get("base_turn_seconds", 10)
     max_turns = config.get("max_turns")
-    current_turn = 1
+    tick = 1
     while True:
-        run_once(base_path, current_turn)
-        if max_turns is not None and isinstance(max_turns, int) and current_turn >= max_turns:
+        run_tick(base_path, tick)
+        if max_turns is not None and tick >= max_turns:
             break
-        current_turn += 1
+        tick += 1
         time.sleep(base_turn_seconds)

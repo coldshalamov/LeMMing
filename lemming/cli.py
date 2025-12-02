@@ -5,510 +5,103 @@ import json
 import logging
 from pathlib import Path
 
+from .agents import discover_agents, load_agent
 from .config_validation import validate_everything
 from .engine import run_forever, run_once
-from .messaging import collect_incoming_messages, create_message, mark_message_processed, send_message
-from .org import reset_caches
+from .org import derive_org_graph, save_derived_org_graph
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BASE_RESUME_TEMPLATE = """Name: {name}
-Role: {role}
-Description: {description}
 
-[INSTRUCTIONS]
-{instructions}
-
-[CONFIG]
-{config}
-"""
-
-
-def write_resume(path: Path, name: str, role: str, description: str, instructions: str, config: dict) -> None:
-    text = BASE_RESUME_TEMPLATE.format(
-        name=name,
-        role=role,
-        description=description,
-        instructions=instructions.strip(),
-        config=json.dumps(config, indent=2),
-    )
-    path.write_text(text, encoding="utf-8")
-
-
-def ensure_agent_dirs(agent_path: Path) -> None:
-    for sub in ["outbox", "memory", "logs", "config"]:
-        (agent_path / sub).mkdir(parents=True, exist_ok=True)
-
-
-def bootstrap(base_path: Path) -> None:
-    config_dir = base_path / "lemming" / "config"
-    config_dir.mkdir(parents=True, exist_ok=True)
-
-    defaults = {
-        "org_chart.json": {
-            "human": {"send_to": ["manager"], "read_from": ["manager"]},
-            "manager": {
-                "send_to": ["planner", "hr", "coder_01", "janitor", "human"],
-                "read_from": ["planner", "hr", "coder_01", "janitor", "human"],
-            },
-            "planner": {"send_to": ["coder_01", "manager"], "read_from": ["manager", "coder_01"]},
-            "hr": {"send_to": ["manager"], "read_from": ["manager"]},
-            "coder_01": {"send_to": ["planner", "manager"], "read_from": ["planner"]},
-            "janitor": {"send_to": ["manager"], "read_from": ["manager", "planner", "coder_01", "hr"]},
-            "preference_memory": {"send_to": ["manager"], "read_from": ["manager"]},
-        },
-        "credits.json": {
-            "manager": {"model": "gpt-4.1-mini", "cost_per_action": 0.01, "credits_left": 100.0},
-            "planner": {"model": "gpt-4.1-mini", "cost_per_action": 0.01, "credits_left": 100.0},
-            "hr": {"model": "gpt-4.1-mini", "cost_per_action": 0.01, "credits_left": 100.0},
-            "coder_01": {"model": "gpt-4.1", "cost_per_action": 0.03, "credits_left": 200.0},
-            "janitor": {"model": "gpt-4.1-mini", "cost_per_action": 0.005, "credits_left": 50.0},
-            "preference_memory": {"model": "gpt-4.1-mini", "cost_per_action": 0.005, "credits_left": 30.0},
-        },
-        "org_config.json": {"base_turn_seconds": 10, "summary_every_n_turns": 12, "max_turns": None},
-        "models.json": {
-            "gpt-4.1": {"provider": "openai", "model_name": "gpt-4.1"},
-            "gpt-4.1-mini": {"provider": "openai", "model_name": "gpt-4.1-mini"},
-            "claude-sonnet": {"provider": "anthropic", "model_name": "claude-3-5-sonnet-20241022"},
-            "claude-haiku": {"provider": "anthropic", "model_name": "claude-3-5-haiku-20241022"},
-            "ollama-llama": {
-                "provider": "ollama",
-                "model_name": "llama3.2",
-                "provider_config": {"base_url": "http://localhost:11434"},
-            },
-        },
-    }
-
-    for filename, content in defaults.items():
-        path = config_dir / filename
-        if not path.exists():
-            path.write_text(json.dumps(content, indent=2), encoding="utf-8")
-            logger.info("Created default config %s", path)
-
-    # Agent template
-    template_dir = base_path / "agents" / "agent_template"
-    ensure_agent_dirs(template_dir)
-    if not (template_dir / "resume.txt").exists():
-        template_resume = """Name: TEMPLATE_AGENT
-Role: Generic worker agent
-Description: A generic LeMMing agent created from the template. Customize this resume for specific roles.
-
-[INSTRUCTIONS]
-You are a LeMMing agent. Follow your role description and respond with clear, structured outputs.
-You receive messages from other agents and produce replies or actions.
-Always respond in JSON following the protocol described in your CONFIG.
-
-[CONFIG]
-{
-  "model": "gpt-4.1-mini",
-  "org_speed_multiplier": 1,
-  "send_to": [],
-  "read_from": [],
-  "max_credits": 50.0,
-  "priority": "normal"
-}
-"""
-        (template_dir / "resume.txt").write_text(template_resume, encoding="utf-8")
-        logger.info("Created agent template resume")
-
-    # Create human agent directory
-    human_dir = base_path / "agents" / "human"
-    ensure_agent_dirs(human_dir)
-    if not (human_dir / "resume.txt").exists():
-        human_resume = """Name: HUMAN
-Role: Human user
-Description: The human user who interacts with the organization.
-
-[INSTRUCTIONS]
-You are the human user. This is a placeholder for the human operator.
-
-[CONFIG]
-{
-  "model": "none",
-  "org_speed_multiplier": 1,
-  "send_to": ["manager"],
-  "read_from": ["manager"],
-  "max_credits": 999999.0,
-  "priority": "highest"
-}
-"""
-        (human_dir / "resume.txt").write_text(human_resume, encoding="utf-8")
-        logger.info("Created human agent directory")
-
-    # Concrete agents
-    agent_defs = {
-        "manager": {
-            "role": "Organization manager and user interface",
-            "description": "Top-level agent that communicates with the human user and coordinates all other agents.",
-            "instructions": """You are the Manager agent in the LeMMing organization.
-You do NOT write code or perform low-level tasks directly.
-Your jobs are:
-- Interpret high-level user goals (from logs or future stdin integration).
-- Communicate with Planner, HR, and other agents only through messages.
-- Periodically summarize org status in a concise, human-readable way.
-- When you respond, always output JSON:
-
-{
-  \"messages\": [
-    {
-      \"to\": \"<agent_name>\",
-      \"content\": \"<text>\",
-      \"importance\": \"normal\",
-      \"ttl_turns\": 12
-    }
-  ],
-  \"notes\": \"<free-form summary for logs>\"
-}
-""",
-            "config": {
-                "model": "gpt-4.1-mini",
-                "org_speed_multiplier": 1,
-                "send_to": ["planner", "hr", "coder_01", "janitor"],
-                "read_from": ["planner", "hr", "coder_01", "janitor"],
-                "max_credits": 100.0,
-                "priority": "high",
-            },
-        },
-        "planner": {
-            "role": "Breaks goals into tasks and coordinates execution",
-            "description": "Planner decomposes objectives, assigns work to coder_01, and reports progress to manager.",
-            "instructions": """You are the Planner agent.
-Analyze objectives from the Manager, break them into actionable tasks, and delegate to coder_01.
-Report progress and blockers back to the Manager. Keep messages concise and actionable.
-Always respond with JSON payloads containing messages and notes.
-""",
-            "config": {
-                "model": "gpt-4.1-mini",
-                "org_speed_multiplier": 1,
-                "send_to": ["coder_01", "manager"],
-                "read_from": ["manager", "coder_01"],
-                "max_credits": 100.0,
-                "priority": "high",
-            },
-        },
-        "hr": {
-            "role": "HR and org growth advisor",
-            "description": "HR proposes new agents and monitors morale and capacity.",
-            "instructions": """You are the HR agent.
-Monitor the organization for staffing gaps and suggest new agents using the template.
-You do not create agents directly but propose configurations to the Manager.
-Always respond with JSON containing messages and notes.
-""",
-            "config": {
-                "model": "gpt-4.1-mini",
-                "org_speed_multiplier": 2,
-                "send_to": ["manager"],
-                "read_from": ["manager"],
-                "max_credits": 100.0,
-                "priority": "normal",
-            },
-        },
-        "coder_01": {
-            "role": "Primary coding agent",
-            "description": "Implements tasks defined by Planner and reports technical status.",
-            "instructions": """You are coder_01.
-Implement and explain code-level tasks assigned by the Planner.
-If you need clarification, ask the Planner. Provide progress updates for the Manager when appropriate.
-Always respond with JSON containing messages and notes.
-""",
-            "config": {
-                "model": "gpt-4.1",
-                "org_speed_multiplier": 1,
-                "send_to": ["planner", "manager"],
-                "read_from": ["planner"],
-                "max_credits": 200.0,
-                "priority": "high",
-            },
-        },
-        "janitor": {
-            "role": "Cleanup and maintenance",
-            "description": "Janitor suggests cleanup of expired or excessive messages and files.",
-            "instructions": """You are the Janitor agent.
-Inspect the organization for stale or excessive messages and propose cleanup actions.
-You cannot delete files directly; request actions via messages to the Manager.
-Always respond with JSON containing messages and notes.
-""",
-            "config": {
-                "model": "gpt-4.1-mini",
-                "org_speed_multiplier": 3,
-                "send_to": ["manager"],
-                "read_from": ["manager", "planner", "coder_01", "hr"],
-                "max_credits": 50.0,
-                "priority": "normal",
-            },
-        },
-        "preference_memory": {
-            "role": "Preference historian",
-            "description": "Captures human feedback and summarizes preferences for the org.",
-            "instructions": """You are a lightweight memory-focused agent.
-When you receive messages from the Manager containing human feedback or decisions,
-extract concise preference statements.
-Append them to your memory under the key \"preferences\" as short bullet phrases.
-When reporting back, summarize only the most recent preferences and avoid inventing content.
-Always respond with JSON containing messages and notes.
-""",
-            "config": {
-                "model": "gpt-4.1-mini",
-                "org_speed_multiplier": 3,
-                "send_to": ["manager"],
-                "read_from": ["manager"],
-                "max_credits": 25.0,
-                "priority": "low",
-            },
-        },
-    }
-
-    for name, info in agent_defs.items():
-        agent_dir = base_path / "agents" / name
-        ensure_agent_dirs(agent_dir)
-        resume_path = agent_dir / "resume.txt"
-        if not resume_path.exists():
-            write_resume(
-                resume_path,
-                name=info.get("name", name).upper(),
-                role=info["role"],
-                description=info["description"],
-                instructions=info["instructions"],
-                config=info["config"],
-            )
-            logger.info("Created resume for %s", name)
-
-    reset_caches()
-
-
-def send_message_cmd(base_path: Path, agent: str, message: str, importance: str = "normal") -> None:
-    """Send a message from human to an agent."""
-    msg = create_message(sender="human", receiver=agent, content=message, importance=importance, current_turn=0)
-    send_message(base_path, msg)
-    print(f"✉️  Message sent to {agent}")
-
-
-def view_inbox(base_path: Path) -> None:
-    """View messages sent to human from agents."""
-    from .messaging import collect_incoming_messages
-
-    messages = collect_incoming_messages(base_path, "human", current_turn=999999)
-
-    if not messages:
-        print("📭 No messages in your inbox")
-        return
-
-    print(f"\n📬 You have {len(messages)} message(s):\n")
-    for i, msg in enumerate(messages, 1):
-        print(f"[{i}] From: {msg.sender}")
-        print(f"    Importance: {msg.importance}")
-        print(f"    Content: {msg.content}")
-        print(f"    Time: {msg.timestamp}")
-        print()
-
-
-def chat_mode(base_path: Path, agent: str = "manager") -> None:
-    """Interactive chat mode with an agent."""
-    print(f"💬 Chat mode with {agent}. Type 'exit' or 'quit' to leave.\n")
-
-    while True:
-        message = input(f"You → {agent}: ").strip()
-
-        if message.lower() in ["exit", "quit"]:
-            print("👋 Goodbye!")
-            break
-
-        if not message:
-            continue
-
-        # Send message
-        msg = create_message(sender="human", receiver=agent, content=message, current_turn=0)
-        send_message(base_path, msg)
-
-        # Wait a moment and check for replies
-        import time
-
-        time.sleep(1)
-
-        # Collect responses
-        responses = collect_incoming_messages(base_path, "human", current_turn=999999)
-        if responses:
-            for resp in responses:
-                if resp.sender == agent:
-                    print(f"{agent} → You: {resp.content}\n")
-                    mark_message_processed(base_path, resp)
-        else:
-            print(f"(No immediate response from {agent})\n")
-
-
-def show_status(base_path: Path) -> None:
-    """Show org status including credits and agents."""
-    from .agents import discover_agents
-    from .org import get_credits
-
+def list_agents_cmd(base_path: Path) -> None:
     agents = discover_agents(base_path)
-    credits = get_credits(base_path)
-
-    print("\n🏢 LeMMing Organization Status\n")
-    print(f"{'Agent':<15} {'Model':<20} {'Credits':<10} {'Speed':<5}")
-    print("=" * 55)
-
+    print(f"\n{'Name':<20} {'Title':<30} {'Schedule':<20} {'Model':<20}")
+    print("=" * 95)
     for agent in agents:
-        credit_info = credits.get(agent.name, {})
-        credits_left = credit_info.get("credits_left", 0.0)
-        model = credit_info.get("model", agent.model_key)
-        print(f"{agent.name:<15} {model:<20} {credits_left:<10.2f} {agent.org_speed_multiplier}x")
-
-    print()
+        schedule = f"every {agent.schedule.run_every_n_ticks} (offset {agent.schedule.phase_offset})"
+        print(f"{agent.name:<20} {agent.title:<30} {schedule:<20} {agent.model.key:<20}")
+    print(f"\nTotal: {len(agents)} agents")
 
 
-def show_logs(base_path: Path, agent: str, lines: int = 20) -> None:
-    """Show recent logs for an agent."""
-    log_file = base_path / "agents" / agent / "logs" / "activity.log"
-
-    if not log_file.exists():
-        print(f"No logs found for {agent}")
-        return
-
-    with log_file.open("r") as f:
-        all_lines = f.readlines()
-
-    recent = all_lines[-lines:]
-    print(f"\n📝 Recent logs for {agent} (last {lines} lines):\n")
-    for line in recent:
-        print(line.rstrip())
-
-
-def inspect_agent(base_path: Path, agent: str) -> None:
-    """Show detailed information about an agent."""
-    from .agents import load_agent
-    from .org import get_agent_credits, get_read_from, get_send_to
-
+def show_agent_cmd(base_path: Path, name: str) -> None:
     try:
-        ag = load_agent(base_path, agent)
+        agent = load_agent(base_path, name)
     except FileNotFoundError:
-        print(f"Agent '{agent}' not found")
+        print(f"Agent '{name}' not found")
         return
 
-    credits = get_agent_credits(agent, base_path)
-    send_to = get_send_to(agent, base_path)
-    read_from = get_read_from(agent, base_path)
+    print(f"\n{'='*60}\nAgent: {agent.name}\n{'='*60}")
+    print(f"Title: {agent.title}")
+    print(f"Description: {agent.short_description}")
+    if agent.workflow_description:
+        print(f"Workflow: {agent.workflow_description}")
+    print(f"Model: {agent.model.key} (temp={agent.model.temperature}, max_tokens={agent.model.max_tokens})")
+    print(
+        f"Schedule: every {agent.schedule.run_every_n_ticks} ticks (offset={agent.schedule.phase_offset})"
+    )
+    print(f"Readable outboxes: {', '.join(agent.permissions.read_outboxes)}")
+    print(f"Tools: {', '.join(agent.permissions.tools)}")
+    print("\nInstructions preview:\n" + "-" * 40)
+    preview = agent.instructions[:600]
+    if len(agent.instructions) > 600:
+        preview += "..."
+    print(preview)
 
-    print(f"\n🔍 Agent: {ag.name}\n")
-    print(f"Role: {ag.role}")
-    print(f"Description: {ag.description}")
-    print(f"Model: {ag.model_key}")
-    print(f"Speed Multiplier: {ag.org_speed_multiplier}x")
-    print(f"Max Credits: {ag.max_credits}")
-    print(f"Credits Left: {credits.get('credits_left', 0.0):.2f}")
-    print(f"Can send to: {', '.join(send_to) if send_to else 'none'}")
-    print(f"Can read from: {', '.join(read_from) if read_from else 'none'}")
-    print()
+
+def derive_graph_cmd(base_path: Path) -> None:
+    graph = derive_org_graph(base_path)
+    print("\nDerived Organization Graph\n" + "=" * 50)
+    for agent, info in sorted(graph.items()):
+        can_read = info.get("can_read", [])
+        tools = info.get("tools", [])
+        print(f"\n{agent}:")
+        print(f"  Can read: {', '.join(can_read) if can_read else '(none)'}")
+        print(f"  Tools: {', '.join(tools) if tools else '(none)'}")
+    saved = save_derived_org_graph(base_path)
+    print(f"\nSaved to: {saved}")
 
 
-def top_up_credits(base_path: Path, agent: str, amount: float) -> None:
-    """Add credits to an agent."""
-    from .org import deduct_credits, get_agent_credits, save_credits
+def migrate_resumes_cmd(base_path: Path) -> None:
+    from scripts.migrate_resumes import main as migrate_main
 
-    # Deduct negative amount = add credits
-    deduct_credits(agent, -amount, base_path)
-    save_credits(base_path)
-
-    new_credits = get_agent_credits(agent, base_path).get("credits_left", 0.0)
-    print(f"💰 Added {amount} credits to {agent}. New balance: {new_credits:.2f}")
+    migrate_main()
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="LeMMing CLI - filesystem-first multi-agent orchestrator",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    sub.add_parser("bootstrap", help="Bootstrap default configs and agents")
-    sub.add_parser("run", help="Run the engine indefinitely")
-    sub.add_parser("run-once", help="Run a single engine turn")
-
-    # Human interaction commands
-    send_parser = sub.add_parser("send", help="Send a message to an agent")
-    send_parser.add_argument("agent", help="Agent to send message to")
-    send_parser.add_argument("message", help="Message content")
-    send_parser.add_argument("--importance", default="normal", choices=["low", "normal", "high", "urgent"])
-
-    sub.add_parser("inbox", help="View messages sent to you")
-
-    chat_parser = sub.add_parser("chat", help="Interactive chat with an agent")
-    chat_parser.add_argument("--agent", default="manager", help="Agent to chat with (default: manager)")
-
-    # Status and inspection commands
-    sub.add_parser("status", help="Show organization status")
-
-    logs_parser = sub.add_parser("logs", help="Show agent logs")
-    logs_parser.add_argument("agent", help="Agent name")
-    logs_parser.add_argument("--lines", type=int, default=20, help="Number of lines to show")
-
-    inspect_parser = sub.add_parser("inspect", help="Inspect agent details")
-    inspect_parser.add_argument("agent", help="Agent name")
-
-    topup_parser = sub.add_parser("top-up", help="Add credits to an agent")
-    topup_parser.add_argument("agent", help="Agent name")
-    topup_parser.add_argument("amount", type=float, help="Amount of credits to add")
-
-    # API server command
-    api_parser = sub.add_parser("serve", help="Start the API server and dashboard")
-    api_parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    api_parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
-    api_parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
-
-    validate_parser = sub.add_parser(
-        "validate", help="Validate configs and agent resumes without running the engine"
-    )
-    validate_parser.add_argument(
-        "--quiet", action="store_true", help="Only exit with status, no detailed output"
-    )
-
+    parser = argparse.ArgumentParser(description="LeMMing CLI")
+    parser.add_argument("command", help="Command to run")
+    parser.add_argument("arg", nargs="?", help="Optional argument")
+    parser.add_argument("--base-path", default=Path.cwd(), type=Path, help="Repository base path")
     args = parser.parse_args()
-    base_path = Path(__file__).resolve().parent.parent
 
-    if args.command == "bootstrap":
-        bootstrap(base_path)
-    elif args.command == "run":
+    base_path: Path = args.base_path
+
+    if args.command == "run":
         run_forever(base_path)
     elif args.command == "run-once":
-        run_once(base_path, current_turn=1)
-    elif args.command == "send":
-        send_message_cmd(base_path, args.agent, args.message, args.importance)
-    elif args.command == "inbox":
-        view_inbox(base_path)
-    elif args.command == "chat":
-        chat_mode(base_path, args.agent)
-    elif args.command == "status":
-        show_status(base_path)
-    elif args.command == "logs":
-        show_logs(base_path, args.agent, args.lines)
-    elif args.command == "inspect":
-        inspect_agent(base_path, args.agent)
-    elif args.command == "top-up":
-        top_up_credits(base_path, args.agent, args.amount)
-    elif args.command == "serve":
-        try:
-            import uvicorn
-        except ImportError:
-            print("❌ FastAPI and uvicorn are required for the API server.")
-            print("Install with: pip install -e '.[api]'")
-            return
-
-        print(f"🚀 Starting LeMMing API server on http://{args.host}:{args.port}")
-        print(f"📊 Dashboard: http://{args.host}:{args.port}/dashboard")
-        print(f"📚 API docs: http://{args.host}:{args.port}/docs")
-
-        uvicorn.run("lemming.api:app", host=args.host, port=args.port, reload=args.reload)
+        tick = int(args.arg or 1)
+        run_once(base_path, tick)
     elif args.command == "validate":
         errors = validate_everything(base_path)
         if errors:
-            if not args.quiet:
-                print("❌ Validation failed:")
-                for err in errors:
-                    print(f" - {err}")
-            raise SystemExit(1)
-        if not args.quiet:
-            print("✅ All configs and resumes look good.")
+            print("Validation errors:")
+            for err in errors:
+                print(f" - {err}")
+        else:
+            print("All configs and resumes are valid.")
+    elif args.command == "list-agents":
+        list_agents_cmd(base_path)
+    elif args.command == "show-agent":
+        if not args.arg:
+            parser.error("show-agent requires an agent name")
+        show_agent_cmd(base_path, args.arg)
+    elif args.command == "derive-graph":
+        derive_graph_cmd(base_path)
+    elif args.command == "migrate-resumes":
+        migrate_resumes_cmd(base_path)
+    else:
+        parser.error(f"Unknown command {args.command}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+{
+  "name": "hr",
+  "title": "HR and org growth advisor",
+  "short_description": "Proposes new agents and monitors morale and capacity.",
+  "workflow_description": "",
+  "model": {
+    "key": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "max_tokens": 2048
+  },
+  "permissions": {
+    "read_outboxes": [
+      "manager"
+    ],
+    "tools": [
+      "memory_read",
+      "memory_write"
+    ]
+  },
+  "schedule": {
+    "run_every_n_ticks": 2,
+    "phase_offset": 0
+  },
+  "instructions": "You are the HR agent.\nMonitor the organization for staffing gaps and suggest new agents using the template.\nYou do not create agents directly but propose configurations to the Manager.\nAlways respond with JSON containing messages and notes."
+}

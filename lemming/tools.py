@@ -212,6 +212,21 @@ class CreateAgentTool(Tool):
             return ToolResult(False, "", f"Failed to create agent: {exc}")
 
 
+class ListAgentsTool(Tool):
+    name = "list_agents"
+    description = "List all agents and basic information."
+
+    def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:  # noqa: ARG002
+        from .agents import discover_agents
+
+        agents = discover_agents(base_path)
+        info = [
+            {"name": ag.name, "title": ag.title, "description": ag.short_description}
+            for ag in agents
+        ]
+        return ToolResult(True, json.dumps(info, indent=2))
+
+
 # Register default tools
 ToolRegistry.register(FileReadTool())
 ToolRegistry.register(FileWriteTool())
@@ -220,4 +235,5 @@ ToolRegistry.register(ShellTool())
 ToolRegistry.register(MemoryReadTool())
 ToolRegistry.register(MemoryWriteTool())
 ToolRegistry.register(CreateAgentTool())
+ToolRegistry.register(ListAgentsTool())
 
