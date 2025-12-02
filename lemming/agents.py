@@ -4,7 +4,6 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class Agent:
     instructions: str
 
     @classmethod
-    def from_resume(cls, resume_path: Path) -> "Agent":
+    def from_resume(cls, resume_path: Path) -> Agent:
         with resume_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -118,9 +117,9 @@ def validate_resume(resume_path: Path) -> list[str]:
         return [f"Invalid JSON: {exc}"]
 
     required_fields = ["name", "title", "short_description", "model", "permissions", "instructions"]
-    for field in required_fields:
-        if field not in data:
-            errors.append(f"Missing required field: {field}")
+    for required_field in required_fields:
+        if required_field not in data:
+            errors.append(f"Missing required field: {required_field}")
 
     if data.get("name") and data["name"] != resume_path.parent.name:
         errors.append(

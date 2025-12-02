@@ -31,7 +31,7 @@ class OutboxEntry:
         payload: dict[str, Any],
         tags: list[str] | None = None,
         meta: dict[str, Any] | None = None,
-    ) -> "OutboxEntry":
+    ) -> OutboxEntry:
         timestamp = datetime.now(UTC).isoformat()
         entry_id = f"msg_{timestamp}_{uuid.uuid4().hex[:8]}"
         return cls(
@@ -49,7 +49,7 @@ class OutboxEntry:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "OutboxEntry":
+    def from_dict(cls, data: dict[str, Any]) -> OutboxEntry:
         return cls(**data)
 
 
