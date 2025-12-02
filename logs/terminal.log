@@ -1,0 +1,671 @@
+# Terminal Log
+
+## Session $(date -u +"%Y-%m-%d %H:%M:%SZ")
+- Initialized terminal logging.
+## work
+?? PROJECT_RULES.md
+?? logs/
+?? plan.md
+?? workflow_state.md
+# 🤖 LeMMing: Lightweight Multi-Model Engine
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+LeMMing is a **filesystem-first multi-agent orchestration framework** that simulates an organization of LLM workers communicating via permissioned outboxes in discrete turns.
+
+## ✨ Key Features
+
+- 🏢 **Org Chart Permissions** - Hierarchical communication via send_to/read_from permissions
+- 💬 **Human-in-the-Loop** - Interactive CLI for chatting with agents and viewing messages
+- 🌐 **Multi-Provider Support** - OpenAI, Anthropic Claude, and Ollama local models
+- 📊 **Live Dashboard** - Real-time web UI with FastAPI and WebSocket updates
+- 💾 **Persistent Memory** - Agent memory system for context retention
+- 💰 **Credit System** - Cost control with per-agent credit tracking
+- ⚡ **Speed Multipliers** - Control agent execution frequency
+- 🧪 **Comprehensive Testing** - 72 tests with high coverage
+- 🐳 **Docker Ready** - Containerized deployment with docker-compose
+- 🔄 **CI/CD** - GitHub Actions for automated testing and builds
+
+## 📋 Requirements
+
+- Python >= 3.11
+- Optional: API keys for your chosen LLM providers
+  - `OPENAI_API_KEY` for OpenAI models
+  - `ANTHROPIC_API_KEY` for Claude models
+  - Ollama installed for local models
+
+## Installation
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+## Configuration
+Default configuration lives under `lemming/config`. The `bootstrap` command will create any missing files and agent folders.
+
+Set your OpenAI API key before running:
+```bash
+export OPENAI_API_KEY=your_api_key_here
+```
+
+## Usage
+
+### Core Commands
+
+Bootstrap the org and agents (idempotent):
+```bash
+python -m lemming.cli bootstrap
+```
+
+Run the engine continuously:
+```bash
+python -m lemming.cli run
+```
+
+Run a single turn (useful for testing):
+```bash
+python -m lemming.cli run-once
+```
+
+Validate configs and resumes before running (great for CI or new orgs):
+```bash
+python -m lemming.cli validate
+```
+
+### Human Interaction Commands
+
+Send a message to an agent:
+```bash
+python -m lemming.cli send manager "Hello, what's the status?"
+python -m lemming.cli send manager "Urgent task" --importance high
+```
+
+View your inbox:
+```bash
+python -m lemming.cli inbox
+```
+
+Interactive chat with an agent:
+```bash
+python -m lemming.cli chat
+python -m lemming.cli chat --agent planner
+```
+
+### Monitoring Commands
+
+View organization status:
+```bash
+python -m lemming.cli status
+```
+
+View agent logs:
+```bash
+python -m lemming.cli logs manager
+python -m lemming.cli logs coder_01 --lines 50
+```
+
+Inspect agent details:
+```bash
+python -m lemming.cli inspect manager
+```
+
+Add credits to an agent:
+```bash
+python -m lemming.cli top-up manager 100.0
+```
+
+### API Server & Dashboard
+
+Start the API server and live dashboard:
+```bash
+python -m lemming.cli serve
+```
+
+Access the dashboard at `http://localhost:8000/dashboard` and API docs at `http://localhost:8000/docs`.
+
+Custom host/port:
+```bash
+python -m lemming.cli serve --host 127.0.0.1 --port 8080
+```
+
+The API provides endpoints for:
+- `/api/agents` - List all agents
+- `/api/agents/{name}` - Get agent details
+- `/api/messages` - List messages
+- `/api/org-chart` - Get organization chart
+- `/api/credits` - Get credits information
+- `/api/status` - System status
+- `/ws` - WebSocket for real-time updates
+
+### Resume Format (Agent Contract)
+
+Resumes are the filesystem ABI between humans and agents. Each `resume.txt` must include:
+
+```
+Name: <AGENT_NAME>
+Role: <short role>
+Description: <1–2 line summary>
+
+[INSTRUCTIONS]
+<guidance for the model>
+
+[CONFIG]
+{
+  "model": "gpt-4.1-mini",
+  "org_speed_multiplier": 1,
+  "send_to": ["manager"],
+  "read_from": ["manager"],
+  "max_credits": 100.0
+}
+```
+
+The `[CONFIG]` block is validated for required fields and types when the engine loads or when you run `lemming.cli validate`.
+
+## Project Layout
+```
+LeMMing/
+├── lemming/               # Python package
+│   ├── cli.py             # CLI entry points
+│   ├── engine.py          # Turn loop
+│   ├── messaging.py       # Outbox-only messaging
+│   ├── agents.py          # Agent loading/parsing helpers
+│   ├── models.py          # Model registry + OpenAI wrapper
+│   ├── org.py             # Org chart, config, credits
+│   ├── memory.py          # Agent memory system
+│   ├── api.py             # FastAPI backend server
+│   ├── file_dispatcher.py # Filesystem helpers
+│   └── config/            # Default configs
+├── agents/                # Agent folders (resume, outbox, memory, logs)
+│   └── human/             # Special human agent for user interaction
+├── tests/                 # Comprehensive test suite
+├── ui/                    # Dashboard UIs
+│   ├── lemming_dashboard.html       # Static dashboard
+│   └── lemming_dashboard_live.html  # Live dashboard with API
+├── Makefile               # Common development commands
+└── pyproject.toml
+```
+
+## 🐳 Docker Deployment
+
+Run LeMMing with Docker:
+
+```bash
+# Set environment variables
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start with docker-compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+# LeMMing Development Roadmap
+
+**Version:** 1.0
+**Status:** v0.1.0 → v1.0.0
+**Timeline:** 5 Phases
+
+---
+
+## Current State (v0.1.0)
+
+✅ Core multi-agent orchestration engine
+✅ Filesystem-based messaging via outboxes
+✅ Org chart permission system
+✅ Credit/cost management
+✅ Resume-based agent configuration
+✅ Turn-based execution loop
+✅ Basic CLI (bootstrap, run, run-once)
+✅ 5 default agents (manager, planner, hr, coder_01, janitor)
+
+❌ No tests
+❌ No human interaction
+❌ Static dashboard only
+❌ Single provider (OpenAI only)
+❌ Limited observability
+❌ No error recovery
+
+---
+
+## Phase 1: Foundation & Testing Infrastructure
+
+**Goal:** Establish code quality foundation and developer tooling
+**Version:** v0.2.0
+
+### 1.1 Testing Infrastructure
+- [ ] Add pytest as dev dependency
+- [ ] Create `tests/` directory structure
+- [ ] Add `conftest.py` with fixtures (mock agents, temp directories)
+- [ ] Mock OpenAI client for testing
+- [ ] Unit tests for `messaging.py` (100% coverage)
+- [ ] Unit tests for `org.py` (100% coverage)
+- [ ] Unit tests for `agents.py` (100% coverage)
+- [ ] Unit tests for `models.py` (100% coverage)
+- [ ] Integration tests for `engine.py`
+- [ ] Test utilities and helpers
+
+### 1.2 Code Quality Tools
+- [ ] Add `ruff` for linting
+- [ ] Add `black` for formatting
+- [ ] Add `mypy` for type checking
+- [ ] Add `pytest-cov` for coverage reporting
+- [ ] Create `pyproject.toml` dev dependencies section
+- [ ] Add `Makefile` with common commands (test, lint, format)
+- [ ] Pre-commit hooks configuration
+
+### 1.3 Configuration Validation
+- [ ] JSON schema files for all config files
+- [ ] Validation on bootstrap
+- [ ] Validation on config load
+- [ ] Better error messages for invalid configs
+- [ ] Config migration system
+
+### 1.4 Better Logging
+- [ ] Structured logging with context (agent name, turn number)
+- [ ] Log levels per module
+- [ ] JSON log output option
+- [ ] Separate log files per agent
+- [ ] Log rotation
+
+**Deliverables:** Test suite, linting setup, validated configs, better logs
+
+---
+
+## Phase 2: Human Interaction & Core Features
+
+**Goal:** Make LeMMing interactive and usable for real tasks
+**Version:** v0.3.0
+
+### 2.1 Human-in-the-Loop CLI
+- [ ] `lemming send <agent> <message>` command
+- [ ] `lemming chat` interactive REPL mode
+- [ ] `lemming inbox` view messages for user
+- [ ] Create virtual "human" agent in org chart
+- [ ] Human agent directory structure
+- [ ] Manager can send to human
+- [ ] Rich CLI formatting (colors, tables)
+- [ ] Message history view
+
+### 2.2 Enhanced CLI Commands
+- [ ] `lemming status` - show org health, credits, active agents
+- [ ] `lemming logs <agent>` - tail agent logs
+- [ ] `lemming inspect <agent>` - show agent details
+- [ ] `lemming reset` - reset org state
+- [ ] `lemming top-up <agent> <credits>` - add credits
+- [ ] `lemming pause` / `lemming resume` - control execution
+- [ ] Turn-by-turn stepping mode
+
+### 2.3 Message Enhancements
+- [ ] Message priorities (urgent, normal, low)
+- [ ] Message threading/reply-to
+- [ ] Message reactions/acknowledgments
+- [ ] Broadcast messages
+- [ ] Message search functionality
+- [ ] Archive instead of delete
+
+### 2.4 Agent Memory System
+- [ ] Persistent memory directory per agent
+- [ ] Memory read/write in agent instructions
+- [ ] Memory summary on agent init
+- [ ] Vector DB integration (optional, using chromadb)
+- [ ] Memory search capabilities
+
+**Deliverables:** Interactive CLI, human agent, message improvements, memory system
+
+---
+
+## Phase 3: Dashboard & API Backend
+
+**Goal:** Real-time visualization and monitoring
+**Version:** v0.4.0
+
+### 3.1 REST API Backend
+- [ ] FastAPI application structure
+- [ ] `/api/agents` - list all agents
+- [ ] `/api/agents/{name}` - agent details
+- [ ] `/api/messages` - message history
+- [ ] `/api/messages?agent={name}` - agent-specific messages
+- [ ] `/api/credits` - credits status
+- [ ] `/api/org-chart` - org structure
+- [ ] `/api/status` - system health
+- [ ] CORS configuration
+- [ ] API authentication (API key)
+
+### 3.2 WebSocket Support
+- [ ] WebSocket endpoint for live updates
+- [ ] Broadcast turn completions
+- [ ] Broadcast new messages
+- [ ] Agent status changes
+- [ ] Real-time log streaming
+
+### 3.3 Enhanced Dashboard UI
+- [ ] Connect to REST API instead of static data
+- [ ] Real-time updates via WebSocket
+- [ ] Interactive org chart visualization (D3.js/mermaid)
+- [ ] Message flow animation
+- [ ] Agent activity timeline
+- [ ] Credit usage graphs (Chart.js)
+- [ ] Message browser with search
+- [ ] Agent configuration editor
+- [ ] Dark mode toggle
+
+### 3.4 Monitoring & Metrics
+- [ ] Prometheus metrics export
+- [ ] Turn duration tracking
+- [ ] Message count metrics
+- [ ] Credit usage metrics
+- [ ] API call success/failure rates
+- [ ] Agent activity heatmap
+
+**Deliverables:** FastAPI backend, WebSocket support, interactive dashboard, metrics
+
+---
+
+## Phase 4: Multi-Provider & Advanced Agent Capabilities
+
+**Goal:** Provider flexibility and agent superpowers
+**Version:** v0.5.0
+
+### 4.1 Abstract LLM Interface
+- [ ] Provider abstraction layer
+- [ ] Provider registry system
+- [ ] Provider-specific configuration
+- [ ] Fallback provider mechanism
+- [ ] Cost tracking per provider
+
+### 4.2 Additional LLM Providers
+- [ ] Anthropic Claude support (claude-3-5-sonnet, etc.)
+- [ ] Azure OpenAI support
+- [ ] Local model support (Ollama)
+- [ ] Google Gemini support
+- [ ] Custom provider plugin system
+- [ ] Provider health checks
+
+### 4.3 Agent Tool Calling
+- [ ] Tool/function calling framework
+- [ ] Filesystem tools (read, write, list, search)
+- [ ] Shell command execution tools
+- [ ] Python code execution (sandbox)
+- [ ] Web search tool
+- [ ] Calculator tool
+- [ ] Custom tool registration
+- [ ] Tool permission system
+
+### 4.4 Advanced Agent Features
+- [ ] Dynamic agent creation (HR can spawn agents)
+- [ ] Agent templates library
+- [ ] Agent inheritance/composition
+- [ ] Specialized agent types (Tester, Reviewer, QA)
+- [ ] Agent collaboration patterns
+- [ ] Parallel agent execution
+- [ ] Agent state checkpointing
+__init__.py
+agents.py
+api.py
+cli.py
+config
+config_validation.py
+engine.py
+file_dispatcher.py
+memory.py
+messaging.py
+models.py
+org.py
+providers.py
+tools.py
+__init__.py
+conftest.py
+test_agents.py
+test_config_validation.py
+test_engine.py
+test_file_dispatcher.py
+test_memory.py
+test_messaging.py
+test_models.py
+test_org.py
+test_tools.py
+agent_template
+coder_01
+hr
+janitor
+manager
+planner
+preference_memory
+Name: MANAGER
+Role: Organization manager and user interface
+Description: Top-level agent that communicates with the human user and coordinates all other agents.
+
+[INSTRUCTIONS]
+You are the Manager agent in the LeMMing organization.
+You do NOT write code or perform low-level tasks directly.
+Your jobs are:
+- Interpret high-level user goals (from logs or future stdin integration).
+- Communicate with Planner, HR, and other agents only through messages.
+- Periodically summarize org status in a concise, human-readable way.
+- When you respond, always output JSON:
+
+{
+  "messages": [
+    {
+      "to": "<agent_name>",
+      "content": "<text>",
+      "importance": "normal",
+      "ttl_turns": 12
+    }
+  ],
+  "notes": "<free-form summary for logs>"
+}
+
+[CONFIG]
+{
+  "model": "gpt-4.1-mini",
+  "org_speed_multiplier": 1,
+  "send_to": ["planner", "hr", "coder_01", "janitor"],
+  "read_from": ["planner", "hr", "coder_01", "janitor"],
+  "max_credits": 100.0,
+  "priority": "high"
+}
+## work
+?? PROJECT_RULES.md
+?? logs/
+?? plan.md
+?? workflow_state.md
+     1	# PROJECT_RULES
+     2	
+     3	## Architectural Mandates ("New World Order")
+     4	1. **Resume-Driven:** Each agent must load configuration, permissions, schedule, and tools exclusively from `agents/<name>/resume.json`.
+     5	2. **Outbox-Only Messaging:** Agents never write into other agents' folders. An agent writes to its own `outbox/`, and peers read from that location if permitted.
+     6	3. **Tick-Based Scheduling:** Replace continuous loops with tick-based execution: `run_if: (tick % run_every_n) == phase_offset`.
+     7	4. **No Central Org Chart:** The organization graph is derived dynamically from agent resumes, not from any central configuration file.
+     8	5. **Generic Engine:** The engine remains role-agnostic; it orchestrates generic agents defined by JSON without hardcoded notions of roles.
+     9	
+    10	## Safety & Constraints
+    11	- Enforce strict handling of LLM JSON outputs: never crash on malformed JSON; log issues and continue.
+    12	- Never delete user data in `agents/` without explicit confirmation.
+    13	- Avoid adding new dependencies without approval.
+    14	- Maintain scope focus on the refactor plan; do not add unrelated improvements.
+     1	# Migration Roadmap
+     2	
+     3	1. **Analysis**: Scan existing `lemming/` modules to map current logic.
+     4	2. **Agent Loader**: Implement `Agent` class that loads strictly from `agents/<name>/resume.json`.
+     5	3. **Refactor Messaging**: Switch from `outbox/receiver/` (push) to pure `outbox/` (pull).
+     6	4. **Deprecate Org Chart**: Remove `org_chart.json` dependency; derive permissions from resumes.
+     7	5. **Implement Scheduler**: Replace speed multipliers with `run_every_n_ticks` and `phase_offset`.
+     8	6. **Schema Enforcement**: Enforce strict JSON output from LLMs (Outbox, Tool Calls, Memory).
+     9	7. **Tool & Memory Alignment**: Wire tools to permissions defined in `resume.json`.
+    10	8. **Generalize Agents**: Convert existing example agents to generic `resume.json` format.
+    11	9. **Update Interfaces**: Update CLI, API, and UI to reflect the new generic architecture.
+    12	10. **Test Coverage**: Update tests for the new scheduler and messaging model.
+     1	# Workflow State
+     2	
+     3	## Current Task
+     4	Initialize the memory bank, record the migration roadmap, and summarize the repository state for the LeMMing refactor context.
+     5	
+     6	## Plan (3-7 steps)
+     7	- [x] Create the required memory bank files (`PROJECT_RULES.md`, `plan.md`, `workflow_state.md`) and logging skeleton under `logs/`.
+     8	- [x] Capture the migration roadmap and current task plan in the new files.
+     9	- [x] Review high-level repository documentation (e.g., `README.md`, `ROADMAP.md`) to understand the current architecture.
+    10	- [x] Summarize the repository state and note any immediate questions or follow-ups.
+    11	- [x] Record changes and command outputs in the logging files to close out the initialization.
+    12	
+    13	## Repo Summary
+    14	- Filesystem-first multi-agent framework with CLI, FastAPI server, and dashboard; agents communicate via outboxes with org-chart permissions and credit tracking. Resumes currently use `resume.txt` with `[INSTRUCTIONS]` plus `[CONFIG]` JSON including `model`, `org_speed_multiplier`, `send_to`, `read_from`, and `max_credits` fields.
+    15	- Key Python modules live under `lemming/` (CLI, engine, messaging, org chart, memory, tools, model providers, API, config validation). Messaging/engine/org components support turn-based execution with credit use and outbox handling.
+    16	- `tests/` contains unit coverage for agents, config validation, engine, file dispatch, memory, messaging, models, org, and tools, indicating an established test suite.
+    17	- `agents/` includes default roles (`manager`, `planner`, `hr`, `coder_01`, `janitor`, `preference_memory`) plus `agent_template`, each with resume/outbox/memory folders following the current resume.txt schema.
+    18	- UI assets under `ui/` provide dashboard HTML pages; docs include README and a roadmap outlining future phases and features beyond the current version.
+    19	
+    20	## Open Questions
+    21	- None yet; will note any uncertainties after the repository scan.
+    22	
+    23	## Relevant Paths
+    24	- project root
+    25	- `logs/`
+    26	- `README.md`, `ROADMAP.md`
+    27	- `lemming/` package, `tests/`, `agents/`, `ui/`
+     1	# Changes Log
+     2	
+     3	## Entries
+     4	- *(none yet)*
+     5	- 2025-12-02 05:17:08Z: Initialized memory bank files (PROJECT_RULES.md, plan.md, workflow_state.md) and created logs/ directory with baseline log files.
+     6	- 2025-12-02 05:17:37Z: Added repository summary and plan progress updates to workflow_state.md.
+     1	# Changes Log
+     2	
+     3	## Entries
+     4	- 2025-12-02 05:17:08Z: Initialized memory bank files (PROJECT_RULES.md, plan.md, workflow_state.md) and created logs/ directory with baseline log files.
+     5	- 2025-12-02 05:17:37Z: Added repository summary and plan progress updates to workflow_state.md.
+     6	- 2025-12-02 05:18:06Z: Removed placeholder entry from logs/changes.md.
+## work
+?? PROJECT_RULES.md
+?? logs/
+?? plan.md
+?? workflow_state.md
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Linting
+.ruff_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# LeMMing specific
+agents/*/outbox/
+agents/*/logs/
+agents/*/memory/
+lemming/config/credits.json
+
+# Keep agent structure but not runtime data
+!agents/*/outbox/.gitkeep
+!agents/*/logs/.gitkeep
+!agents/*/memory/.gitkeep
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Logs
+*.log
+## work
+A  PROJECT_RULES.md
+A  logs/changes.md
+A  logs/errors.md
+A  logs/experiments.md
+A  logs/terminal.log
+A  plan.md
+A  workflow_state.md
+[work 145ab2a] Initialize memory bank setup
+ 7 files changed, 697 insertions(+)
+ create mode 100644 PROJECT_RULES.md
+ create mode 100644 logs/changes.md
+ create mode 100644 logs/errors.md
+ create mode 100644 logs/experiments.md
+ create mode 100644 logs/terminal.log
+ create mode 100644 plan.md
+ create mode 100644 workflow_state.md
+## work
+ M logs/terminal.log
+# Session $(date -Iseconds)
+$ ls lemming
+__init__.py  api.py  config  engine.py  memory.py  models.py  providers.py
+agents.py    cli.py  config_validation.py  file_dispatcher.py  messaging.py  org.py     tools.py
+
+$ sed -n '1,200p' lemming/agents.py
+<see above output>
+
+$ sed -n '1,240p' lemming/engine.py
+<see above output>
+
+$ sed -n '1,260p' lemming/messaging.py
+<see above output>
+
+$ sed -n '1,240p' lemming/org.py
+<see above output>
+
+$ sed -n '1,200p' lemming/file_dispatcher.py
+<see above output>
+
+$ sed -n '1,240p' lemming/config_validation.py
+<see above output>
