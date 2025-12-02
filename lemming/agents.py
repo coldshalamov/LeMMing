@@ -2,115 +2,139 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
-
-from .config_validation import ValidationError, validate_resume_file
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AgentSchedule:
+    run_every_n_ticks: int = 1
+    phase_offset: int = 0
+
+
+@dataclass
+class AgentModel:
+    key: str
+    temperature: float = 0.2
+    max_tokens: int = 2048
+
+
+@dataclass
+class AgentPermissions:
+    read_outboxes: list[str] = field(default_factory=list)
+    tools: list[str] = field(default_factory=list)
 
 
 @dataclass
 class Agent:
     name: str
     path: Path
-    model_key: str
-    org_speed_multiplier: int
-    send_to: list[str]
-    read_from: list[str]
-    max_credits: float
-    resume_text: str
-    instructions_text: str
-    config_json: dict[str, Any]
-    role: str
-    description: str
+    title: str
+    short_description: str
+    workflow_description: str
+    model: AgentModel
+    permissions: AgentPermissions
+    schedule: AgentSchedule
+    instructions: str
 
+    @classmethod
+    def from_resume(cls, resume_path: Path) -> Agent:
+        with resume_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
 
-def parse_resume(resume_path: Path) -> dict[str, Any]:
-    try:
-        return validate_resume_file(resume_path)
-    except ValidationError:
-        raise
-    except Exception as exc:  # pragma: no cover - surfaced to caller
-        raise ValidationError(f"Failed to parse resume {resume_path}: {exc}") from exc
+        schedule_data = data.get("schedule", {})
+        model_data = data.get("model", {})
+        permissions_data = data.get("permissions", {})
+
+        return cls(
+            name=data["name"],
+            path=resume_path.parent,
+            title=data["title"],
+            short_description=data["short_description"],
+            workflow_description=data.get("workflow_description", ""),
+            model=AgentModel(
+                key=model_data.get("key", "gpt-4.1-mini"),
+                temperature=model_data.get("temperature", 0.2),
+                max_tokens=model_data.get("max_tokens", 2048),
+            ),
+            permissions=AgentPermissions(
+                read_outboxes=list(permissions_data.get("read_outboxes", [])),
+                tools=list(permissions_data.get("tools", [])),
+            ),
+            schedule=AgentSchedule(
+                run_every_n_ticks=schedule_data.get("run_every_n_ticks", 1),
+                phase_offset=schedule_data.get("phase_offset", 0),
+            ),
+            instructions=data["instructions"],
+        )
 
 
 def load_agent(base_path: Path, name: str) -> Agent:
     agent_path = base_path / "agents" / name
-    resume_path = agent_path / "resume.txt"
+    resume_path = agent_path / "resume.json"
+
     if not resume_path.exists():
+        old_resume = agent_path / "resume.txt"
+        if old_resume.exists():
+            raise FileNotFoundError(
+                f"Agent {name} has old resume.txt. Run scripts/migrate_resumes.py to upgrade."
+            )
         raise FileNotFoundError(f"Missing resume for agent {name} at {resume_path}")
-    parsed = parse_resume(resume_path)
-    cfg = parsed["config_json"]
-    return Agent(
-        name=name,
-        path=agent_path,
-        model_key=cfg.get("model", "gpt-4.1-mini"),
-        org_speed_multiplier=int(cfg.get("org_speed_multiplier", 1)),
-        send_to=list(cfg.get("send_to", [])),
-        read_from=list(cfg.get("read_from", [])),
-        max_credits=float(cfg.get("max_credits", 0.0)),
-        resume_text=parsed["resume_text"],
-        instructions_text=parsed["instructions_text"],
-        config_json=cfg,
-        role=parsed.get("role", ""),
-        description=parsed.get("description", ""),
-    )
+
+    return Agent.from_resume(resume_path)
 
 
 def discover_agents(base_path: Path) -> list[Agent]:
     agents_dir = base_path / "agents"
     agents: list[Agent] = []
+
     if not agents_dir.exists():
         return agents
+
     for child in agents_dir.iterdir():
-        if not child.is_dir():
+        if not child.is_dir() or child.name == "agent_template":
             continue
-        if child.name == "agent_template":
+        resume_path = child / "resume.json"
+        if not resume_path.exists():
+            logger.warning("Skipping %s; missing resume.json", child.name)
             continue
-        resume_path = child / "resume.txt"
-        if resume_path.exists():
-            try:
-                agents.append(load_agent(base_path, child.name))
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.error("Failed to load agent %s: %s", child.name, exc)
+        try:
+            agents.append(Agent.from_resume(resume_path))
+        except Exception as exc:  # pragma: no cover
+            logger.error("Failed to load agent %s: %s", child.name, exc)
+
     return agents
 
 
-def bootstrap_agent_from_template(base_path: Path, name: str, role_config: dict[str, Any]) -> Agent:
-    template_dir = base_path / "agents" / "agent_template"
-    target_dir = base_path / "agents" / name
-    target_dir.mkdir(parents=True, exist_ok=True)
+def validate_resume(resume_path: Path) -> list[str]:
+    errors: list[str] = []
+    try:
+        with resume_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as exc:
+        return [f"Invalid JSON: {exc}"]
 
-    # Copy template structure
-    for sub in ["outbox", "memory", "logs", "config"]:
-        (target_dir / sub).mkdir(parents=True, exist_ok=True)
+    required_fields = ["name", "title", "short_description", "model", "permissions", "instructions"]
+    for required_field in required_fields:
+        if required_field not in data:
+            errors.append(f"Missing required field: {required_field}")
 
-    template_resume = template_dir / "resume.txt"
-    if not template_resume.exists():
-        raise FileNotFoundError("Template resume not found; run bootstrap to create it")
-    with template_resume.open("r", encoding="utf-8") as f:
-        template_text = f.read()
+    if data.get("name") and data["name"] != resume_path.parent.name:
+        errors.append(
+            f"Agent name '{data.get('name')}' does not match directory '{resume_path.parent.name}'"
+        )
 
-    # Replace fields
-    resume_lines = []
-    for line in template_text.splitlines():
-        if line.startswith("Name: "):
-            resume_lines.append(f"Name: {role_config.get('name', name)}")
-        elif line.startswith("Role: "):
-            resume_lines.append(f"Role: {role_config.get('role', 'Generic agent')}")
-        elif line.startswith("Description: "):
-            resume_lines.append(f"Description: {role_config.get('description', '')}")
-        else:
-            resume_lines.append(line)
-    resume_text = "\n".join(resume_lines)
+    model = data.get("model", {})
+    if model and "key" not in model:
+        errors.append("Missing model.key")
 
-    # Replace config block
-    if "[CONFIG]" in resume_text:
-        parts = resume_text.split("[CONFIG]")
-        resume_text = f"{parts[0]}[CONFIG]\n{json.dumps(role_config.get('config', {}), indent=2)}\n"
-    with (target_dir / "resume.txt").open("w", encoding="utf-8") as f:
-        f.write(resume_text)
+    permissions = data.get("permissions", {})
+    if permissions:
+        if "read_outboxes" not in permissions:
+            errors.append("Missing permissions.read_outboxes")
+        if "tools" not in permissions:
+            errors.append("Missing permissions.tools")
 
-    return load_agent(base_path, name)
+    return errors

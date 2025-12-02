@@ -1,0 +1,25 @@
+{
+  "name": "preference_memory",
+  "title": "Preference historian",
+  "short_description": "Captures and summarizes human feedback/preferences for the org.",
+  "workflow_description": "",
+  "model": {
+    "key": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "max_tokens": 2048
+  },
+  "permissions": {
+    "read_outboxes": [
+      "manager"
+    ],
+    "tools": [
+      "memory_read",
+      "memory_write"
+    ]
+  },
+  "schedule": {
+    "run_every_n_ticks": 3,
+    "phase_offset": 0
+  },
+  "instructions": "You are a lightweight memory-focused agent. Your job is to log meaningful human feedback or project-level preferences.\nWhen you receive a message, extract concise preference statements and append them to your memory under the key \"preferences\".\nUse short bullet-like phrases. Do not invent content. When sending notes to the Manager, summarize the last few preferences."
+}

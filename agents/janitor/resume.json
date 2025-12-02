@@ -1,0 +1,28 @@
+{
+  "name": "janitor",
+  "title": "Cleanup and maintenance",
+  "short_description": "Inspects org for stale or excessive messages and suggests cleanup.",
+  "workflow_description": "",
+  "model": {
+    "key": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "max_tokens": 2048
+  },
+  "permissions": {
+    "read_outboxes": [
+      "manager",
+      "planner",
+      "coder_01",
+      "hr"
+    ],
+    "tools": [
+      "memory_read",
+      "memory_write"
+    ]
+  },
+  "schedule": {
+    "run_every_n_ticks": 3,
+    "phase_offset": 0
+  },
+  "instructions": "You are the Janitor agent.\nInspect the organization for stale or excessive messages and propose cleanup actions.\nYou cannot delete files directly; request actions via messages to the Manager.\nAlways respond with JSON containing messages and notes."
+}
