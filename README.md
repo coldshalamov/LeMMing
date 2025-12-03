@@ -4,18 +4,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-LeMMing is a **filesystem-first multi-agent orchestration framework** that simulates an organization of LLM workers communicating via permissioned outboxes in discrete turns.
+LeMMing is a **filesystem-first multi-agent orchestration framework** that simulates an organization of LLM workers communicating via permissioned outboxes in discrete ticks.
 
 ## ✨ Key Features
 
-- 🏢 **Org Chart Permissions** - Hierarchical communication via send_to/read_from permissions
-- 💬 **Human-in-the-Loop** - Interactive CLI for chatting with agents and viewing messages
+- 📄 **Resume as ABI** - Agent configuration via `resume.json` files
+- 📬 **Outbox-Only Messaging** - Agents communicate through `OutboxEntry` messages in their outboxes
+- ⏱️ **Tick-Based Scheduler** - Deterministic execution with configurable `run_every_n_ticks` and `phase_offset`
 - 🌐 **Multi-Provider Support** - OpenAI, Anthropic Claude, and Ollama local models
-- 📊 **Live Dashboard** - Real-time web UI with FastAPI and WebSocket updates
-- 💾 **Persistent Memory** - Agent memory system for context retention
 - 💰 **Credit System** - Cost control with per-agent credit tracking
-- ⚡ **Speed Multipliers** - Control agent execution frequency
-- 🧪 **Comprehensive Testing** - 72 tests with high coverage
+- 🧪 **Comprehensive Testing** - Test suite with high coverage
 - 🐳 **Docker Ready** - Containerized deployment with docker-compose
 - 🔄 **CI/CD** - GitHub Actions for automated testing and builds
 
@@ -46,7 +44,7 @@ export OPENAI_API_KEY=your_api_key_here
 
 ### Core Commands
 
-Bootstrap the org and agents (idempotent):
+Bootstrap the framework (idempotent):
 ```bash
 python -m lemming.cli bootstrap
 ```
@@ -56,33 +54,14 @@ Run the engine continuously:
 python -m lemming.cli run
 ```
 
-Run a single turn (useful for testing):
+Run a single tick (useful for testing):
 ```bash
 python -m lemming.cli run-once
 ```
 
-Validate configs and resumes before running (great for CI or new orgs):
+Validate configs and resumes before running:
 ```bash
 python -m lemming.cli validate
-```
-
-### Human Interaction Commands
-
-Send a message to an agent:
-```bash
-python -m lemming.cli send manager "Hello, what's the status?"
-python -m lemming.cli send manager "Urgent task" --importance high
-```
-
-View your inbox:
-```bash
-python -m lemming.cli inbox
-```
-
-Interactive chat with an agent:
-```bash
-python -m lemming.cli chat
-python -m lemming.cli chat --agent planner
 ```
 
 ### Monitoring Commands
@@ -94,18 +73,18 @@ python -m lemming.cli status
 
 View agent logs:
 ```bash
-python -m lemming.cli logs manager
-python -m lemming.cli logs coder_01 --lines 50
+python -m lemming.cli logs <agent_name>
+python -m lemming.cli logs <agent_name> --lines 50
 ```
 
 Inspect agent details:
 ```bash
-python -m lemming.cli inspect manager
+python -m lemming.cli inspect <agent_name>
 ```
 
 Add credits to an agent:
 ```bash
-python -m lemming.cli top-up manager 100.0
+python -m lemming.cli top-up <agent_name> 100.0
 ```
 
 ### API Server & Dashboard
@@ -126,57 +105,107 @@ The API provides endpoints for:
 - `/api/agents` - List all agents
 - `/api/agents/{name}` - Get agent details
 - `/api/messages` - List messages
-- `/api/org-chart` - Get organization chart
 - `/api/credits` - Get credits information
 - `/api/status` - System status
 - `/ws` - WebSocket for real-time updates
 
 ### Resume Format (Agent Contract)
 
-Resumes are the filesystem ABI between humans and agents. Each `resume.txt` must include:
+Resumes are the filesystem ABI between humans and agents. Each `agents/<name>/resume.json` defines the agent:
 
-```
-Name: <AGENT_NAME>
-Role: <short role>
-Description: <1–2 line summary>
-
-[INSTRUCTIONS]
-<guidance for the model>
-
-[CONFIG]
+```json
 {
+  "name": "agent_name",
+  "title": "Agent Title",
+  "short_description": "Brief description of agent purpose",
+  "workflow_description": "Detailed workflow and responsibilities",
+  "instructions": "Specific instructions for the LLM",
   "model": "gpt-4.1-mini",
-  "org_speed_multiplier": 1,
-  "send_to": ["manager"],
-  "read_from": ["manager"],
-  "max_credits": 100.0
+  "permissions": {
+    "read_outboxes": ["other_agent"],
+    "tools": ["tool1", "tool2"]
+  },
+  "schedule": {
+    "run_every_n_ticks": 1,
+    "phase_offset": 0
+  }
 }
 ```
 
-The `[CONFIG]` block is validated for required fields and types when the engine loads or when you run `lemming.cli validate`.
+See `agents/agent_template/` for a canonical example.
 
 ## Project Layout
 ```
 LeMMing/
 ├── lemming/               # Python package
 │   ├── cli.py             # CLI entry points
-│   ├── engine.py          # Turn loop
-│   ├── messaging.py       # Outbox-only messaging
+│   ├── engine.py          # Tick-based scheduler
+│   ├── messages.py        # OutboxEntry message format
 │   ├── agents.py          # Agent loading/parsing helpers
-│   ├── models.py          # Model registry + OpenAI wrapper
-│   ├── org.py             # Org chart, config, credits
+│   ├── models.py          # Model registry + provider wrappers
+│   ├── org.py             # Org graph, config, credits
 │   ├── memory.py          # Agent memory system
 │   ├── api.py             # FastAPI backend server
-│   ├── file_dispatcher.py # Filesystem helpers
 │   └── config/            # Default configs
+│       ├── credits.json   # Per-agent credit tracking
+│       ├── models.json    # Model provider configurations
+│       └── org_config.json # Global org settings
 ├── agents/                # Agent folders (resume, outbox, memory, logs)
-│   └── human/             # Special human agent for user interaction
+│   └── agent_template/    # Canonical agent example
 ├── tests/                 # Comprehensive test suite
 ├── ui/                    # Dashboard UIs
-│   ├── lemming_dashboard.html       # Static dashboard
-│   └── lemming_dashboard_live.html  # Live dashboard with API
 ├── Makefile               # Common development commands
 └── pyproject.toml
+```
+
+## 🏗️ Architecture
+
+### Core Principles
+
+1. **Resume as ABI**: Every agent is defined by `agents/<name>/resume.json`. This file contains all configuration, permissions, scheduling, and instructions.
+
+2. **Outbox-Only Messaging**: Agents never write to other agents' directories. Instead:
+   - Each agent writes `OutboxEntry` messages to its own `agents/<name>/outbox/`
+   - Other agents read permitted outboxes to build a virtual inbox
+   - Message format is defined in `lemming.messages.OutboxEntry`
+
+3. **Tick-Based Scheduling**: The engine runs in discrete ticks:
+   - Global tick counter increments each cycle
+   - Agent runs when: `(tick % run_every_n_ticks) == (phase_offset % run_every_n_ticks)`
+   - Configured via `schedule` in resume.json
+
+4. **No Central Org Chart**: The permission graph is derived dynamically from resume.json files. No `org_chart.json` exists as authoritative config.
+
+5. **Filesystem Transparency**: Everything important is a file: resumes, outboxes, memory, configs, logs. Git-trackable and human-readable.
+
+## 🚀 Creating Your First Agent
+
+1. Copy the template:
+```bash
+cp -r agents/agent_template agents/my_agent
+```
+
+2. Edit `agents/my_agent/resume.json`:
+   - Set `name` to "my_agent"
+   - Customize `title`, `short_description`, `instructions`
+   - Configure `permissions.read_outboxes` for which agents to read from
+   - Set `schedule.run_every_n_ticks` for execution frequency
+
+3. Update `lemming/config/credits.json`:
+```json
+{
+  "my_agent": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": 100.0
+  }
+}
+```
+
+4. Bootstrap and run:
+```bash
+python -m lemming.cli bootstrap
+python -m lemming.cli run
 ```
 
 ## 🐳 Docker Deployment
@@ -217,11 +246,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [ROADMAP.md](ROADMAP.md) - Development roadmap and planned features
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- [PROJECT_RULES.md](PROJECT_RULES.md) - Architectural mandates
 - API Docs: Run `python -m lemming.cli serve` and visit `/docs`
 
 ## Notes
 
-- Agents communicate solely via outboxes - reading others' outboxes simulates inboxes
+- Agents communicate solely via `OutboxEntry` messages in their outboxes
 - Credits are deducted per model call and persisted to `lemming/config/credits.json`
-- The Manager agent is the primary interface for human interaction
-- Turn-based execution ensures deterministic behavior and easy debugging
+- Tick-based execution ensures deterministic behavior and easy debugging
+- The framework is role-agnostic - define your organization structure via resume.json files
