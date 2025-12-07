@@ -220,10 +220,7 @@ class ListAgentsTool(Tool):
         from .agents import discover_agents
 
         agents = discover_agents(base_path)
-        info = [
-            {"name": ag.name, "title": ag.title, "description": ag.short_description}
-            for ag in agents
-        ]
+        info = [{"name": ag.name, "title": ag.title, "description": ag.short_description} for ag in agents]
         return ToolResult(True, json.dumps(info, indent=2))
 
 
@@ -236,4 +233,3 @@ ToolRegistry.register(MemoryReadTool())
 ToolRegistry.register(MemoryWriteTool())
 ToolRegistry.register(CreateAgentTool())
 ToolRegistry.register(ListAgentsTool())
-

@@ -20,9 +20,7 @@ def _require_keys(mapping: dict[str, Any], required: list[str], context: str) ->
 def _require_type(value: Any, expected_type: type | tuple[type, ...], context: str) -> None:
     if not isinstance(value, expected_type):
         names = (
-            ", ".join(t.__name__ for t in expected_type)
-            if isinstance(expected_type, tuple)
-            else expected_type.__name__
+            ", ".join(t.__name__ for t in expected_type) if isinstance(expected_type, tuple) else expected_type.__name__
         )
         raise ValidationError(f"Expected {context} to be {names}, got {type(value).__name__}")
 
@@ -69,9 +67,7 @@ def validate_resume_file(resume_path: Path) -> dict[str, Any]:
         str(resume_path),
     )
     if content.get("name") != resume_path.parent.name:
-        raise ValidationError(
-            f"Agent name {content.get('name')} does not match directory {resume_path.parent.name}"
-        )
+        raise ValidationError(f"Agent name {content.get('name')} does not match directory {resume_path.parent.name}")
 
     _require_keys(content.get("model", {}), ["key"], f"model in {resume_path}")
     permissions = content.get("permissions", {})
