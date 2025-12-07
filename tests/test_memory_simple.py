@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from lemming.memory import get_memory_context, load_memory, save_memory

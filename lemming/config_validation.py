@@ -91,7 +91,9 @@ def validate_models(models: dict[str, Any]) -> None:
         if entry["provider"] not in valid_providers:
             import logging
 
-            logging.warning(f"Unknown provider '{entry['provider']}' for model '{key}'. Known providers: {valid_providers}")
+            logging.warning(
+                f"Unknown provider '{entry['provider']}' for model '{key}'. " f"Known providers: {valid_providers}"
+            )
 
         if "provider_config" in entry and not isinstance(entry["provider_config"], dict):
             raise ValidationError(f"provider_config must be dict for {key}")

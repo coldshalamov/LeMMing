@@ -15,7 +15,6 @@ from lemming.config_validation import (
 
 def test_validate_org_config_valid() -> None:
     """Test validation of valid org config."""
-    from lemming.config_validation import ValidationError
 
     config = {"base_turn_seconds": 5, "max_turns": 100}
     # Should not raise
