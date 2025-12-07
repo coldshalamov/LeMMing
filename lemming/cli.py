@@ -36,9 +36,7 @@ def show_agent_cmd(base_path: Path, name: str) -> None:
     if agent.workflow_description:
         print(f"Workflow: {agent.workflow_description}")
     print(f"Model: {agent.model.key} (temp={agent.model.temperature}, max_tokens={agent.model.max_tokens})")
-    print(
-        f"Schedule: every {agent.schedule.run_every_n_ticks} ticks (offset={agent.schedule.phase_offset})"
-    )
+    print(f"Schedule: every {agent.schedule.run_every_n_ticks} ticks (offset={agent.schedule.phase_offset})")
     print(f"Readable outboxes: {', '.join(agent.permissions.read_outboxes)}")
     print(f"Tools: {', '.join(agent.permissions.tools)}")
     print("\nInstructions preview:\n" + "-" * 40)

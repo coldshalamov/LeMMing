@@ -78,9 +78,7 @@ def load_agent(base_path: Path, name: str) -> Agent:
     if not resume_path.exists():
         old_resume = agent_path / "resume.txt"
         if old_resume.exists():
-            raise FileNotFoundError(
-                f"Agent {name} has old resume.txt. Run scripts/migrate_resumes.py to upgrade."
-            )
+            raise FileNotFoundError(f"Agent {name} has old resume.txt. Run scripts/migrate_resumes.py to upgrade.")
         raise FileNotFoundError(f"Missing resume for agent {name} at {resume_path}")
 
     return Agent.from_resume(resume_path)
@@ -122,9 +120,7 @@ def validate_resume(resume_path: Path) -> list[str]:
             errors.append(f"Missing required field: {required_field}")
 
     if data.get("name") and data["name"] != resume_path.parent.name:
-        errors.append(
-            f"Agent name '{data.get('name')}' does not match directory '{resume_path.parent.name}'"
-        )
+        errors.append(f"Agent name '{data.get('name')}' does not match directory '{resume_path.parent.name}'")
 
     model = data.get("model", {})
     if model and "key" not in model:

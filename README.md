@@ -233,10 +233,49 @@ The docker-compose setup runs both the API server (port 8000) and the engine.
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-- Run tests: `make test`
-- Format code: `make format`
-- Lint code: `make lint`
-- All checks: `make check-all`
+### Development Commands
+
+- **Run tests**: `make test` or `pytest`
+- **Run tests with coverage**: `make coverage` or `pytest --cov=lemming`
+- **Format code**: `make format` (uses black)
+- **Lint code**: `make lint` (uses ruff)
+- **Type checking**: `make typecheck` (uses mypy)
+- **All checks**: `make check-all` (lint + typecheck + test)
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_agents_new.py
+
+# Run tests with coverage report
+make coverage
+# View coverage report at htmlcov/index.html
+
+# Run specific test
+pytest tests/test_config_validation.py::test_validate_org_config_valid -v
+```
+
+### Code Quality
+
+The project uses:
+- **Black** for code formatting (120 char line length)
+- **Ruff** for linting
+- **MyPy** for static type checking
+- **Pytest** for testing with 52%+ coverage
+
+Before submitting PRs, run:
+```bash
+make format      # Auto-format code
+make lint-fix    # Auto-fix linting issues
+make check-all   # Run all quality checks
+```
 
 ## 📝 License
 
@@ -248,6 +287,82 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
 - [PROJECT_RULES.md](PROJECT_RULES.md) - Architectural mandates
 - API Docs: Run `python -m lemming.cli serve` and visit `/docs`
+
+## 🔧 Troubleshooting
+
+### Configuration Issues
+
+**Problem**: `Missing required config file` errors
+```bash
+# Solution: Ensure all required config files exist
+ls lemming/config/
+# Should contain: org_config.json, credits.json, models.json
+```
+
+**Problem**: Agent validation errors
+```bash
+# Solution: Validate your configuration
+python -m lemming.cli validate
+# Fix any reported issues in resume.json files
+```
+
+### Agent Issues
+
+**Problem**: Agent has no credits
+```bash
+# Solution: Add credits to the agent
+python -m lemming.cli top-up agent_name 100.0
+```
+
+**Problem**: Agent not running
+- Check schedule settings in `resume.json` (`run_every_n_ticks`, `phase_offset`)
+- Verify agent has credits in `lemming/config/credits.json`
+- Check agent logs: `python -m lemming.cli logs agent_name`
+
+### API Key Issues
+
+**Problem**: OpenAI API errors
+```bash
+# Solution: Set your API key
+export OPENAI_API_KEY=your_key_here
+# Or add to .env file
+echo "OPENAI_API_KEY=your_key_here" >> .env
+```
+
+**Problem**: Anthropic API errors
+```bash
+# Solution: Install anthropic and set API key
+pip install -e ".[llm]"
+export ANTHROPIC_API_KEY=your_key_here
+```
+
+### Testing Issues
+
+**Problem**: Import errors when running tests
+```bash
+# Solution: Install dev dependencies
+pip install -e ".[dev,api,llm]"
+```
+
+**Problem**: Tests fail with file permission errors
+```bash
+# Solution: Tests use tmp directories, ensure /tmp is writable
+ls -la /tmp
+```
+
+### Common Validation Errors
+
+1. **"Agent name does not match directory"**: Ensure `"name"` in `resume.json` matches the folder name
+2. **"Missing keys in permissions"**: Add `"read_outboxes"` and `"tools"` to permissions
+3. **"base_turn_seconds must be positive"**: Set a positive value in `org_config.json`
+4. **"credits_left must be non-negative"**: Ensure credit values are >= 0 in `credits.json`
+
+### Getting Help
+
+- Check [GitHub Issues](https://github.com/coldshalamov/LeMMing/issues)
+- Review [PROJECT_RULES.md](PROJECT_RULES.md) for architectural guidelines
+- Run validation: `python -m lemming.cli validate`
+- Check logs: `python -m lemming.cli logs agent_name`
 
 ## Notes
 

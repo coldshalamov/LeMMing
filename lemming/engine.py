@@ -56,12 +56,42 @@ If you have nothing to do, respond with: {"notes": "No action needed."}
 
 
 def should_run(agent: Agent, tick: int) -> bool:
+    """
+    Determine if an agent should run on a given tick.
+
+    Args:
+        agent: The agent to check
+        tick: Current tick number
+
+    Returns:
+        True if the agent should run this tick, False otherwise
+
+    The agent runs when: (tick % run_every_n_ticks) == (phase_offset % run_every_n_ticks)
+    """
     n = agent.schedule.run_every_n_ticks or 1
     offset = agent.schedule.phase_offset or 0
     return (tick % n) == (offset % n)
 
 
 def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, str]]:
+    """
+    Build the prompt messages for an agent's LLM call.
+
+    Includes:
+    - System preamble with JSON schema
+    - Agent role and instructions
+    - Agent memory context
+    - Incoming messages from readable outboxes
+    - Current tick and available tools
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        agent: The agent to build the prompt for
+        tick: Current tick number
+
+    Returns:
+        List of message dictionaries for the LLM
+    """
     messages: list[dict[str, str]] = []
     messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
     messages.append({"role": "system", "content": f"YOUR ROLE: {agent.title}\n\n{agent.instructions}"})
@@ -92,8 +122,19 @@ def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, st
 
 
 def _parse_llm_output(raw: str) -> dict[str, Any]:
+    """
+    Parse LLM JSON output, handling both raw JSON and markdown code blocks.
+
+    Args:
+        raw: Raw LLM response string
+
+    Returns:
+        Dictionary with keys: outbox_entries, tool_calls, memory_updates, notes
+        Returns empty structure if parsing fails
+    """
     try:
         raw = raw.strip()
+        # Handle markdown code blocks
         if raw.startswith("```"):
             lines = raw.split("\n")
             body: list[str] = []
@@ -119,6 +160,17 @@ def _parse_llm_output(raw: str) -> dict[str, Any]:
 
 
 def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> list[ToolResult]:
+    """
+    Execute tool calls for an agent, respecting permissions.
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        agent: The agent executing the tools
+        tool_calls: List of tool call dicts with 'tool' and 'args' keys
+
+    Returns:
+        List of ToolResult objects
+    """
     results: list[ToolResult] = []
     allowed = set(agent.permissions.tools)
     for call in tool_calls:
@@ -140,6 +192,27 @@ def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> lis
 
 
 def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
+    """
+    Run a single agent for one tick.
+
+    Performs the following:
+    1. Checks agent has sufficient credits
+    2. Builds prompt with agent context
+    3. Calls LLM and parses response
+    4. Writes outbox entries
+    5. Executes tool calls
+    6. Updates agent memory
+    7. Deducts credits
+    8. Logs activity
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        agent: The agent to run
+        tick: Current tick number
+
+    Returns:
+        Dictionary with execution statistics
+    """
     credits_info = get_agent_credits(agent.name, base_path)
     credits_left = credits_info.get("credits_left", 0.0)
     cost_per_action = credits_info.get("cost_per_action", 0.01)
@@ -195,6 +268,16 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
 
 
 def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
+    """
+    Execute one tick of the engine, running all scheduled agents.
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        tick: Current tick number
+
+    Returns:
+        Dictionary mapping agent names to their execution results
+    """
     logger.info("=== Tick %s ===", tick)
     results: dict[str, Any] = {}
     agents = discover_agents(base_path)
@@ -211,6 +294,16 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
 
 
 def run_once(base_path: Path, tick: int = 1) -> dict[str, Any]:
+    """
+    Run the engine for exactly one tick (useful for testing).
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        tick: Tick number to run (default: 1)
+
+    Returns:
+        Execution results from run_tick
+    """
     return run_tick(base_path, tick)
 
 

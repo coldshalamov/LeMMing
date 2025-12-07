@@ -97,9 +97,7 @@ def collect_readable_outboxes(
         agents_dir = base_path / "agents"
         if agents_dir.exists():
             read_outboxes = [
-                d.name
-                for d in agents_dir.iterdir()
-                if d.is_dir() and d.name not in {agent_name, "agent_template"}
+                d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
             ]
     for other in read_outboxes:
         if other == agent_name:
