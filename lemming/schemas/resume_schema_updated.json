@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Resume Schema",
+  "description": "Schema for LeMMing agent resume.json files",
+  "type": "object",
+  "required": ["name", "title", "short_description", "model", "permissions", "instructions"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Agent name (must match directory name)",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable agent title",
+      "minLength": 1
+    },
+    "short_description": {
+      "type": "string",
+      "description": "Brief description of agent's purpose",
+      "minLength": 1
+    },
+    "workflow_description": {
+      "type": "string",
+      "description": "Detailed workflow and responsibilities"
+    },
+    "model": {
+      "type": "object",
+      "required": ["key"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Model key from models.json"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Sampling temperature (0-2)"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum tokens to generate"
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "required": ["read_outboxes", "tools"],
+      "properties": {
+        "read_outboxes": {
+          "type": "array",
+          "description": "List of agent names whose outboxes this agent can read (use '*' for all)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tools": {
+          "type": "array",
+          "description": "List of tool names this agent can use",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "run_every_n_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Run every N ticks (1 = every tick)"
+        },
+        "phase_offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Phase offset for scheduling"
+        }
+      }
+    },
+    "instructions": {
+      "type": "string",
+      "description": "Detailed instructions for the LLM",
+      "minLength": 10
+    }
+  }
+}
