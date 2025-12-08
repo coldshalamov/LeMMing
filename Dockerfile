@@ -15,8 +15,8 @@ COPY . /app
 # Install Python dependencies
 RUN pip install --no-cache-dir -e ".[api,llm]"
 
-# Create data directory for agents
-RUN mkdir -p /data/agents
+# Create data directories for agents and logs
+RUN mkdir -p /app/agents /app/logs
 
 # Environment variables
 ENV OPENAI_API_KEY=""
