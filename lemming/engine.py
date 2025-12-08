@@ -17,7 +17,8 @@ from .messages import (
     write_outbox_entry,
 )
 from .models import call_llm
-from .org import deduct_credits, get_agent_credits, get_org_config
+from .org import deduct_credits, get_agent_credits, get_credits, get_org_config
+from .paths import get_config_dir, get_logs_dir, get_tick_file
 from .tools import ToolRegistry, ToolResult
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,25 @@ You MUST respond with valid JSON in this exact format:
 All fields are optional but the response must be valid JSON.
 If you have nothing to do, respond with: {"notes": "No action needed."}
 """
+
+
+def load_tick(base_path: Path) -> int:
+    tick_file = get_tick_file(base_path)
+    if tick_file.exists():
+        try:
+            with tick_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            return int(data.get("current_tick", 1))
+        except Exception:  # pragma: no cover - defensive
+            logger.warning("Could not parse tick file %s; defaulting to 1", tick_file)
+    return 1
+
+
+def persist_tick(base_path: Path, tick: int) -> None:
+    tick_file = get_tick_file(base_path)
+    tick_file.parent.mkdir(parents=True, exist_ok=True)
+    with tick_file.open("w", encoding="utf-8") as f:
+        json.dump({"current_tick": tick}, f, indent=2)
 
 
 def should_run(agent: Agent, tick: int) -> bool:
@@ -153,7 +173,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         agent.model.key,
         prompt,
         temperature=agent.model.temperature,
-        config_dir=base_path / "lemming" / "config",
+        config_dir=get_config_dir(base_path),
     )
     parsed = _parse_llm_output(raw_output)
 
@@ -180,7 +200,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
 
     notes = parsed.get("notes")
     if notes:
-        log_dir = agent.path / "logs"
+        log_dir = get_logs_dir(base_path, agent.name)
         log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / "activity.log").open("a", encoding="utf-8") as f:
             f.write(f"[Tick {tick}] {notes}\n")
@@ -198,6 +218,7 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
     logger.info("=== Tick %s ===", tick)
     results: dict[str, Any] = {}
     agents = discover_agents(base_path)
+    get_credits(base_path, agents)
     for agent in agents:
         if not should_run(agent, tick):
             continue
@@ -210,17 +231,21 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
     return results
 
 
-def run_once(base_path: Path, tick: int = 1) -> dict[str, Any]:
-    return run_tick(base_path, tick)
+def run_once(base_path: Path, tick: int | None = None) -> dict[str, Any]:
+    tick_to_run = tick if tick is not None else load_tick(base_path)
+    results = run_tick(base_path, tick_to_run)
+    persist_tick(base_path, tick_to_run + 1)
+    return results
 
 
 def run_forever(base_path: Path) -> None:
     config = get_org_config(base_path)
     base_turn_seconds = config.get("base_turn_seconds", 10)
     max_turns = config.get("max_turns")
-    tick = 1
+    tick = load_tick(base_path)
     while True:
         run_tick(base_path, tick)
+        persist_tick(base_path, tick + 1)
         if max_turns is not None and tick >= max_turns:
             break
         tick += 1

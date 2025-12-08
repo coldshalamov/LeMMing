@@ -8,18 +8,29 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .paths import get_agents_dir, get_outbox_dir
+
 logger = logging.getLogger(__name__)
+
+
+OUTBOX_FILENAME_TEMPLATE = "{tick:08d}_{entry_id}.json"
 
 
 @dataclass
 class OutboxEntry:
+    """Canonical outbox message entry.
+
+    ``meta`` is retained for backward compatibility with existing callers but is
+    not part of the core ABI fields.
+    """
+
     id: str
-    timestamp: str
     tick: int
     agent: str
     kind: str
     payload: dict[str, Any]
-    tags: list[str] = field(default_factory=list)
+    tags: list[str]
+    created_at: str
     meta: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -31,17 +42,17 @@ class OutboxEntry:
         payload: dict[str, Any],
         tags: list[str] | None = None,
         meta: dict[str, Any] | None = None,
-    ) -> OutboxEntry:
-        timestamp = datetime.now(UTC).isoformat()
-        entry_id = f"msg_{timestamp}_{uuid.uuid4().hex[:8]}"
+    ) -> "OutboxEntry":
+        created_at = datetime.now(UTC).isoformat()
+        entry_id = uuid.uuid4().hex
         return cls(
             id=entry_id,
-            timestamp=timestamp,
             tick=tick,
             agent=agent,
             kind=kind,
             payload=payload,
             tags=tags or [],
+            created_at=created_at,
             meta=meta or {},
         )
 
@@ -49,39 +60,67 @@ class OutboxEntry:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> OutboxEntry:
+    def from_dict(cls, data: dict[str, Any]) -> "OutboxEntry":
+        # Backward compatibility: older entries used ``timestamp``.
+        if "created_at" not in data and "timestamp" in data:
+            data = dict(data)
+            data["created_at"] = data.pop("timestamp")
         return cls(**data)
 
 
+def outbox_filename(entry: OutboxEntry) -> str:
+    return OUTBOX_FILENAME_TEMPLATE.format(tick=entry.tick, entry_id=entry.id)
+
+
 def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> Path:
-    outbox_dir = base_path / "agents" / agent_name / "outbox"
+    outbox_dir = get_outbox_dir(base_path, agent_name)
     outbox_dir.mkdir(parents=True, exist_ok=True)
-    entry_path = outbox_dir / f"{entry.id}.json"
+    entry_path = outbox_dir / outbox_filename(entry)
     with entry_path.open("w", encoding="utf-8") as f:
         json.dump(entry.to_dict(), f, indent=2)
     return entry_path
 
 
+def _load_entry(entry_path: Path) -> OutboxEntry | None:
+    try:
+        with entry_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        return OutboxEntry.from_dict(data)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Failed to read outbox entry %s: %s", entry_path, exc)
+        return None
+
+
+def _tick_from_filename(entry_path: Path) -> int | None:
+    try:
+        stem = entry_path.stem
+        tick_part = stem.split("_", 1)[0]
+        return int(tick_part)
+    except Exception:
+        return None
+
+
 def read_outbox_entries(
     base_path: Path, agent_name: str, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntry]:
-    outbox_dir = base_path / "agents" / agent_name / "outbox"
+    outbox_dir = get_outbox_dir(base_path, agent_name)
     if not outbox_dir.exists():
         return []
 
     entries: list[OutboxEntry] = []
-    for entry_path in outbox_dir.glob("msg_*.json"):
-        try:
-            with entry_path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            entry = OutboxEntry.from_dict(data)
-            if since_tick is not None and entry.tick < since_tick:
+    for entry_path in outbox_dir.glob("*.json"):
+        if since_tick is not None:
+            tick_val = _tick_from_filename(entry_path)
+            if tick_val is not None and tick_val < since_tick:
                 continue
-            entries.append(entry)
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.error("Failed to read outbox entry %s: %s", entry_path, exc)
+        entry = _load_entry(entry_path)
+        if entry is None:
+            continue
+        if since_tick is not None and entry.tick < since_tick:
+            continue
+        entries.append(entry)
 
-    entries.sort(key=lambda e: e.timestamp, reverse=True)
+    entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
 
 
@@ -94,7 +133,7 @@ def collect_readable_outboxes(
 ) -> list[OutboxEntry]:
     entries: list[OutboxEntry] = []
     if read_outboxes == ["*"]:
-        agents_dir = base_path / "agents"
+        agents_dir = get_agents_dir(base_path)
         if agents_dir.exists():
             read_outboxes = [
                 d.name
@@ -105,32 +144,32 @@ def collect_readable_outboxes(
         if other == agent_name:
             continue
         entries.extend(read_outbox_entries(base_path, other, limit=limit, since_tick=since_tick))
-    entries.sort(key=lambda e: e.timestamp, reverse=True)
+    entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
 
 
 def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks: int = 100) -> int:
     removed = 0
-    agents_dir = base_path / "agents"
+    agents_dir = get_agents_dir(base_path)
     if not agents_dir.exists():
         return 0
 
     for agent_dir in agents_dir.iterdir():
         if not agent_dir.is_dir():
             continue
-        outbox_dir = agent_dir / "outbox"
+        outbox_dir = get_outbox_dir(base_path, agent_dir.name)
         if not outbox_dir.exists():
             continue
-        for entry_path in outbox_dir.glob("msg_*.json"):
-            try:
-                with entry_path.open("r", encoding="utf-8") as f:
-                    data = json.load(f)
-                tick = int(data.get("tick", 0))
-                if current_tick - tick > max_age_ticks:
+        for entry_path in outbox_dir.glob("*.json"):
+            tick_val = _tick_from_filename(entry_path)
+            if tick_val is None:
+                continue
+            if current_tick - tick_val > max_age_ticks:
+                try:
                     entry_path.unlink()
                     removed += 1
-            except Exception as exc:  # pragma: no cover
-                logger.error("Failed to clean outbox entry %s: %s", entry_path, exc)
+                except Exception as exc:  # pragma: no cover
+                    logger.error("Failed to clean outbox entry %s: %s", entry_path, exc)
     return removed
 
 
@@ -142,7 +181,7 @@ def format_outbox_context(entries: list[OutboxEntry], max_chars: int = 8000) -> 
     total = len(lines[0])
     for entry in entries:
         text = entry.payload.get("text", json.dumps(entry.payload))
-        line = f"\n[{entry.timestamp}] From {entry.agent} ({entry.kind}): {text}"
+        line = f"\n[{entry.created_at}] From {entry.agent} ({entry.kind}): {text}"
         if total + len(line) > max_chars:
             lines.append("\n... (truncated)")
             break
