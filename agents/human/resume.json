@@ -1,0 +1,24 @@
+{
+  "name": "human",
+  "title": "Human Operator",
+  "short_description": "Human user interacting via CLI",
+  "workflow_description": "Human operator - messages originate from CLI commands",
+  "model": {
+    "key": "human",
+    "temperature": 0.0,
+    "max_tokens": 0
+  },
+  "permissions": {
+    "read_outboxes": ["*"],
+    "tools": []
+  },
+  "schedule": {
+    "run_every_n_ticks": 0,
+    "phase_offset": 0
+  },
+  "instructions": "This is a special agent representing human operators. It never runs automatically. Messages are added to its outbox via CLI commands.",
+  "credits": {
+    "max_credits": 0,
+    "soft_cap": 0
+  }
+}

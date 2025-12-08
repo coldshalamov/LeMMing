@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -161,3 +162,122 @@ def register_provider(name: str, provider_class: type[LLMProvider]) -> None:
 
     _PROVIDERS[name.lower()] = provider_class
     logger.info("Registered custom provider: %s", name)
+
+
+class CircuitBreaker:
+    """Circuit breaker for LLM providers to prevent cascading failures.
+
+    States:
+    - CLOSED: Normal operation, requests pass through
+    - OPEN: Too many failures, requests fail immediately
+    - HALF_OPEN: Testing if service has recovered
+    """
+
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: float = 60.0):
+        """
+        Args:
+            failure_threshold: Number of consecutive failures before opening circuit
+            recovery_timeout: Seconds to wait before attempting recovery
+        """
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.failure_count = 0
+        self.last_failure_time: float | None = None
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+
+    def call(self, func, *args, **kwargs):
+        """Execute a function with circuit breaker protection."""
+        if self.state == "OPEN":
+            # Check if we should attempt recovery
+            if (
+                self.last_failure_time
+                and time.time() - self.last_failure_time >= self.recovery_timeout
+            ):
+                logger.info("Circuit breaker entering HALF_OPEN state")
+                self.state = "HALF_OPEN"
+            else:
+                raise RuntimeError("Circuit breaker is OPEN - too many recent failures")
+
+        try:
+            result = func(*args, **kwargs)
+            # Success - reset failure count
+            if self.state == "HALF_OPEN":
+                logger.info("Circuit breaker recovery successful, entering CLOSED state")
+            self.state = "CLOSED"
+            self.failure_count = 0
+            return result
+
+        except Exception as exc:
+            self.failure_count += 1
+            self.last_failure_time = time.time()
+
+            if self.failure_count >= self.failure_threshold:
+                logger.error(
+                    "Circuit breaker opening after %d failures: %s",
+                    self.failure_count,
+                    exc,
+                )
+                self.state = "OPEN"
+            elif self.state == "HALF_OPEN":
+                # Failed during recovery attempt
+                logger.warning("Circuit breaker recovery failed, returning to OPEN state")
+                self.state = "OPEN"
+
+            raise
+
+
+class RetryingLLMProvider(LLMProvider):
+    """Wrapper provider that adds retry logic and circuit breaker.
+
+    Implements exponential backoff: 1s, 2s, 4s, 8s
+    """
+
+    def __init__(
+        self,
+        inner_provider: LLMProvider,
+        max_retries: int = 3,
+        circuit_breaker: CircuitBreaker | None = None,
+    ):
+        """
+        Args:
+            inner_provider: The actual LLM provider to wrap
+            max_retries: Maximum number of retry attempts
+            circuit_breaker: Optional circuit breaker instance
+        """
+        self.inner_provider = inner_provider
+        self.max_retries = max_retries
+        self.circuit_breaker = circuit_breaker or CircuitBreaker()
+
+    def call(
+        self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any
+    ) -> str:
+        """Call the inner provider with retry logic and circuit breaker."""
+        last_exception: Exception | None = None
+
+        for attempt in range(self.max_retries + 1):
+            try:
+                # Call through circuit breaker
+                return self.circuit_breaker.call(
+                    self.inner_provider.call, model_name, messages, temperature, **kwargs
+                )
+
+            except Exception as exc:
+                last_exception = exc
+                if attempt < self.max_retries:
+                    # Exponential backoff: 1s, 2s, 4s, 8s
+                    backoff = 2**attempt
+                    logger.warning(
+                        "LLM call failed (attempt %d/%d), retrying in %ds: %s",
+                        attempt + 1,
+                        self.max_retries + 1,
+                        backoff,
+                        exc,
+                    )
+                    time.sleep(backoff)
+                else:
+                    logger.error("LLM call failed after %d attempts: %s", self.max_retries + 1, exc)
+
+        # All retries exhausted
+        if last_exception:
+            raise last_exception
+        raise RuntimeError("LLM call failed with unknown error")

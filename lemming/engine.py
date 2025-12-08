@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
+from .logging_config import log_agent_action, log_engine_event
 from .memory import get_memory_context, save_memory
 from .messages import (
     OutboxEntry,
@@ -75,10 +76,41 @@ def persist_tick(base_path: Path, tick: int) -> None:
         json.dump({"current_tick": tick}, f, indent=2)
 
 
+def compute_fire_point(agent: Agent) -> float:
+    """Compute fire_point for intra-tick ordering.
+
+    fire_point = (-phase_offset mod N) / N  ∈ [0, 1)
+
+    This ensures deterministic execution order within a tick:
+    - Agents with lower fire_point run first
+    - Agents with same fire_point are ordered alphabetically by name
+    """
+    n = agent.schedule.run_every_n_ticks or 1
+    if n == 1:
+        return 0.0
+    offset = agent.schedule.phase_offset % n
+    return ((-offset) % n) / n
+
+
 def should_run(agent: Agent, tick: int) -> bool:
     n = agent.schedule.run_every_n_ticks or 1
     offset = agent.schedule.phase_offset or 0
     return (tick % n) == (offset % n)
+
+
+def get_firing_agents(agents: list[Agent], tick: int) -> list[Agent]:
+    """Get agents that should fire this tick, in canonical order.
+
+    Returns agents sorted by (fire_point, agent_name) for deterministic execution.
+    """
+    firing = []
+    for agent in agents:
+        if should_run(agent, tick):
+            firing.append(agent)
+
+    # Sort by (fire_point, agent_name) for deterministic ordering
+    firing.sort(key=lambda a: (compute_fire_point(a), a.name))
+    return firing
 
 
 def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, str]]:
@@ -160,23 +192,50 @@ def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> lis
 
 
 def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
+    start_time = time.time()
+
     credits_info = get_agent_credits(agent.name, base_path)
     credits_left = credits_info.get("credits_left", 0.0)
     cost_per_action = credits_info.get("cost_per_action", 0.01)
 
     if credits_left <= 0:
         logger.warning("Agent %s has no credits; skipping", agent.name)
+        log_agent_action(
+            base_path,
+            agent.name,
+            tick,
+            "agent_skipped",
+            reason="no_credits",
+            credits_left=0.0,
+        )
         return {"skipped": True, "reason": "no_credits"}
 
+    # Build prompt and call LLM
     prompt = _build_prompt(base_path, agent, tick)
-    raw_output = call_llm(
-        agent.model.key,
-        prompt,
-        temperature=agent.model.temperature,
-        config_dir=get_config_dir(base_path),
-    )
+    llm_start = time.time()
+    try:
+        raw_output = call_llm(
+            agent.model.key,
+            prompt,
+            temperature=agent.model.temperature,
+            config_dir=get_config_dir(base_path),
+        )
+    except Exception as exc:
+        logger.error("LLM call failed for agent %s: %s", agent.name, exc)
+        log_agent_action(
+            base_path,
+            agent.name,
+            tick,
+            "llm_call_failed",
+            error=str(exc),
+            duration_ms=int((time.time() - llm_start) * 1000),
+        )
+        raise
+
+    llm_duration_ms = int((time.time() - llm_start) * 1000)
     parsed = _parse_llm_output(raw_output)
 
+    # Write outbox entries
     for entry_data in parsed.get("outbox_entries", []):
         entry = OutboxEntry.create(
             agent=agent.name,
@@ -188,16 +247,20 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         )
         write_outbox_entry(base_path, agent.name, entry)
 
+    # Execute tools
     tool_results = _execute_tools(base_path, agent, parsed.get("tool_calls", []))
 
+    # Update memory
     for update in parsed.get("memory_updates", []):
         key = update.get("key")
         if not key:
             continue
         save_memory(base_path, agent.name, key, update.get("value"))
 
+    # Deduct credits
     deduct_credits(agent.name, cost_per_action, base_path)
 
+    # Log notes to text file (for backward compatibility)
     notes = parsed.get("notes")
     if notes:
         log_dir = get_logs_dir(base_path, agent.name)
@@ -205,29 +268,68 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         with (log_dir / "activity.log").open("a", encoding="utf-8") as f:
             f.write(f"[Tick {tick}] {notes}\n")
 
+    # Log structured agent action
+    total_duration_ms = int((time.time() - start_time) * 1000)
+    log_agent_action(
+        base_path,
+        agent.name,
+        tick,
+        "agent_completed",
+        duration_ms=total_duration_ms,
+        llm_duration_ms=llm_duration_ms,
+        outbox_count=len(parsed.get("outbox_entries", [])),
+        tool_count=len(parsed.get("tool_calls", [])),
+        memory_updates=len(parsed.get("memory_updates", [])),
+        credits_left=credits_left - cost_per_action,
+    )
+
     return {
         "outbox_entries": len(parsed.get("outbox_entries", [])),
         "tool_calls": len(parsed.get("tool_calls", [])),
         "tool_results": [asdict(result) for result in tool_results],
         "memory_updates": len(parsed.get("memory_updates", [])),
         "notes": notes,
+        "duration_ms": total_duration_ms,
     }
 
 
 def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
+    tick_start = time.time()
     logger.info("=== Tick %s ===", tick)
+    log_engine_event("tick_started", tick=tick)
+
     results: dict[str, Any] = {}
     agents = discover_agents(base_path)
     get_credits(base_path, agents)
-    for agent in agents:
-        if not should_run(agent, tick):
-            continue
-        logger.info("Running agent: %s", agent.name)
+
+    # Get agents that should fire this tick in deterministic order
+    firing_agents = get_firing_agents(agents, tick)
+    log_engine_event(
+        f"tick_{tick}_agents_firing",
+        tick=tick,
+        agent_count=len(firing_agents),
+        agents=[a.name for a in firing_agents],
+    )
+
+    for agent in firing_agents:
+        fire_point = compute_fire_point(agent)
+        logger.info("Running agent: %s (fire_point=%.3f)", agent.name, fire_point)
         results[agent.name] = run_agent(base_path, agent, tick)
 
+    # Cleanup old outbox entries
     removed = cleanup_old_outbox_entries(base_path, tick)
     if removed:
         logger.info("Cleaned up %s expired outbox entries", removed)
+        log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
+
+    tick_duration_ms = int((time.time() - tick_start) * 1000)
+    log_engine_event(
+        "tick_completed",
+        tick=tick,
+        duration_ms=tick_duration_ms,
+        agents_run=len(results),
+    )
+
     return results
 
 

@@ -30,9 +30,18 @@ class AgentModel:
 
 
 @dataclass
+class FileAccess:
+    """File access permissions for agents."""
+
+    allow_read: list[str] = field(default_factory=list)
+    allow_write: list[str] = field(default_factory=list)
+
+
+@dataclass
 class AgentPermissions:
     read_outboxes: list[str] = field(default_factory=list)
     tools: list[str] = field(default_factory=list)
+    file_access: FileAccess | None = None
 
 
 @dataclass
@@ -68,9 +77,20 @@ class Agent:
         credits_data = normalized.get("credits", DEFAULT_CREDITS)
 
         model = _parse_model(model_data)
+
+        # Parse file_access from permissions
+        file_access_data = permissions_data.get("file_access")
+        file_access = None
+        if file_access_data and isinstance(file_access_data, dict):
+            file_access = FileAccess(
+                allow_read=list(file_access_data.get("allow_read", [])),
+                allow_write=list(file_access_data.get("allow_write", [])),
+            )
+
         permissions = AgentPermissions(
             read_outboxes=list(permissions_data.get("read_outboxes", [])),
             tools=list(permissions_data.get("tools", [])),
+            file_access=file_access,
         )
         schedule = AgentSchedule(
             run_every_n_ticks=int(schedule_data.get("run_every_n_ticks", 1)),
