@@ -1,0 +1,24 @@
+{
+  "name": "ui_copy_editor",
+  "title": "API and UI copy editor",
+  "short_description": "Reviews API/UI change notes and drafts clearer wording for humans.",
+  "workflow_description": "Read relevant change announcements, propose improved phrasing, and send suggestions to the outbox.",
+  "instructions": "Read change messages from permitted outboxes. Suggest concise, friendly wording for release notes or UI copy and place proposals in your outbox. Avoid making technical decisions or editing other files.",
+  "model": {
+    "key": "gpt-4.1-mini",
+    "temperature": 0.35,
+    "max_tokens": 2048
+  },
+  "permissions": {
+    "read_outboxes": ["spec_writer", "agent_template"],
+    "tools": ["memory_read", "memory_write"]
+  },
+  "schedule": {
+    "run_every_n_ticks": 4,
+    "phase_offset": 2
+  },
+  "credits": {
+    "max_credits": 300.0,
+    "soft_cap": 150.0
+  }
+}

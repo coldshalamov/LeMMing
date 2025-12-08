@@ -1,25 +1,24 @@
 {
   "name": "agent_template",
-  "title": "Generic worker agent",
-  "short_description": "A generic LeMMing agent created from the template. Customize this resume for specific roles.",
-  "workflow_description": "",
+  "title": "Replace with agent title",
+  "short_description": "Single-sentence summary of what this agent does.",
+  "workflow_description": "Numbered or bulleted list of how the agent processes inputs and produces outputs.",
+  "instructions": "Plain-language directions for the agent. Keep this synced with resume.txt and avoid tool-specific jargon unless required.",
   "model": {
     "key": "gpt-4.1-mini",
     "temperature": 0.2,
     "max_tokens": 2048
   },
   "permissions": {
-    "read_outboxes": [
-      "*"
-    ],
-    "tools": [
-      "memory_read",
-      "memory_write"
-    ]
+    "read_outboxes": ["*"],
+    "tools": ["memory_read", "memory_write"]
   },
   "schedule": {
     "run_every_n_ticks": 1,
     "phase_offset": 0
   },
-  "instructions": "You are a LeMMing agent. Follow your role description and respond with clear, structured outputs.\nYou receive messages from other agents and produce replies or actions.\nAlways respond in JSON following the protocol described in your CONFIG."
+  "credits": {
+    "max_credits": 500.0,
+    "soft_cap": 250.0
+  }
 }

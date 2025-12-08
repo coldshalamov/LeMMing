@@ -1,0 +1,24 @@
+{
+  "name": "spec_writer",
+  "title": "Org spec snapshotter",
+  "short_description": "Reads permitted outboxes and writes concise org behavior snapshots to memory.",
+  "workflow_description": "Check permitted outboxes, extract decisions and blockers, and append a dated snapshot to memory.",
+  "instructions": "Summarize recent activity across readable outboxes into a short spec entry. Highlight dependencies, risks, and next actions without inventing work.",
+  "model": {
+    "key": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "max_tokens": 2048
+  },
+  "permissions": {
+    "read_outboxes": ["*"],
+    "tools": ["memory_read", "memory_write"]
+  },
+  "schedule": {
+    "run_every_n_ticks": 3,
+    "phase_offset": 0
+  },
+  "credits": {
+    "max_credits": 400.0,
+    "soft_cap": 200.0
+  }
+}
