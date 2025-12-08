@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from lemming.agents import load_agent, validate_resume
+from lemming.agents import discover_agents, load_agent, validate_resume
 
 
 def test_load_from_json_resume(tmp_path: Path) -> None:
@@ -11,10 +11,12 @@ def test_load_from_json_resume(tmp_path: Path) -> None:
         "name": "test_agent",
         "title": "Test Agent",
         "short_description": "A test agent",
+        "workflow_description": "",
         "model": {"key": "gpt-4.1-mini"},
         "permissions": {"read_outboxes": ["*"], "tools": ["memory_read"]},
         "schedule": {"run_every_n_ticks": 2, "phase_offset": 0},
         "instructions": "Test instructions",
+        "credits": {"max_credits": 10.0, "soft_cap": 5.0},
     }
     with (agent_dir / "resume.json").open("w", encoding="utf-8") as f:
         json.dump(resume, f)
@@ -36,3 +38,16 @@ def test_validate_resume_missing_fields(tmp_path: Path) -> None:
     errors = validate_resume(resume_path)
     assert errors
     assert any("permissions" in err for err in errors)
+
+
+def test_discover_skips_invalid_agents(tmp_path: Path) -> None:
+    agents_dir = tmp_path / "agents"
+    missing_resume = agents_dir / "no_resume"
+    missing_resume.mkdir(parents=True)
+
+    bad_json_dir = agents_dir / "bad_json"
+    bad_json_dir.mkdir(parents=True)
+    (bad_json_dir / "resume.json").write_text("not-json", encoding="utf-8")
+
+    agents = discover_agents(tmp_path)
+    assert agents == []

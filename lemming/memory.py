@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .paths import get_memory_dir
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,7 +23,7 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
         key: Memory key (e.g., "context", "facts", "goals")
         value: Value to store (will be JSON serialized)
     """
-    memory_dir = base_path / "agents" / agent_name / "memory"
+    memory_dir = get_memory_dir(base_path, agent_name)
     memory_dir.mkdir(parents=True, exist_ok=True)
 
     memory_file = memory_dir / f"{key}.json"
@@ -45,7 +47,7 @@ def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
     Returns:
         The stored value, or None if not found
     """
-    memory_file = base_path / "agents" / agent_name / "memory" / f"{key}.json"
+    memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
     if not memory_file.exists():
         return None
@@ -70,7 +72,7 @@ def list_memories(base_path: Path, agent_name: str) -> list[str]:
     Returns:
         List of memory keys
     """
-    memory_dir = base_path / "agents" / agent_name / "memory"
+    memory_dir = get_memory_dir(base_path, agent_name)
 
     if not memory_dir.exists():
         return []
@@ -90,7 +92,7 @@ def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
     Returns:
         True if deleted, False if not found
     """
-    memory_file = base_path / "agents" / agent_name / "memory" / f"{key}.json"
+    memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
     if not memory_file.exists():
         return False
