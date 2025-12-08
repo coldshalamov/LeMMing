@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
+import shutil
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -228,3 +229,120 @@ def get_memory_context(base_path: Path, agent_name: str, max_items: int = 20) ->
             display = str(value)
         lines.append(f"{key}: {display}")
     return "\n".join(lines)
+
+
+def compact_memory_list(
+    base_path: Path,
+    agent_name: str,
+    key: str,
+    max_entries: int = 100,
+) -> int:
+    """Compact a list-based memory entry by keeping only the most recent entries.
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        agent_name: Name of the agent
+        key: Memory key (must be a list)
+        max_entries: Maximum number of entries to keep
+
+    Returns:
+        Number of entries removed
+    """
+    current = load_memory(base_path, agent_name, key)
+
+    if current is None:
+        return 0
+    if not isinstance(current, list):
+        logger.warning("Cannot compact non-list memory key: %s", key)
+        return 0
+
+    original_count = len(current)
+    if original_count <= max_entries:
+        return 0
+
+    # Keep only the most recent entries
+    compacted = current[-max_entries:]
+    save_memory(base_path, agent_name, key, compacted)
+
+    removed = original_count - len(compacted)
+    logger.info("Compacted memory %s/%s: removed %d entries", agent_name, key, removed)
+    return removed
+
+
+def archive_old_memories(
+    base_path: Path,
+    agent_name: str,
+    days_old: int = 30,
+) -> int:
+    """Archive memory files older than a specified number of days.
+
+    Moves old memory files to an archive subdirectory.
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        agent_name: Name of the agent
+        days_old: Archive memories older than this many days
+
+    Returns:
+        Number of memories archived
+    """
+    memory_dir = get_memory_dir(base_path, agent_name)
+    if not memory_dir.exists():
+        return 0
+
+    archive_dir = memory_dir / "archive"
+    archive_dir.mkdir(exist_ok=True)
+
+    cutoff_time = datetime.now(UTC) - timedelta(days=days_old)
+    archived_count = 0
+
+    for memory_file in memory_dir.glob("*.json"):
+        if memory_file.parent == archive_dir:
+            continue
+
+        try:
+            with memory_file.open("r", encoding="utf-8") as f:
+                entry = json.load(f)
+
+            timestamp_str = entry.get("timestamp")
+            if not timestamp_str:
+                continue
+
+            timestamp = datetime.fromisoformat(timestamp_str)
+            if timestamp < cutoff_time:
+                # Move to archive
+                archive_path = archive_dir / memory_file.name
+                shutil.move(str(memory_file), str(archive_path))
+                archived_count += 1
+                logger.info("Archived memory: %s/%s", agent_name, memory_file.name)
+
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Failed to process memory file %s: %s", memory_file, exc)
+
+    return archived_count
+
+
+def compact_all_agent_memories(
+    base_path: Path,
+    agent_name: str,
+    max_entries: int = 100,
+) -> dict[str, int]:
+    """Compact all list-based memories for an agent.
+
+    Args:
+        base_path: Base path of the LeMMing installation
+        agent_name: Name of the agent
+        max_entries: Maximum entries to keep per memory key
+
+    Returns:
+        Dictionary mapping memory keys to number of entries removed
+    """
+    keys = list_memories(base_path, agent_name)
+    results = {}
+
+    for key in keys:
+        removed = compact_memory_list(base_path, agent_name, key, max_entries)
+        if removed > 0:
+            results[key] = removed
+
+    return results
