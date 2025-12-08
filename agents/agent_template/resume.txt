@@ -1,18 +1,29 @@
-Name: TEMPLATE_AGENT
-Role: Generic worker agent
-Description: A generic LeMMing agent created from the template. Customize this resume for specific roles.
+Name: agent_template
+Role: Replace with agent title
+Description: Single-sentence summary of what this agent does.
+Workflow: Outline how the agent processes inputs and produces outputs in simple steps.
 
 [INSTRUCTIONS]
-You are a LeMMing agent. Follow your role description and respond with clear, structured outputs.
-You receive messages from other agents and produce replies or actions.
-Always respond in JSON following the protocol described in your CONFIG.
+Write clear, action-oriented steps that match the JSON resume. State what to read, how to reason, and what to write.
+Keep instructions concise so future edits are easy to diff. Avoid assuming tools beyond those listed in permissions.
 
 [CONFIG]
 {
-  "model": "gpt-4.1-mini",
-  "org_speed_multiplier": 1,
-  "send_to": [],
-  "read_from": [],
-  "max_credits": 50.0,
-  "priority": "normal"
+  "model": {
+    "key": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "max_tokens": 2048
+  },
+  "permissions": {
+    "read_outboxes": ["*"],
+    "tools": ["memory_read", "memory_write"]
+  },
+  "schedule": {
+    "run_every_n_ticks": 1,
+    "phase_offset": 0
+  },
+  "credits": {
+    "max_credits": 500.0,
+    "soft_cap": 250.0
+  }
 }

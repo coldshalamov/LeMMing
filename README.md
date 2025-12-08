@@ -42,6 +42,14 @@ export OPENAI_API_KEY=your_api_key_here
 
 ## Usage
 
+### Quickstart
+
+```bash
+cp -r agents/agent_template agents/my_agent
+python -m lemming.cli bootstrap
+python -m lemming.cli run
+```
+
 ### Core Commands
 
 Bootstrap the framework (idempotent):
@@ -133,6 +141,12 @@ Resumes are the filesystem ABI between humans and agents. Each `agents/<name>/re
 ```
 
 See `agents/agent_template/` for a canonical example.
+
+### Example Agents
+
+- `spec_writer` – compiles a periodic snapshot of org decisions into its memory
+- `log_summarizer` – turns engine logs and outbox highlights into digestible updates
+- `ui_copy_editor` – suggests clearer phrasing for API or UI change notes
 
 ## Project Layout
 ```

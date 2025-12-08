@@ -1,0 +1,24 @@
+{
+  "name": "log_summarizer",
+  "title": "Run log summarizer",
+  "short_description": "Reads engine logs and agent outboxes to produce human-friendly run summaries in memory.",
+  "workflow_description": "Collect recent log lines and message highlights, extract anomalies or wins, and write a digest entry to memory.",
+  "instructions": "Pull recent engine logs and readable outboxes. Produce a concise digest noting successes, errors, and follow-ups. Keep tone factual and avoid modifying other files.",
+  "model": {
+    "key": "gpt-4.1-mini",
+    "temperature": 0.25,
+    "max_tokens": 2048
+  },
+  "permissions": {
+    "read_outboxes": ["agent_template", "spec_writer", "ui_copy_editor"],
+    "tools": ["memory_read", "memory_write"]
+  },
+  "schedule": {
+    "run_every_n_ticks": 5,
+    "phase_offset": 1
+  },
+  "credits": {
+    "max_credits": 350.0,
+    "soft_cap": 175.0
+  }
+}
