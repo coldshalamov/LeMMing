@@ -4,26 +4,32 @@ services:
   lemming-api:
     build: .
     container_name: lemming-api
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
-      - ./agents:/data/agents
+      - ./agents:/app/agents
       - ./lemming/config:/app/lemming/config
+      - ./logs:/app/logs
     restart: unless-stopped
     command: python -m lemming.cli serve --host 0.0.0.0 --port 8000
 
   lemming-engine:
     build: .
     container_name: lemming-engine
+    env_file:
+      - .env
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
-      - ./agents:/data/agents
+      - ./agents:/app/agents
       - ./lemming/config:/app/lemming/config
+      - ./logs:/app/logs
     restart: unless-stopped
     command: python -m lemming.cli run
     depends_on:
