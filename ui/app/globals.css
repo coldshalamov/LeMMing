@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #050505;
+  --color-foreground: #ededed;
+  
+  --color-neo-bg: #050505;
+  --color-neo-panel: #0a0a0c;
+  --color-neo-surface: #121215;
+  --color-neo-border: #27272a;
+  
+  --color-brand-cyan: #06b6d4;
+  --color-brand-cyan-dim: rgba(6, 182, 212, 0.1);
+  --color-brand-cyan-glow: rgba(6, 182, 212, 0.5);
+  
+  --color-brand-lime: #84cc16;
+  --color-brand-lime-dim: rgba(132, 204, 22, 0.1);
+  --color-brand-lime-glow: rgba(132, 204, 22, 0.5);
+  
+  --color-brand-pink: #ec4899;
+  
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+:root {
+  --background: var(--color-neo-bg);
+  --foreground: var(--color-foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow: hidden; /* App-like feel, scroll handled in containers */
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(18, 18, 21, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  .neon-text-cyan {
+    text-shadow: 0 0 10px var(--color-brand-cyan-glow);
+  }
+  
+  .neon-border-cyan {
+    box-shadow: 0 0 5px var(--color-brand-cyan-glow), inset 0 0 5px var(--color-brand-cyan-dim);
+  }
+}
