@@ -53,12 +53,12 @@
         <div class="value" id="totalCredits">-</div>
       </div>
       <div class="stat-card">
-        <div class="label">Connection</div>
-        <div class="value"><span class="status-indicator online"></span>Live</div>
+        <div class="label">Current Tick</div>
+        <div class="value" id="currentTick">-</div>
       </div>
       <div class="stat-card">
-        <div class="label">Last Update</div>
-        <div class="value" id="lastUpdate" style="font-size: 16px;">-</div>
+        <div class="label">Total Messages</div>
+        <div class="value" id="totalMessages">-</div>
       </div>
     </div>
 
@@ -73,22 +73,40 @@
     </div>
 
     <div class="card">
-      <h2>📊 Organization Chart</h2>
+      <h2>📊 Organization Graph</h2>
       <div id="orgChart">Loading...</div>
     </div>
   </div>
 
   <script>
-    const API_BASE = 'http://localhost:8000';
+    const API_BASE = '';
+
+    function asText(entry) {
+      if (entry.payload && entry.payload.text) {
+        return entry.payload.text;
+      }
+      try {
+        return JSON.stringify(entry.payload);
+      } catch (err) {
+        return '';
+      }
+    }
+
+    function renderStatus(status) {
+      if (!status) return;
+      document.getElementById('totalAgents').textContent = status.total_agents ?? '-';
+      document.getElementById('totalCredits').textContent = status.total_credits?.toFixed ? status.total_credits.toFixed(2) : status.total_credits;
+      document.getElementById('currentTick').textContent = status.tick ?? '-';
+      document.getElementById('totalMessages').textContent = status.total_messages ?? '-';
+    }
 
     async function loadAgents() {
       try {
         const response = await fetch(`${API_BASE}/api/agents`);
         const agents = await response.json();
 
+        const totalCredits = agents.reduce((sum, a) => sum + (a.credits?.credits_left ?? 0), 0);
         document.getElementById('totalAgents').textContent = agents.length;
-
-        const totalCredits = agents.reduce((sum, a) => sum + a.credits_left, 0);
         document.getElementById('totalCredits').textContent = totalCredits.toFixed(2);
 
         const table = `
@@ -98,7 +116,7 @@
                 <th>Agent</th>
                 <th>Role</th>
                 <th>Model</th>
-                <th>Speed</th>
+                <th>Schedule</th>
                 <th>Credits</th>
               </tr>
             </thead>
@@ -106,13 +124,13 @@
               ${agents.map(agent => `
                 <tr>
                   <td><strong>${agent.name}</strong></td>
-                  <td>${agent.role}</td>
+                  <td>${agent.title}</td>
                   <td>${agent.model}</td>
-                  <td>${agent.speed_multiplier}x</td>
+                  <td>every ${agent.schedule.run_every_n_ticks} ticks (offset ${agent.schedule.phase_offset})</td>
                   <td>
-                    ${agent.credits_left.toFixed(2)} / ${agent.max_credits.toFixed(2)}
+                    ${agent.credits?.credits_left?.toFixed ? agent.credits.credits_left.toFixed(2) : '-'} / ${agent.credits?.max_credits ?? '-'}
                     <div class="credits-bar">
-                      <div class="credits-fill" style="width: ${(agent.credits_left / agent.max_credits * 100)}%"></div>
+                      <div class="credits-fill" style="width: ${agent.credits?.max_credits ? (agent.credits.credits_left / agent.credits.max_credits * 100) : 0}%"></div>
                     </div>
                   </td>
                 </tr>
@@ -122,52 +140,44 @@
         `;
 
         document.getElementById('agentsTable').innerHTML = table;
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
       } catch (error) {
         document.getElementById('agentsTable').innerHTML = `<div class="error">Error loading agents: ${error.message}</div>`;
       }
     }
 
-    async function loadMessages() {
-      try {
-        const response = await fetch(`${API_BASE}/api/messages?limit=10`);
-        const messages = await response.json();
-
-        const table = `
-          <table>
-            <thead>
+    function renderMessages(messages) {
+      const table = `
+        <table>
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Kind</th>
+              <th>Payload</th>
+              <th>Tick</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${!messages || messages.length === 0 ? '<tr><td colspan="5">No messages yet</td></tr>' :
+              messages.map(msg => `
               <tr>
-                <th>From</th>
-                <th>To</th>
-                <th>Importance</th>
-                <th>Content</th>
-                <th>Time</th>
+                <td>${msg.agent}</td>
+                <td>${msg.kind}</td>
+                <td>${asText(msg)}</td>
+                <td>${msg.tick}</td>
+                <td>${msg.created_at ? new Date(msg.created_at).toLocaleString() : ''}</td>
               </tr>
-            </thead>
-            <tbody>
-              ${messages.length === 0 ? '<tr><td colspan="5">No messages yet</td></tr>' :
-                messages.map(msg => `
-                <tr>
-                  <td>${msg.sender}</td>
-                  <td>${msg.receiver}</td>
-                  <td><span class="badge ${msg.importance}">${msg.importance}</span></td>
-                  <td>${msg.content.substring(0, 80)}${msg.content.length > 80 ? '...' : ''}</td>
-                  <td>${new Date(msg.timestamp).toLocaleString()}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
+            `).join('')}
+          </tbody>
+        </table>
+      `;
 
-        document.getElementById('messagesTable').innerHTML = table;
-      } catch (error) {
-        document.getElementById('messagesTable').innerHTML = `<div class="error">Error loading messages: ${error.message}</div>`;
-      }
+      document.getElementById('messagesTable').innerHTML = table;
     }
 
     async function loadOrgChart() {
       try {
-        const response = await fetch(`${API_BASE}/api/org-chart`);
+        const response = await fetch(`${API_BASE}/api/org-graph`);
         const chart = await response.json();
 
         let html = '<pre style="background: #f8fafc; padding: 15px; border-radius: 8px; overflow-x: auto;">';
@@ -176,20 +186,31 @@
 
         document.getElementById('orgChart').innerHTML = html;
       } catch (error) {
-        document.getElementById('orgChart').innerHTML = `<div class="error">Error loading org chart: ${error.message}</div>`;
+        document.getElementById('orgChart').innerHTML = `<div class="error">Error loading org graph: ${error.message}</div>`;
       }
+    }
+
+    function startWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.status) {
+            renderStatus(data.status);
+          }
+          if (data.messages) {
+            renderMessages(data.messages);
+          }
+        };
+        ws.onclose = () => {
+          setTimeout(startWebSocket, 2000);
+        };
     }
 
     // Load data on page load
     loadAgents();
-    loadMessages();
     loadOrgChart();
-
-    // Auto-refresh every 5 seconds
-    setInterval(() => {
-      loadAgents();
-      loadMessages();
-    }, 5000);
+    startWebSocket();
   </script>
 </body>
 </html>

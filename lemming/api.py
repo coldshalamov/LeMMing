@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
+import os
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .agents import discover_agents, load_agent
-from .messages import read_outbox_entries
-from .org import derive_org_graph, get_agent_credits, get_credits, get_org_config
+from .engine import load_tick
+from .messages import OutboxEntry, read_outbox_entries
+from .org import (
+    compute_virtual_inbox_sources,
+    derive_org_graph,
+    get_agent_credits,
+    get_credits,
+    get_org_config,
+)
 
-BASE_PATH = Path(__file__).resolve().parent.parent
+BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.0")
 
 app.add_middleware(
@@ -24,19 +33,33 @@ app.add_middleware(
 )
 
 
+class ScheduleInfo(BaseModel):
+    run_every_n_ticks: int
+    phase_offset: int
+
+
+class CreditsInfo(BaseModel):
+    model: str | None = None
+    credits_left: float | None = None
+    max_credits: float | None = None
+    soft_cap: float | None = None
+    cost_per_action: float | None = None
+
+
 class AgentInfo(BaseModel):
     name: str
     title: str
     description: str
     model: str
-    schedule: str
+    schedule: ScheduleInfo
     read_outboxes: list[str]
     tools: list[str]
+    credits: CreditsInfo | None = None
 
 
 class OutboxEntryModel(BaseModel):
     id: str
-    timestamp: str
+    created_at: str
     tick: int
     agent: str
     kind: str
@@ -50,23 +73,44 @@ async def root() -> dict[str, str]:
     return {"message": "LeMMing API", "version": "0.4.0"}
 
 
+@app.get("/api/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+def _serialize_entry(entry: OutboxEntry) -> dict[str, Any]:
+    data = entry.to_dict()
+    data.setdefault("tags", [])
+    return data
+
+
+def _load_agents_with_credits(base_path: Path) -> tuple[list[Any], dict[str, Any]]:
+    agents = discover_agents(base_path)
+    credits = get_credits(base_path, agents)
+    return agents, credits
+
+
+def _build_agent_info(agent: Any, credits: dict[str, Any]) -> AgentInfo:
+    agent_credits = credits.get(agent.name)
+    return AgentInfo(
+        name=agent.name,
+        title=agent.title,
+        description=agent.short_description,
+        model=agent.model.key,
+        schedule=ScheduleInfo(
+            run_every_n_ticks=agent.schedule.run_every_n_ticks,
+            phase_offset=agent.schedule.phase_offset,
+        ),
+        read_outboxes=agent.permissions.read_outboxes,
+        tools=agent.permissions.tools,
+        credits=CreditsInfo(**agent_credits) if agent_credits else None,
+    )
+
+
 @app.get("/api/agents", response_model=list[AgentInfo])
 async def list_agents() -> list[AgentInfo]:
-    agents = discover_agents(BASE_PATH)
-    results: list[AgentInfo] = []
-    for agent in agents:
-        results.append(
-            AgentInfo(
-                name=agent.name,
-                title=agent.title,
-                description=agent.short_description,
-                model=agent.model.key,
-                schedule=f"every {agent.schedule.run_every_n_ticks} ticks (offset {agent.schedule.phase_offset})",
-                read_outboxes=agent.permissions.read_outboxes,
-                tools=agent.permissions.tools,
-            )
-        )
-    return results
+    agents, credits = _load_agents_with_credits(BASE_PATH)
+    return [_build_agent_info(agent, credits) for agent in agents]
 
 
 @app.get("/api/agents/{agent_name}", response_model=AgentInfo)
@@ -76,26 +120,28 @@ async def get_agent(agent_name: str) -> AgentInfo:
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
 
-    return AgentInfo(
-        name=agent.name,
-        title=agent.title,
-        description=agent.short_description,
-        model=agent.model.key,
-        schedule=f"every {agent.schedule.run_every_n_ticks} ticks (offset {agent.schedule.phase_offset})",
-        read_outboxes=agent.permissions.read_outboxes,
-        tools=agent.permissions.tools,
-    )
+    _, credits = _load_agents_with_credits(BASE_PATH)
+    return _build_agent_info(agent, credits)
 
 
 @app.get("/api/agents/{agent_name}/outbox", response_model=list[OutboxEntryModel])
-async def get_agent_outbox(agent_name: str, limit: int = 20) -> list[OutboxEntryModel]:
-    entries = read_outbox_entries(BASE_PATH, agent_name, limit=limit)
-    return [OutboxEntryModel(**entry.to_dict()) for entry in entries]
+async def get_agent_outbox(agent_name: str, limit: int = 20, since_tick: int | None = None) -> list[OutboxEntryModel]:
+    entries = read_outbox_entries(BASE_PATH, agent_name, limit=limit, since_tick=since_tick)
+    return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries]
 
 
 @app.get("/api/org-graph")
 async def get_org_graph() -> dict[str, Any]:
-    return derive_org_graph(BASE_PATH)
+    # Avoid mutating credits on read-only operations.
+    agents = discover_agents(BASE_PATH)
+    agent_names = {agent.name for agent in agents}
+    return {
+        agent.name: {
+            "can_read": compute_virtual_inbox_sources(agent, agent_names),
+            "tools": agent.permissions.tools,
+        }
+        for agent in agents
+    }
 
 
 @app.get("/api/credits")
@@ -115,11 +161,49 @@ async def get_config() -> dict[str, Any]:
 
 @app.get("/api/status")
 async def status() -> dict[str, Any]:
-    agents = discover_agents(BASE_PATH)
-    credits = get_credits(BASE_PATH)
+    agents, credits = _load_agents_with_credits(BASE_PATH)
+    tick = load_tick(BASE_PATH)
+    total_messages = sum(len(read_outbox_entries(BASE_PATH, agent.name, limit=10_000)) for agent in agents)
     total_credits = sum(entry.get("credits_left", 0.0) for entry in credits.values())
     return {
+        "tick": tick,
         "total_agents": len(agents),
+        "total_messages": total_messages,
         "total_credits": total_credits,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
+
+
+@app.get("/api/messages", response_model=list[OutboxEntryModel])
+async def list_messages(agent: str | None = None, limit: int = 50, since_tick: int | None = None) -> list[OutboxEntryModel]:
+    agent_names: list[str]
+    if agent:
+        try:
+            load_agent(BASE_PATH, agent)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail=f"Agent '{agent}' not found")
+        agent_names = [agent]
+    else:
+        agent_names = [a.name for a in discover_agents(BASE_PATH)]
+
+    entries: list[OutboxEntry] = []
+    for agent_name in agent_names:
+        entries.extend(read_outbox_entries(BASE_PATH, agent_name, limit=limit, since_tick=since_tick))
+
+    entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
+    return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries[:limit]]
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket) -> None:
+    await websocket.accept()
+    try:
+        while True:
+            status_payload = await status()
+            messages = await list_messages(limit=20)
+            await websocket.send_json(
+                {"status": status_payload, "messages": [m.model_dump() for m in messages]}
+            )
+            await asyncio.sleep(2.0)
+    except WebSocketDisconnect:
+        return
