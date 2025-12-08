@@ -52,13 +52,56 @@ class ToolRegistry:
         cls._tools.clear()
 
 
-def _allowed_paths(base_path: Path, agent_name: str) -> list[Path]:
+def _get_allowed_paths(base_path: Path, agent_name: str, mode: str) -> list[Path]:
+    """Get allowed paths for an agent based on their file_access permissions.
+
+    Args:
+        base_path: Repository base path
+        agent_name: Name of the agent
+        mode: Either "read" or "write"
+
+    Returns:
+        List of allowed paths (resolved to absolute)
+    """
+    from .agents import load_agent
+
+    try:
+        agent = load_agent(base_path, agent_name)
+    except Exception:  # pragma: no cover - defensive
+        # Fallback to default if agent not found
+        workspace = (base_path / "agents" / agent_name / "workspace").resolve()
+        shared = (base_path / "shared").resolve()
+        return [workspace, shared]
+
+    # Check if agent has file_access permissions configured
+    if agent.permissions.file_access:
+        if mode == "read":
+            allow_list = agent.permissions.file_access.allow_read
+        elif mode == "write":
+            allow_list = agent.permissions.file_access.allow_write
+        else:
+            allow_list = []
+
+        if allow_list:
+            # Convert configured paths to absolute
+            allowed_paths = []
+            for path_str in allow_list:
+                path = Path(path_str)
+                if not path.is_absolute():
+                    path = (base_path / path).resolve()
+                else:
+                    path = path.resolve()
+                allowed_paths.append(path)
+            return allowed_paths
+
+    # Default: workspace + shared
     workspace = (base_path / "agents" / agent_name / "workspace").resolve()
     shared = (base_path / "shared").resolve()
     return [workspace, shared]
 
 
 def _resolve_path(base_path: Path, agent_name: str, path: str) -> Path:
+    """Resolve a path to absolute, canonicalized form."""
     candidate = Path(path)
     if not candidate.is_absolute():
         candidate = (base_path / "agents" / agent_name / "workspace" / candidate).resolve()
@@ -67,14 +110,32 @@ def _resolve_path(base_path: Path, agent_name: str, path: str) -> Path:
     return candidate
 
 
-def _is_path_allowed(base_path: Path, agent_name: str, path: Path) -> bool:
-    path = path.resolve()
-    for allowed in _allowed_paths(base_path, agent_name):
+def _is_path_allowed(base_path: Path, agent_name: str, path: Path, mode: str) -> bool:
+    """Check if an agent has permission to access a path.
+
+    Args:
+        base_path: Repository base path
+        agent_name: Name of the agent
+        path: Path to check (will be canonicalized)
+        mode: Either "read" or "write"
+
+    Returns:
+        True if access is allowed, False otherwise
+    """
+    # Canonicalize the target path (resolve symlinks, normalize)
+    canonical_path = path.resolve()
+
+    # Get allowed paths for this mode
+    allowed_paths = _get_allowed_paths(base_path, agent_name, mode)
+
+    # Check if canonical path has a prefix match with any allowed path
+    for allowed in allowed_paths:
         try:
-            path.relative_to(allowed)
+            canonical_path.relative_to(allowed)
             return True
         except ValueError:
             continue
+
     return False
 
 
@@ -87,8 +148,8 @@ class FileReadTool(Tool):
         if not path_arg:
             return ToolResult(False, "", "Missing path")
         target = _resolve_path(base_path, agent_name, str(path_arg))
-        if not _is_path_allowed(base_path, agent_name, target):
-            return ToolResult(False, "", "Access denied to path")
+        if not _is_path_allowed(base_path, agent_name, target, "read"):
+            return ToolResult(False, "", f"Access denied: read permission denied for {path_arg}")
         if not target.exists() or not target.is_file():
             return ToolResult(False, "", "File not found")
         try:
@@ -108,8 +169,8 @@ class FileWriteTool(Tool):
         if not path_arg:
             return ToolResult(False, "", "Missing path")
         target = _resolve_path(base_path, agent_name, str(path_arg))
-        if not _is_path_allowed(base_path, agent_name, target):
-            return ToolResult(False, "", "Access denied to path")
+        if not _is_path_allowed(base_path, agent_name, target, "write"):
+            return ToolResult(False, "", f"Access denied: write permission denied for {path_arg}")
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(str(content), encoding="utf-8")
@@ -125,8 +186,8 @@ class FileListTool(Tool):
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_arg = kwargs.get("path", ".")
         target_dir = _resolve_path(base_path, agent_name, str(path_arg))
-        if not _is_path_allowed(base_path, agent_name, target_dir):
-            return ToolResult(False, "", "Access denied to path")
+        if not _is_path_allowed(base_path, agent_name, target_dir, "read"):
+            return ToolResult(False, "", f"Access denied: read permission denied for {path_arg}")
         if not target_dir.exists() or not target_dir.is_dir():
             return ToolResult(False, "", "Directory not found")
         items = sorted(p.name for p in target_dir.iterdir())

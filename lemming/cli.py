@@ -10,13 +10,15 @@ from .agents import discover_agents, load_agent
 from .bootstrap import bootstrap as run_bootstrap
 from .config_validation import validate_everything
 from .engine import load_tick, run_forever, run_once
-from .messages import read_outbox_entries
+from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
 from .memory import get_memory_summary
 from .org import derive_org_graph, get_agent_credits, get_credits, save_derived_org_graph
 from .paths import get_logs_dir
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+HUMAN_AGENT_NAME = "human"
 
 
 def list_agents_cmd(base_path: Path) -> None:
@@ -147,6 +149,133 @@ def logs_cmd(base_path: Path, name: str, lines: int) -> None:
         print(line)
 
 
+def send_cmd(base_path: Path, target: str, message: str, importance: str = "normal") -> None:
+    """Send a message from human to an agent."""
+    # Verify target agent exists
+    try:
+        load_agent(base_path, target)
+    except FileNotFoundError:
+        print(f"Error: Agent '{target}' not found")
+        sys.exit(1)
+
+    tick = load_tick(base_path)
+    entry = OutboxEntry.create(
+        agent=HUMAN_AGENT_NAME,
+        tick=tick,
+        kind="message",
+        payload={
+            "text": message,
+            "importance": importance,
+            "target": target,
+        },
+        tags=["human-originated"],
+    )
+    write_outbox_entry(base_path, HUMAN_AGENT_NAME, entry)
+    print(f"✉️  Message sent to '{target}' at tick {tick}")
+    print(f"    Content: {message}")
+
+
+def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> None:
+    """View inbox (messages from agents)."""
+    if agent:
+        # Show specific agent's outbox
+        try:
+            load_agent(base_path, agent)
+        except FileNotFoundError:
+            print(f"Error: Agent '{agent}' not found")
+            sys.exit(1)
+
+        entries = read_outbox_entries(base_path, agent, limit=limit)
+        print(f"\n📬 Outbox for '{agent}':")
+    else:
+        # Show all recent messages from all agents
+        agents = discover_agents(base_path)
+        entries = []
+        for ag in agents:
+            if ag.name == HUMAN_AGENT_NAME:
+                continue
+            agent_entries = read_outbox_entries(base_path, ag.name, limit=limit)
+            entries.extend(agent_entries)
+
+        # Sort by tick and created_at, most recent first
+        entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
+        entries = entries[:limit]
+        print(f"\n📥 Recent messages from all agents:")
+
+    if not entries:
+        print("  (no messages)")
+        return
+
+    for entry in entries:
+        text = entry.payload.get("text", json.dumps(entry.payload))
+        # Truncate long messages
+        if len(text) > 100:
+            text = text[:97] + "..."
+        importance = entry.payload.get("importance", "normal")
+        importance_marker = "❗" if importance == "high" else " "
+        print(f"{importance_marker} [Tick {entry.tick}] {entry.agent} ({entry.kind}): {text}")
+
+
+def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
+    """Interactive chat mode with an agent."""
+    target = target_agent if target_agent else "example_planner"
+
+    # Verify target agent exists
+    try:
+        load_agent(base_path, target)
+    except FileNotFoundError:
+        print(f"Error: Agent '{target}' not found")
+        print("Available agents:")
+        list_agents_cmd(base_path)
+        sys.exit(1)
+
+    print(f"💬 Chat mode with '{target}' (type 'quit' or 'exit' to leave, 'tick' to advance)")
+    print("─" * 60)
+
+    while True:
+        try:
+            user_input = input(f"\nYou → {target}: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n\nExiting chat.")
+            break
+
+        if user_input.lower() in ("quit", "exit"):
+            break
+        elif user_input.lower() == "tick":
+            print("⏱️  Advancing tick...")
+            result = run_once(base_path)
+            agents_run = list(result.keys())
+            if agents_run:
+                print(f"   Agents that ran: {', '.join(agents_run)}")
+            else:
+                print("   No agents ran this tick")
+            # Show recent messages from target agent
+            entries = read_outbox_entries(base_path, target, limit=3)
+            if entries:
+                print(f"\n   Recent messages from '{target}':")
+                for entry in entries:
+                    text = entry.payload.get("text", json.dumps(entry.payload))
+                    if len(text) > 150:
+                        text = text[:147] + "..."
+                    print(f"   [{entry.kind}] {text}")
+        elif user_input:
+            send_cmd(base_path, target, user_input)
+            # Auto-advance tick so agent processes message
+            print("⏱️  Advancing tick for agent to respond...")
+            result = run_once(base_path)
+            if target in result:
+                print(f"   '{target}' processed your message")
+                # Show the response
+                entries = read_outbox_entries(base_path, target, limit=3)
+                if entries:
+                    print(f"\n   {target} → You:")
+                    for entry in entries[:1]:  # Show most recent
+                        text = entry.payload.get("text", json.dumps(entry.payload))
+                        print(f"   {text}")
+            else:
+                print(f"   '{target}' did not run this tick (check schedule)")
+
+
 def serve_cmd(host: str, port: int) -> None:
     try:
         import uvicorn
@@ -193,6 +322,18 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--host", default="0.0.0.0", help="Host to bind")
     serve_parser.add_argument("--port", type=int, default=8000, help="Port to bind")
 
+    send_parser = subparsers.add_parser("send", help="Send a message to an agent")
+    send_parser.add_argument("target", help="Target agent name")
+    send_parser.add_argument("message", help="Message text to send")
+    send_parser.add_argument("--importance", default="normal", choices=["normal", "high"], help="Message importance")
+
+    inbox_parser = subparsers.add_parser("inbox", help="View messages from agents")
+    inbox_parser.add_argument("--agent", help="Show outbox from a specific agent")
+    inbox_parser.add_argument("--limit", type=int, default=20, help="Number of messages to show")
+
+    chat_parser = subparsers.add_parser("chat", help="Interactive chat with an agent")
+    chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
+
     return parser
 
 
@@ -231,6 +372,12 @@ def main() -> None:
         logs_cmd(base_path, args.name, args.lines)
     elif args.command == "serve":
         serve_cmd(args.host, args.port)
+    elif args.command == "send":
+        send_cmd(base_path, args.target, args.message, args.importance)
+    elif args.command == "inbox":
+        inbox_cmd(base_path, args.agent, args.limit)
+    elif args.command == "chat":
+        chat_cmd(base_path, args.agent)
     else:  # pragma: no cover - parser enforces valid commands
         parser.error(f"Unknown command {args.command}")
 
