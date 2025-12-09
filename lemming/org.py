@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .agents import DEFAULT_CREDITS, Agent, discover_agents
 from .paths import get_config_dir
@@ -30,7 +30,8 @@ def _load_json(filename: str) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Missing configuration file: {path}")
     with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+        data: dict[str, Any] = json.load(f)
+    return data
 
 
 def get_org_config(base_path: Path | None = None) -> dict[str, Any]:
@@ -65,7 +66,7 @@ def get_credits(base_path: Path | None = None, agents: list[Agent] | None = None
 
 def derive_org_graph(base_path: Path) -> dict[str, dict[str, list[str]]]:
     agents = discover_agents(base_path)
-    credits = get_credits(base_path, agents)
+    get_credits(base_path, agents)
     save_credits(base_path)  # Persist any new credit entries.
 
     agent_names = {agent.name for agent in agents}
@@ -98,13 +99,16 @@ def save_derived_org_graph(base_path: Path) -> Path:
 
 def get_agent_credits(agent: str, base_path: Path | None = None) -> dict[str, Any]:
     credits = get_credits(base_path)
-    return credits.get(
-        agent,
-        {
-            "model": "gpt-4.1-mini",
-            "cost_per_action": 0.01,
-            "credits_left": 0.0,
-        },
+    return cast(
+        dict[str, Any],
+        credits.get(
+            agent,
+            {
+                "model": "gpt-4.1-mini",
+                "cost_per_action": 0.01,
+                "credits_left": 0.0,
+            },
+        ),
     )
 
 

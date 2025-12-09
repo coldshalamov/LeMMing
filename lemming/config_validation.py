@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 class ValidationError(ValueError):
@@ -59,7 +59,8 @@ def validate_models(models: dict[str, Any]) -> None:
 
 def validate_resume_file(resume_path: Path) -> dict[str, Any]:
     try:
-        content = json.loads(resume_path.read_text(encoding="utf-8"))
+        raw_content = resume_path.read_text(encoding="utf-8")
+        content = cast(dict[str, Any], json.loads(raw_content))
     except json.JSONDecodeError as exc:  # pragma: no cover - surfaced to caller
         raise ValidationError(f"Invalid JSON in {resume_path}: {exc}") from exc
 
@@ -94,7 +95,8 @@ def validate_everything(base_path: Path) -> list[str]:
 
     def _load_json(path: Path) -> dict[str, Any]:
         with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            loaded: dict[str, Any] = json.load(f)
+        return loaded
 
     file_validators = [
         (config_dir / "org_config.json", validate_org_config),

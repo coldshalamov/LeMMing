@@ -143,31 +143,106 @@ def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, st
     return messages
 
 
-def _parse_llm_output(raw: str) -> dict[str, Any]:
+def _strip_fences(raw: str) -> str:
+    """Remove Markdown fences from an LLM response.
+
+    Supports fenced blocks with or without language annotations. Only the first
+    fenced block is considered to avoid mixing content from multiple blocks.
+    """
+
+    lines = raw.split("\n")
+    body: list[str] = []
+    in_block = False
+    for line in lines:
+        if line.startswith("```"):
+            if not in_block:
+                in_block = True
+                continue
+            break
+        if in_block:
+            body.append(line)
+    return "\n".join(body) if body else raw
+
+
+def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
+    """Parse and validate LLM output against the JSON contract.
+
+    Any contract violation is logged with enough detail to debug while ensuring
+    the engine keeps running without writing malformed data.
+    """
+
+    default = {"outbox_entries": [], "tool_calls": [], "memory_updates": [], "notes": ""}
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = _strip_fences(raw)
+
+    def _log_violation(reason: str) -> None:
+        snippet = raw[:200].replace("\n", " ")
+        logger.error(
+            "LLM contract violation for agent %s at tick %s: %s. Snippet: %s",
+            agent_name,
+            tick,
+            reason,
+            snippet,
+        )
+
     try:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            lines = raw.split("\n")
-            body: list[str] = []
-            in_block = False
-            for line in lines:
-                if line.startswith("```"):
-                    in_block = not in_block
-                    continue
-                if in_block:
-                    body.append(line)
-            raw = "\n".join(body)
         data = json.loads(raw)
-        return {
-            "outbox_entries": data.get("outbox_entries", []),
-            "tool_calls": data.get("tool_calls", []),
-            "memory_updates": data.get("memory_updates", []),
-            "notes": data.get("notes", ""),
-        }
     except json.JSONDecodeError as exc:
-        logger.error("LLM output was not valid JSON: %s", exc)
-        logger.debug("Raw response: %s", raw)
-        return {"outbox_entries": [], "tool_calls": [], "memory_updates": [], "notes": ""}
+        _log_violation(f"response was not valid JSON ({exc})")
+        return default
+
+    if not isinstance(data, dict):
+        _log_violation(f"expected a JSON object but got {type(data).__name__}")
+        return default
+
+    def _ensure_list(value: Any, field: str) -> list[Any]:
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            _log_violation(f"field '{field}' must be a list")
+            return []
+        return value
+
+    def _sanitize_outbox(entries: list[Any]) -> list[dict[str, Any]]:
+        sanitized: list[dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                _log_violation("outbox entry was not an object; skipping")
+                continue
+            kind = entry.get("kind", "message")
+            payload = entry.get("payload", {}) if isinstance(entry.get("payload", {}), dict) else {}
+            tags = entry.get("tags", []) if isinstance(entry.get("tags", []), list) else []
+            meta = entry.get("meta", {}) if isinstance(entry.get("meta", {}), dict) else {}
+            sanitized.append({"kind": kind, "payload": payload, "tags": tags, "meta": meta})
+        return sanitized
+
+    def _sanitize_memory(updates: list[Any]) -> list[dict[str, Any]]:
+        sanitized: list[dict[str, Any]] = []
+        for update in updates:
+            if not isinstance(update, dict):
+                _log_violation("memory update was not an object; skipping")
+                continue
+            if "key" not in update:
+                _log_violation("memory update missing 'key'; skipping")
+                continue
+            sanitized.append({"key": update.get("key"), "value": update.get("value")})
+        return sanitized
+
+    outbox_entries = _sanitize_outbox(_ensure_list(data.get("outbox_entries", []), "outbox_entries"))
+    tool_calls = _ensure_list(data.get("tool_calls", []), "tool_calls")
+    memory_updates = _sanitize_memory(_ensure_list(data.get("memory_updates", []), "memory_updates"))
+    notes = data.get("notes", "")
+    if not isinstance(notes, str):
+        _log_violation("field 'notes' must be a string")
+        notes = str(notes)
+
+    return {
+        "outbox_entries": outbox_entries,
+        "tool_calls": tool_calls,
+        "memory_updates": memory_updates,
+        "notes": notes,
+    }
 
 
 def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> list[ToolResult]:
@@ -233,7 +308,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         raise
 
     llm_duration_ms = int((time.time() - llm_start) * 1000)
-    parsed = _parse_llm_output(raw_output)
+    parsed = _parse_llm_output(raw_output, agent.name, tick)
 
     # Write outbox entries
     for entry_data in parsed.get("outbox_entries", []):
