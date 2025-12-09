@@ -65,7 +65,7 @@ class Agent:
     resume_path: Path
 
     @classmethod
-    def from_resume_data(cls, resume_path: Path, data: dict[str, Any]) -> "Agent":
+    def from_resume_data(cls, resume_path: Path, data: dict[str, Any]) -> Agent:
         normalized = _apply_defaults(data)
         errors = _validate_resume_dict(resume_path, normalized)
         if errors:
@@ -120,8 +120,12 @@ def _parse_model(model_data: Any) -> AgentModel:
     if isinstance(model_data, str):
         return AgentModel(key=model_data)
     if isinstance(model_data, dict):
+        key_value = model_data.get("key") or model_data.get("model") or DEFAULT_MODEL_KEY
+        if not isinstance(key_value, str):
+            key_value = DEFAULT_MODEL_KEY
+
         return AgentModel(
-            key=model_data.get("key", model_data.get("model", DEFAULT_MODEL_KEY)),
+            key=key_value,
             temperature=float(model_data.get("temperature", DEFAULT_TEMPERATURE)),
             max_tokens=int(model_data.get("max_tokens", DEFAULT_MAX_TOKENS)),
         )
@@ -131,7 +135,8 @@ def _parse_model(model_data: Any) -> AgentModel:
 
 def _load_resume_json(resume_path: Path) -> dict[str, Any]:
     with resume_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+        data: dict[str, Any] = json.load(f)
+    return data
 
 
 def _apply_defaults(data: dict[str, Any]) -> dict[str, Any]:

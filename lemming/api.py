@@ -13,13 +13,7 @@ from pydantic import BaseModel
 from .agents import discover_agents, load_agent
 from .engine import load_tick
 from .messages import OutboxEntry, read_outbox_entries
-from .org import (
-    compute_virtual_inbox_sources,
-    derive_org_graph,
-    get_agent_credits,
-    get_credits,
-    get_org_config,
-)
+from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.0")
@@ -175,7 +169,9 @@ async def status() -> dict[str, Any]:
 
 
 @app.get("/api/messages", response_model=list[OutboxEntryModel])
-async def list_messages(agent: str | None = None, limit: int = 50, since_tick: int | None = None) -> list[OutboxEntryModel]:
+async def list_messages(
+    agent: str | None = None, limit: int = 50, since_tick: int | None = None
+) -> list[OutboxEntryModel]:
     agent_names: list[str]
     if agent:
         try:

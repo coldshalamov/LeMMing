@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,10 @@ class OpenAIProvider(LLMProvider):
         logger.info("Calling OpenAI model %s with %d messages", model_name, len(messages))
 
         response = self.client.chat.completions.create(
-            model=model_name, messages=messages, temperature=temperature, **kwargs
+            model=model_name,
+            messages=cast(Any, messages),
+            temperature=temperature,
+            **kwargs,
         )
 
         content = response.choices[0].message.content
@@ -80,11 +84,13 @@ class AnthropicProvider(LLMProvider):
             model=model_name,
             max_tokens=kwargs.get("max_tokens", 4096),
             temperature=temperature,
-            system=system,
-            messages=other_messages,
+            system=cast(Any, system),
+            messages=cast(Any, other_messages),
         )
 
-        content = response.content[0].text if response.content else ""
+        content_blocks = cast(list[Any], response.content or [])
+        text_block = next((block for block in content_blocks if getattr(block, "text", None)), None)
+        content = cast(str, getattr(text_block, "text", "")) if text_block else ""
         logger.debug("Anthropic response content length: %s", len(content))
         return content
 
@@ -97,7 +103,7 @@ class OllamaProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         logger.info("Calling Ollama model %s with %d messages", model_name, len(messages))
 
@@ -110,7 +116,7 @@ class OllamaProvider(LLMProvider):
             response.raise_for_status()
 
             data = response.json()
-            content = data.get("message", {}).get("content", "")
+            content = str(data.get("message", {}).get("content", ""))
             logger.debug("Ollama response content length: %s", len(content))
             return content
 
@@ -164,6 +170,9 @@ def register_provider(name: str, provider_class: type[LLMProvider]) -> None:
     logger.info("Registered custom provider: %s", name)
 
 
+T = TypeVar("T")
+
+
 class CircuitBreaker:
     """Circuit breaker for LLM providers to prevent cascading failures.
 
@@ -185,7 +194,7 @@ class CircuitBreaker:
         self.last_failure_time: float | None = None
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
 
-    def call(self, func, *args, **kwargs):
+    def call(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """Execute a function with circuit breaker protection."""
         if self.state == "OPEN":
             # Check if we should attempt recovery

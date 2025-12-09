@@ -10,8 +10,8 @@ from .agents import discover_agents, load_agent
 from .bootstrap import bootstrap as run_bootstrap
 from .config_validation import validate_everything
 from .engine import load_tick, run_forever, run_once
-from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
 from .memory import get_memory_summary
+from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
 from .org import derive_org_graph, get_agent_credits, get_credits, save_derived_org_graph
 from .paths import get_logs_dir
 
@@ -200,7 +200,7 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
         # Sort by tick and created_at, most recent first
         entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
         entries = entries[:limit]
-        print(f"\n📥 Recent messages from all agents:")
+        print("\n📥 Recent messages from all agents:")
 
     if not entries:
         print("  (no messages)")

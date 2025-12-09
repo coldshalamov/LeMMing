@@ -42,7 +42,7 @@ class OutboxEntry:
         payload: dict[str, Any],
         tags: list[str] | None = None,
         meta: dict[str, Any] | None = None,
-    ) -> "OutboxEntry":
+    ) -> OutboxEntry:
         created_at = datetime.now(UTC).isoformat()
         entry_id = uuid.uuid4().hex
         return cls(
@@ -60,7 +60,7 @@ class OutboxEntry:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "OutboxEntry":
+    def from_dict(cls, data: dict[str, Any]) -> OutboxEntry:
         # Backward compatibility: older entries used ``timestamp``.
         if "created_at" not in data and "timestamp" in data:
             data = dict(data)

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Centralized filesystem path helpers for LeMMing."""
 
 from pathlib import Path
