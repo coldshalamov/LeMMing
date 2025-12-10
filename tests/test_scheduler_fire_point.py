@@ -52,7 +52,7 @@ def test_every_tick_agent_fire_point(tmp_path: Path) -> None:
 def test_intra_tick_ordering_by_fire_point(tmp_path: Path) -> None:
     """Agents are ordered by fire_point (ascending), then by name."""
     # Create agents that all fire at tick 0 with different offsets
-    # should_run: (tick % N) == (offset % N)
+    # should_run: (tick + offset) % N == 0
     # All have offset=0, so all fire at tick 0, 4, 8, etc.
     agents = [
         _dummy_agent("alice", tmp_path, run_every=4, offset=0),   # fp=0.0

@@ -9,7 +9,7 @@ from typing import Any
 
 from .agents import Agent, discover_agents
 from .logging_config import log_agent_action, log_engine_event
-from .memory import get_memory_context, save_memory
+from .memory import delete_memory, get_memory_context, save_memory
 from .messages import (
     OutboxEntry,
     cleanup_old_outbox_entries,
@@ -95,7 +95,7 @@ def compute_fire_point(agent: Agent) -> float:
 def should_run(agent: Agent, tick: int) -> bool:
     n = agent.schedule.run_every_n_ticks or 1
     offset = agent.schedule.phase_offset or 0
-    return (tick % n) == (offset % n)
+    return (tick + (offset % n)) % n == 0
 
 
 def get_firing_agents(agents: list[Agent], tick: int) -> list[Agent]:
@@ -178,7 +178,7 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
 
     def _log_violation(reason: str) -> None:
         snippet = raw[:200].replace("\n", " ")
-        logger.error(
+        logger.warning(
             "LLM contract violation for agent %s at tick %s: %s. Snippet: %s",
             agent_name,
             tick,
@@ -200,7 +200,7 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
         if value is None:
             return []
         if not isinstance(value, list):
-            _log_violation(f"field '{field}' must be a list")
+            _log_violation(f"field '{field}' must be a list; defaulting to []")
             return []
         return value
 
@@ -214,7 +214,19 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
             payload = entry.get("payload", {}) if isinstance(entry.get("payload", {}), dict) else {}
             tags = entry.get("tags", []) if isinstance(entry.get("tags", []), list) else []
             meta = entry.get("meta", {}) if isinstance(entry.get("meta", {}), dict) else {}
-            sanitized.append({"kind": kind, "payload": payload, "tags": tags, "meta": meta})
+
+            recipients: list[str] | None = None
+            to_field = entry.get("to", meta.get("to"))
+            if isinstance(to_field, str):
+                recipients = [to_field]
+            elif isinstance(to_field, list) and all(isinstance(item, str) for item in to_field):
+                recipients = to_field
+            elif to_field is not None:
+                _log_violation("outbox entry 'to' field must be string or list of strings; ignoring")
+
+            sanitized.append(
+                {"kind": kind, "payload": payload, "tags": tags, "meta": meta, "recipients": recipients}
+            )
         return sanitized
 
     def _sanitize_memory(updates: list[Any]) -> list[dict[str, Any]]:
@@ -226,15 +238,24 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
             if "key" not in update:
                 _log_violation("memory update missing 'key'; skipping")
                 continue
-            sanitized.append({"key": update.get("key"), "value": update.get("value")})
+            sanitized.append({"key": update.get("key"), "value": update.get("value"), "op": update.get("op")})
         return sanitized
+
+    required_keys = {"outbox_entries", "tool_calls", "memory_updates", "notes"}
+    missing_keys = [key for key in required_keys if key not in data]
+    if missing_keys:
+        _log_violation(f"missing keys {missing_keys}; applying defaults")
+
+    extra_keys = sorted(set(data.keys()) - required_keys)
+    if extra_keys:
+        _log_violation(f"ignoring unknown output fields: {extra_keys}")
 
     outbox_entries = _sanitize_outbox(_ensure_list(data.get("outbox_entries", []), "outbox_entries"))
     tool_calls = _ensure_list(data.get("tool_calls", []), "tool_calls")
     memory_updates = _sanitize_memory(_ensure_list(data.get("memory_updates", []), "memory_updates"))
     notes = data.get("notes", "")
     if not isinstance(notes, str):
-        _log_violation("field 'notes' must be a string")
+        _log_violation("field 'notes' must be a string; coercing to string")
         notes = str(notes)
 
     return {
@@ -311,13 +332,38 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     parsed = _parse_llm_output(raw_output, agent.name, tick)
 
     # Write outbox entries
+    send_permissions = agent.permissions.send_outboxes
+    allowed_targets: list[str] | None
+    if send_permissions in (None, []):
+        allowed_targets = None  # unrestricted
+    else:
+        allowed_targets = list(send_permissions)
+
     for entry_data in parsed.get("outbox_entries", []):
+        recipients = entry_data.get("recipients")
+
+        if allowed_targets is not None and allowed_targets != ["*"]:
+            if recipients is None:
+                logger.warning(
+                    "Agent %s attempted to send without recipient while send_outboxes restricted; dropping",
+                    agent.name,
+                )
+                continue
+            if any(recipient not in allowed_targets for recipient in recipients):
+                logger.warning(
+                    "Agent %s attempted to send to disallowed recipients %s; dropping entry",
+                    agent.name,
+                    recipients,
+                )
+                continue
+
         entry = OutboxEntry.create(
             agent=agent.name,
             tick=tick,
             kind=entry_data.get("kind", "message"),
             payload=entry_data.get("payload", {}),
             tags=entry_data.get("tags", []),
+            recipients=recipients,
             meta=entry_data.get("meta", {}),
         )
         write_outbox_entry(base_path, agent.name, entry)
@@ -329,6 +375,15 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     for update in parsed.get("memory_updates", []):
         key = update.get("key")
         if not key:
+            continue
+        op = (update.get("op") or "write").lower()
+        if op == "delete":
+            deleted = delete_memory(base_path, agent.name, key)
+            if not deleted:
+                logger.warning("Agent %s attempted to delete missing memory key '%s'", agent.name, key)
+            continue
+        if op != "write":
+            logger.warning("Unknown memory op '%s' from agent %s; skipping", op, agent.name)
             continue
         save_memory(base_path, agent.name, key, update.get("value"))
 
@@ -372,6 +427,7 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
     tick_start = time.time()
     logger.info("=== Tick %s ===", tick)
     log_engine_event("tick_started", tick=tick)
+    config = get_org_config(base_path)
 
     results: dict[str, Any] = {}
     agents = discover_agents(base_path)
@@ -392,7 +448,8 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         results[agent.name] = run_agent(base_path, agent, tick)
 
     # Cleanup old outbox entries
-    removed = cleanup_old_outbox_entries(base_path, tick)
+    max_age_ticks = config.get("max_outbox_age_ticks", 100)
+    removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
     if removed:
         logger.info("Cleaned up %s expired outbox entries", removed)
         log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)

@@ -31,6 +31,7 @@ class OutboxEntry:
     payload: dict[str, Any]
     tags: list[str]
     created_at: str
+    recipients: list[str] | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -41,6 +42,7 @@ class OutboxEntry:
         kind: str,
         payload: dict[str, Any],
         tags: list[str] | None = None,
+        recipients: list[str] | None = None,
         meta: dict[str, Any] | None = None,
     ) -> OutboxEntry:
         created_at = datetime.now(UTC).isoformat()
@@ -53,6 +55,7 @@ class OutboxEntry:
             payload=payload,
             tags=tags or [],
             created_at=created_at,
+            recipients=recipients,
             meta=meta or {},
         )
 
@@ -65,6 +68,9 @@ class OutboxEntry:
         if "created_at" not in data and "timestamp" in data:
             data = dict(data)
             data["created_at"] = data.pop("timestamp")
+        if "recipients" not in data:
+            data = dict(data)
+            data["recipients"] = None
         return cls(**data)
 
 

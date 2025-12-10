@@ -40,6 +40,7 @@ class FileAccess:
 @dataclass
 class AgentPermissions:
     read_outboxes: list[str] = field(default_factory=list)
+    send_outboxes: list[str] | None = None
     tools: list[str] = field(default_factory=list)
     file_access: FileAccess | None = None
 
@@ -87,8 +88,13 @@ class Agent:
                 allow_write=list(file_access_data.get("allow_write", [])),
             )
 
+        send_outboxes = permissions_data.get("send_outboxes")
+        if send_outboxes is not None:
+            send_outboxes = list(send_outboxes)
+
         permissions = AgentPermissions(
             read_outboxes=list(permissions_data.get("read_outboxes", [])),
+            send_outboxes=send_outboxes,
             tools=list(permissions_data.get("tools", [])),
             file_access=file_access,
         )
@@ -236,11 +242,6 @@ def _validate_resume_dict(resume_path: Path, data: dict[str, Any]) -> list[str]:
         if field_name not in data:
             errors.append(f"Missing required field: {field_name}")
 
-    if data.get("name") and data["name"] != resume_path.parent.name:
-        errors.append(
-            f"Agent name '{data.get('name')}' does not match directory '{resume_path.parent.name}'"
-        )
-
     permissions = data.get("permissions", {})
     if permissions:
         if "read_outboxes" not in permissions:
@@ -276,6 +277,7 @@ def load_agent(base_path: Path, name: str) -> Agent:
 def discover_agents(base_path: Path) -> list[Agent]:
     agents_dir = get_agents_dir(base_path)
     agents: list[Agent] = []
+    seen_names: set[str] = set()
 
     if not agents_dir.exists():
         return agents
@@ -291,10 +293,26 @@ def discover_agents(base_path: Path) -> list[Agent]:
         if not data or not resume_path:
             logger.warning("Skipping %s; missing resume.json or resume.txt", child.name)
             continue
+        resume_name = data.get("name")
+        if resume_name and resume_name != child.name:
+            logger.warning(
+                "Folder name '%s' does not match resume name '%s'; using resume name.",
+                child.name,
+                resume_name,
+            )
+
         try:
-            agents.append(Agent.from_resume_data(resume_path, data))
+            agent = Agent.from_resume_data(resume_path, data)
         except Exception as exc:  # pragma: no cover
             logger.warning("Skipping %s due to invalid resume: %s", child.name, exc)
+            continue
+
+        if agent.name in seen_names:
+            logger.warning("Skipping %s due to duplicate agent name %s", child.name, agent.name)
+            continue
+
+        seen_names.add(agent.name)
+        agents.append(agent)
 
     return agents
 
