@@ -74,7 +74,7 @@ def _get_allowed_paths(base_path: Path, agent_name: str, mode: str) -> list[Path
         return [workspace, shared]
 
     # Check if agent has file_access permissions configured
-    if agent.permissions.file_access:
+    if agent.permissions.file_access is not None:
         if mode == "read":
             allow_list = agent.permissions.file_access.allow_read
         elif mode == "write":
@@ -82,17 +82,16 @@ def _get_allowed_paths(base_path: Path, agent_name: str, mode: str) -> list[Path
         else:
             allow_list = []
 
-        if allow_list:
-            # Convert configured paths to absolute
-            allowed_paths = []
-            for path_str in allow_list:
-                path = Path(path_str)
-                if not path.is_absolute():
-                    path = (base_path / path).resolve()
-                else:
-                    path = path.resolve()
-                allowed_paths.append(path)
-            return allowed_paths
+        # If the allow list is explicitly provided (even empty), respect it
+        allowed_paths = []
+        for path_str in allow_list:
+            path = Path(path_str)
+            if not path.is_absolute():
+                path = (base_path / path).resolve()
+            else:
+                path = path.resolve()
+            allowed_paths.append(path)
+        return allowed_paths
 
     # Default: workspace + shared
     workspace = (base_path / "agents" / agent_name / "workspace").resolve()

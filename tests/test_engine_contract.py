@@ -16,7 +16,7 @@ def test_parse_valid_json():
     assert parsed["notes"] == "ok"
     assert parsed["outbox_entries"][0]["payload"]["text"] == "hi"
     assert parsed["tool_calls"] == [{"tool": "ping"}]
-    assert parsed["memory_updates"] == [{"key": "foo", "value": {"bar": 1}}]
+    assert parsed["memory_updates"] == [{"key": "foo", "value": {"bar": 1}, "op": None}]
 
 
 def test_parse_with_fences():
@@ -30,8 +30,16 @@ def test_parse_with_fences():
     }
 
 
+def test_missing_keys_warns(caplog):
+    caplog.set_level(logging.WARNING)
+    parsed = _parse_llm_output("{\"notes\":\"only\"}", agent_name="agent1", tick=6)
+    assert parsed["notes"] == "only"
+    assert parsed["outbox_entries"] == []
+    assert any("missing keys" in message for message in caplog.messages)
+
+
 def test_invalid_json_contract_violation(caplog):
-    caplog.set_level(logging.ERROR)
+    caplog.set_level(logging.WARNING)
     parsed = _parse_llm_output("not-json", agent_name="agent1", tick=2)
     assert parsed == {
         "outbox_entries": [],
@@ -43,14 +51,14 @@ def test_invalid_json_contract_violation(caplog):
 
 
 def test_non_object_contract_violation(caplog):
-    caplog.set_level(logging.ERROR)
+    caplog.set_level(logging.WARNING)
     parsed = _parse_llm_output("[]", agent_name="agent1", tick=3)
     assert parsed["outbox_entries"] == []
     assert any("expected a JSON object" in msg for msg in caplog.messages)
 
 
 def test_rejects_bad_fields(caplog):
-    caplog.set_level(logging.ERROR)
+    caplog.set_level(logging.WARNING)
     raw = (
         '{"outbox_entries": ["bad", {"payload": "oops"}],'
         ' "memory_updates": [{"value": 1}, "oops"],'
@@ -58,7 +66,9 @@ def test_rejects_bad_fields(caplog):
     )
     parsed = _parse_llm_output(raw, agent_name="agent1", tick=4)
     # Only the dict outbox entry should survive and be sanitized
-    assert parsed["outbox_entries"] == [{"kind": "message", "payload": {}, "tags": [], "meta": {}}]
+    assert parsed["outbox_entries"] == [
+        {"kind": "message", "payload": {}, "tags": [], "meta": {}, "recipients": None}
+    ]
     # Invalid memory updates are dropped
     assert parsed["memory_updates"] == []
     # tool_calls coerced to empty list on violation
