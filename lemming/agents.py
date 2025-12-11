@@ -135,7 +135,10 @@ def _parse_model(model_data: Any) -> AgentModel:
             temperature=float(model_data.get("temperature", DEFAULT_TEMPERATURE)),
             max_tokens=int(model_data.get("max_tokens", DEFAULT_MAX_TOKENS)),
         )
-    logger.warning("Unexpected model config format %s; using default", type(model_data))
+    logger.warning(
+        "model_config_unexpected",
+        extra={"event": "model_config_unexpected", "config_type": str(type(model_data))},
+    )
     return AgentModel()
 
 
@@ -185,7 +188,10 @@ def _load_resume_txt(resume_path: Path) -> dict[str, Any]:
         try:
             config_data = json.loads(config_lines)
         except json.JSONDecodeError:
-            logger.warning("Could not parse CONFIG block in %s", resume_path)
+            logger.warning(
+                "resume_config_parse_failed",
+                extra={"event": "resume_config_parse_failed", "path": str(resume_path)},
+            )
 
     model = config_data.get("model", DEFAULT_MODEL_KEY)
     if isinstance(model, str):
@@ -288,27 +294,54 @@ def discover_agents(base_path: Path) -> list[Agent]:
         try:
             data, resume_path = _load_resume(base_path, child.name)
         except json.JSONDecodeError as exc:
-            logger.warning("Skipping %s due to invalid resume JSON: %s", child.name, exc)
+            logger.warning(
+                "resume_invalid_json",
+                extra={
+                    "event": "resume_invalid_json",
+                    "path": str(child),
+                    "error": str(exc),
+                },
+            )
             continue
         if not data or not resume_path:
-            logger.warning("Skipping %s; missing resume.json or resume.txt", child.name)
+            logger.warning(
+                "resume_missing",
+                extra={"event": "resume_missing", "path": str(child)},
+            )
             continue
         resume_name = data.get("name")
         if resume_name and resume_name != child.name:
             logger.warning(
-                "Folder name '%s' does not match resume name '%s'; using resume name.",
-                child.name,
-                resume_name,
+                "resume_name_mismatch",
+                extra={
+                    "event": "resume_name_mismatch",
+                    "folder": child.name,
+                    "resume": resume_name,
+                },
             )
 
         try:
             agent = Agent.from_resume_data(resume_path, data)
         except Exception as exc:  # pragma: no cover
-            logger.warning("Skipping %s due to invalid resume: %s", child.name, exc)
+            logger.warning(
+                "resume_invalid",
+                extra={
+                    "event": "resume_invalid",
+                    "path": str(child),
+                    "error": str(exc),
+                },
+            )
             continue
 
         if agent.name in seen_names:
-            logger.warning("Skipping %s due to duplicate agent name %s", child.name, agent.name)
+            logger.warning(
+                "duplicate_agent_name",
+                extra={
+                    "event": "duplicate_agent_name",
+                    "folder": child.name,
+                    "agent": agent.name,
+                },
+            )
             continue
 
         seen_names.add(agent.name)

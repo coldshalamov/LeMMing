@@ -93,7 +93,14 @@ def _load_entry(entry_path: Path) -> OutboxEntry | None:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Failed to read outbox entry %s: %s", entry_path, exc)
+        logger.warning(
+            "outbox_read_failed",
+            extra={
+                "event": "outbox_read_failed",
+                "path": str(entry_path),
+                "error": str(exc),
+            },
+        )
         return None
 
 
@@ -175,7 +182,14 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
                     entry_path.unlink()
                     removed += 1
                 except Exception as exc:  # pragma: no cover
-                    logger.error("Failed to clean outbox entry %s: %s", entry_path, exc)
+                    logger.error(
+                        "outbox_cleanup_failed",
+                        extra={
+                            "event": "outbox_cleanup_failed",
+                            "path": str(entry_path),
+                            "error": str(exc),
+                        },
+                    )
     return removed
 
 

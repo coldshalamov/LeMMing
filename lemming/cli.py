@@ -139,9 +139,9 @@ def inspect_cmd(base_path: Path, name: str, outbox_limit: int = 5) -> None:
 
 def logs_cmd(base_path: Path, name: str, lines: int) -> None:
     log_dir = get_logs_dir(base_path, name)
-    log_path = log_dir / "activity.log"
+    log_path = log_dir / "structured.jsonl"
     if not log_path.exists():
-        print(f"No log file found for agent '{name}'. It will be created on first run.")
+        print(f"No structured log file found for agent '{name}'. It will be created on first run.")
         return
 
     content = log_path.read_text(encoding="utf-8").splitlines()

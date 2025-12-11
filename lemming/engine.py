@@ -65,7 +65,10 @@ def load_tick(base_path: Path) -> int:
                 data = json.load(f)
             return int(data.get("current_tick", 1))
         except Exception:  # pragma: no cover - defensive
-            logger.warning("Could not parse tick file %s; defaulting to 1", tick_file)
+            logger.warning(
+                "tick_load_failed",
+                extra={"event": "tick_load_failed", "path": str(tick_file)},
+            )
     return 1
 
 
@@ -179,11 +182,14 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
     def _log_violation(reason: str) -> None:
         snippet = raw[:200].replace("\n", " ")
         logger.warning(
-            "LLM contract violation for agent %s at tick %s: %s. Snippet: %s",
-            agent_name,
-            tick,
-            reason,
-            snippet,
+            "llm_contract_violation",
+            extra={
+                "event": "llm_contract_violation",
+                "agent": agent_name,
+                "tick": tick,
+                "reason": reason,
+                "snippet": snippet,
+            },
         )
 
     try:
@@ -295,7 +301,15 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     cost_per_action = credits_info.get("cost_per_action", 0.01)
 
     if credits_left <= 0:
-        logger.warning("Agent %s has no credits; skipping", agent.name)
+        logger.warning(
+            "agent_skipped_no_credits",
+            extra={
+                "event": "agent_skipped_no_credits",
+                "agent": agent.name,
+                "tick": tick,
+                "credits_left": credits_left,
+            },
+        )
         log_agent_action(
             base_path,
             agent.name,
@@ -317,7 +331,15 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
             config_dir=get_config_dir(base_path),
         )
     except Exception as exc:
-        logger.error("LLM call failed for agent %s: %s", agent.name, exc)
+        logger.error(
+            "llm_call_failed",
+            extra={
+                "event": "llm_call_failed",
+                "agent": agent.name,
+                "tick": tick,
+                "error": str(exc),
+            },
+        )
         log_agent_action(
             base_path,
             agent.name,
@@ -345,15 +367,23 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         if allowed_targets is not None and allowed_targets != ["*"]:
             if recipients is None:
                 logger.warning(
-                    "Agent %s attempted to send without recipient while send_outboxes restricted; dropping",
-                    agent.name,
+                    "outbox_recipient_missing",
+                    extra={
+                        "event": "outbox_recipient_missing",
+                        "agent": agent.name,
+                        "tick": tick,
+                    },
                 )
                 continue
             if any(recipient not in allowed_targets for recipient in recipients):
                 logger.warning(
-                    "Agent %s attempted to send to disallowed recipients %s; dropping entry",
-                    agent.name,
-                    recipients,
+                    "outbox_recipient_disallowed",
+                    extra={
+                        "event": "outbox_recipient_disallowed",
+                        "agent": agent.name,
+                        "tick": tick,
+                        "recipients": recipients,
+                    },
                 )
                 continue
 
@@ -380,10 +410,26 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         if op == "delete":
             deleted = delete_memory(base_path, agent.name, key)
             if not deleted:
-                logger.warning("Agent %s attempted to delete missing memory key '%s'", agent.name, key)
+                logger.warning(
+                    "memory_delete_missing",
+                    extra={
+                        "event": "memory_delete_missing",
+                        "agent": agent.name,
+                        "tick": tick,
+                        "key": key,
+                    },
+                )
             continue
         if op != "write":
-            logger.warning("Unknown memory op '%s' from agent %s; skipping", op, agent.name)
+            logger.warning(
+                "memory_op_unknown",
+                extra={
+                    "event": "memory_op_unknown",
+                    "agent": agent.name,
+                    "tick": tick,
+                    "op": op,
+                },
+            )
             continue
         save_memory(base_path, agent.name, key, update.get("value"))
 
@@ -425,7 +471,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
 
 def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
     tick_start = time.time()
-    logger.info("=== Tick %s ===", tick)
+    logger.info("tick_started", extra={"event": "tick_started", "tick": tick})
     log_engine_event("tick_started", tick=tick)
     config = get_org_config(base_path)
 
@@ -444,14 +490,25 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
 
     for agent in firing_agents:
         fire_point = compute_fire_point(agent)
-        logger.info("Running agent: %s (fire_point=%.3f)", agent.name, fire_point)
+        logger.info(
+            "agent_running",
+            extra={
+                "event": "agent_running",
+                "agent": agent.name,
+                "tick": tick,
+                "fire_point": round(fire_point, 3),
+            },
+        )
         results[agent.name] = run_agent(base_path, agent, tick)
 
     # Cleanup old outbox entries
     max_age_ticks = config.get("max_outbox_age_ticks", 100)
     removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
     if removed:
-        logger.info("Cleaned up %s expired outbox entries", removed)
+        logger.info(
+            "outbox_cleanup",
+            extra={"event": "outbox_cleanup", "tick": tick, "entries_removed": removed},
+        )
         log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
 
     tick_duration_ms = int((time.time() - tick_start) * 1000)
