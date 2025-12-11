@@ -90,11 +90,6 @@ Inspect agent details:
 python -m lemming.cli inspect <agent_name>
 ```
 
-Add credits to an agent:
-```bash
-python -m lemming.cli top-up <agent_name> 100.0
-```
-
 ### API Server & Dashboard
 
 Start the API server and live dashboard:
