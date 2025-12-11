@@ -1,5 +1,4 @@
 import json
-import json
 from pathlib import Path
 
 from lemming.agents import discover_agents, load_agent, validate_resume
@@ -46,7 +45,8 @@ def test_loads_description_fallback(tmp_path: Path) -> None:
 
     agent = load_agent(tmp_path, "desc_agent")
     assert agent.short_description == "Description only"
-    assert agent.permissions.send_outboxes == []
+    # send_outboxes is optional and defaults to None (unrestricted)
+    assert agent.permissions.send_outboxes is None
 
 
 def test_validate_resume_missing_fields(tmp_path: Path) -> None:
