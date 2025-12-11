@@ -182,7 +182,8 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
     def _log_violation(reason: str) -> None:
         snippet = raw[:200].replace("\n", " ")
         logger.warning(
-            "llm_contract_violation",
+            "llm_contract_violation: %s",
+            reason,
             extra={
                 "event": "llm_contract_violation",
                 "agent": agent_name,
@@ -356,7 +357,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     # Write outbox entries
     send_permissions = agent.permissions.send_outboxes
     allowed_targets: list[str] | None
-    if send_permissions in (None, []):
+    if send_permissions is None or send_permissions == []:
         allowed_targets = None  # unrestricted
     else:
         allowed_targets = list(send_permissions)
@@ -377,7 +378,8 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
                 continue
             if any(recipient not in allowed_targets for recipient in recipients):
                 logger.warning(
-                    "outbox_recipient_disallowed",
+                    "outbox_recipient_disallowed: disallowed recipients %s",
+                    recipients,
                     extra={
                         "event": "outbox_recipient_disallowed",
                         "agent": agent.name,
