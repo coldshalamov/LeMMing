@@ -8,6 +8,7 @@
     "short_description",
     "model",
     "permissions",
+    "schedule",
     "instructions"
   ],
   "properties": {
@@ -48,11 +49,30 @@
         "tools": {
           "type": "array",
           "items": {"type": "string"}
+        },
+        "send_outboxes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "file_access": {
+          "type": "object",
+          "required": ["allow_read", "allow_write"],
+          "properties": {
+            "allow_read": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "allow_write": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
         }
       }
     },
     "schedule": {
       "type": "object",
+      "required": ["run_every_n_ticks", "phase_offset"],
       "properties": {
         "run_every_n_ticks": {"type": "integer", "minimum": 1},
         "phase_offset": {"type": "integer", "minimum": 0}
@@ -61,6 +81,14 @@
     "instructions": {
       "type": "string",
       "minLength": 1
+    },
+    "credits": {
+      "type": "object",
+      "required": ["max_credits", "soft_cap"],
+      "properties": {
+        "max_credits": {"type": "number"},
+        "soft_cap": {"type": "number"}
+      }
     }
   }
 }

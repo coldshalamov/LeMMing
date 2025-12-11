@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from lemming.agents import discover_agents, load_agent, validate_resume
 
 
@@ -12,8 +14,8 @@ def test_load_from_json_resume(tmp_path: Path) -> None:
         "title": "Test Agent",
         "short_description": "A test agent",
         "workflow_description": "",
-        "model": {"key": "gpt-4.1-mini"},
-        "permissions": {"read_outboxes": ["*"], "tools": ["memory_read"]},
+        "model": {"key": "gpt-4.1-mini", "temperature": 0.1},
+        "permissions": {"read_outboxes": ["*"], "tools": ["memory_read"], "send_outboxes": []},
         "schedule": {"run_every_n_ticks": 2, "phase_offset": 0},
         "instructions": "Test instructions",
         "credits": {"max_credits": 10.0, "soft_cap": 5.0},
@@ -27,25 +29,12 @@ def test_load_from_json_resume(tmp_path: Path) -> None:
     assert agent.model.key == "gpt-4.1-mini"
     assert agent.schedule.run_every_n_ticks == 2
     assert agent.permissions.read_outboxes == ["*"]
+    assert agent.permissions.tools == ["memory_read"]
 
 
-def test_loads_description_fallback(tmp_path: Path) -> None:
-    agent_dir = tmp_path / "agents" / "desc_agent"
-    agent_dir.mkdir(parents=True)
-    resume = {
-        "name": "desc_agent",
-        "title": "Test Agent",
-        "description": "Description only",
-        "model": "gpt-4.1-mini",
-        "permissions": {"read_outboxes": [], "tools": []},
-        "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
-        "instructions": "",
-    }
-    (agent_dir / "resume.json").write_text(json.dumps(resume), encoding="utf-8")
-
-    agent = load_agent(tmp_path, "desc_agent")
-    assert agent.short_description == "Description only"
-    assert agent.permissions.send_outboxes == []
+def test_missing_resume_json_raises(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError):
+        load_agent(tmp_path, "missing")
 
 
 def test_validate_resume_missing_fields(tmp_path: Path) -> None:
@@ -57,6 +46,25 @@ def test_validate_resume_missing_fields(tmp_path: Path) -> None:
     errors = validate_resume(resume_path)
     assert errors
     assert any("permissions" in err for err in errors)
+    assert any("schedule" in err for err in errors)
+
+
+def test_malformed_resume_json_fails_fast(tmp_path: Path) -> None:
+    agent_dir = tmp_path / "agents" / "bad_agent"
+    agent_dir.mkdir(parents=True)
+    resume = {
+        "name": "bad_agent",
+        "title": "Bad Agent",
+        "short_description": "bad agent",
+        "model": {"key": "gpt-4.1-mini"},
+        "permissions": {"read_outboxes": "*", "tools": ["memory_read"]},
+        "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+        "instructions": ""
+    }
+    (agent_dir / "resume.json").write_text(json.dumps(resume), encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        load_agent(tmp_path, "bad_agent")
 
 
 def test_discover_skips_invalid_agents(tmp_path: Path) -> None:
