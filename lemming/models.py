@@ -40,7 +40,10 @@ class ModelRegistry:
                 provider_config=cfg.get("provider_config"),
             )
         self._loaded = True
-        logger.debug("Loaded model registry from %s", models_path)
+        logger.debug(
+            "models_loaded",
+            extra={"event": "models_loaded", "path": str(models_path)},
+        )
 
     def get(self, model_key: str) -> ModelConfig:
         self._load()
