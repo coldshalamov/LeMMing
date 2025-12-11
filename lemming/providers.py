@@ -272,7 +272,8 @@ class CircuitBreaker:
                 )
                 self.state = "CLOSED"
                 self.failure_count = 0
-                return result
+
+            return result
 
         except Exception as exc:
             self.failure_count += 1
