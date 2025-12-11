@@ -163,7 +163,7 @@ def _apply_defaults(data: dict[str, Any]) -> dict[str, Any]:
     permissions = normalized.get("permissions") or {}
     permissions.setdefault("read_outboxes", [])
     permissions.setdefault("tools", [])
-    permissions.setdefault("send_outboxes", [])
+    # send_outboxes is optional - only validate if provided
     file_access = permissions.get("file_access") or {}
     if not isinstance(file_access, dict):
         file_access = {}
@@ -249,6 +249,14 @@ def _load_resume(base_path: Path, name: str) -> tuple[dict[str, Any], Path] | tu
     if json_path.exists():
         return _load_resume_json(json_path), json_path
     if txt_path.exists():
+        logger.warning(
+            f"resume_txt_deprecated: {name} uses deprecated resume.txt - migrate to resume.json",
+            extra={
+                "event": "resume_txt_deprecated",
+                "agent": name,
+                "path": str(txt_path),
+            },
+        )
         return _load_resume_txt(txt_path), txt_path
     return None, None
 
