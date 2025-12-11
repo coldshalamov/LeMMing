@@ -1,4 +1,5 @@
 import json
+import json
 from pathlib import Path
 
 from lemming.agents import discover_agents, load_agent, validate_resume
@@ -27,6 +28,25 @@ def test_load_from_json_resume(tmp_path: Path) -> None:
     assert agent.model.key == "gpt-4.1-mini"
     assert agent.schedule.run_every_n_ticks == 2
     assert agent.permissions.read_outboxes == ["*"]
+
+
+def test_loads_description_fallback(tmp_path: Path) -> None:
+    agent_dir = tmp_path / "agents" / "desc_agent"
+    agent_dir.mkdir(parents=True)
+    resume = {
+        "name": "desc_agent",
+        "title": "Test Agent",
+        "description": "Description only",
+        "model": "gpt-4.1-mini",
+        "permissions": {"read_outboxes": [], "tools": []},
+        "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+        "instructions": "",
+    }
+    (agent_dir / "resume.json").write_text(json.dumps(resume), encoding="utf-8")
+
+    agent = load_agent(tmp_path, "desc_agent")
+    assert agent.short_description == "Description only"
+    assert agent.permissions.send_outboxes == []
 
 
 def test_validate_resume_missing_fields(tmp_path: Path) -> None:

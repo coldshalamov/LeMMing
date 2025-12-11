@@ -66,25 +66,43 @@ def validate_resume_file(resume_path: Path) -> dict[str, Any]:
 
     _require_keys(
         content,
-        ["name", "title", "short_description", "model", "permissions", "instructions"],
+        ["name", "title", "model", "permissions", "schedule", "instructions"],
         str(resume_path),
     )
-    if content.get("name") != resume_path.parent.name:
-        raise ValidationError(
-            f"Agent name {content.get('name')} does not match directory {resume_path.parent.name}"
-        )
+    if not content.get("short_description") and not content.get("description"):
+        raise ValidationError("Missing short_description or description")
 
-    _require_keys(content.get("model", {}), ["key"], f"model in {resume_path}")
-    permissions = content.get("permissions", {})
+    model = content.get("model")
+    if isinstance(model, dict):
+        _require_keys(model, ["key"], f"model in {resume_path}")
+    elif not isinstance(model, str):
+        raise ValidationError("model must be a string key or object with 'key'")
+
+    permissions = content.get("permissions", {}) or {}
     _require_keys(permissions, ["read_outboxes", "tools"], f"permissions in {resume_path}")
-    if not isinstance(permissions.get("read_outboxes"), list) or not all(
-        isinstance(x, str) for x in permissions.get("read_outboxes", [])
-    ):
-        raise ValidationError("permissions.read_outboxes must be list of strings")
-    if not isinstance(permissions.get("tools"), list) or not all(
-        isinstance(x, str) for x in permissions.get("tools", [])
-    ):
-        raise ValidationError("permissions.tools must be list of strings")
+    for key in ["read_outboxes", "tools", "send_outboxes"]:
+        if key in permissions and not isinstance(permissions.get(key, []), list):
+            raise ValidationError(f"permissions.{key} must be list when provided")
+    file_access = permissions.get("file_access")
+    if file_access is not None:
+        if not isinstance(file_access, dict):
+            raise ValidationError("permissions.file_access must be a dict when provided")
+        for sub in ["allow_read", "allow_write"]:
+            if sub in file_access and not isinstance(file_access.get(sub, []), list):
+                raise ValidationError(f"permissions.file_access.{sub} must be list")
+
+    schedule = content.get("schedule", {}) or {}
+    _require_keys(schedule, ["run_every_n_ticks", "phase_offset"], f"schedule in {resume_path}")
+    if int(schedule.get("run_every_n_ticks", 0)) <= 0:
+        raise ValidationError("schedule.run_every_n_ticks must be > 0")
+
+    credits = content.get("credits")
+    if credits is not None:
+        if not isinstance(credits, dict):
+            raise ValidationError("credits must be a dict when provided")
+        for field in ["max_credits", "soft_cap"]:
+            if field not in credits:
+                raise ValidationError(f"Missing credits.{field}")
 
     return content
 
