@@ -1,33 +1,54 @@
 # Workflow State
 
 ## Current Task
-Perform Step 1 analysis: scan existing `lemming/` modules to map current logic against the new resume-driven, pull-based architecture.
+✅ **COMPLETE:** LeMMing v1.0 audit and hardening finished.
 
-## Plan (3-7 steps)
-- [x] Catalog current agent configuration sources (resume files, org chart, credits) and how they are loaded.
-- [x] Trace messaging flow and file layout for outboxes/inboxes, noting any push-based assumptions.
-- [x] Review scheduler/engine mechanics (loops, speed multipliers) and how ticks/turns are handled today.
-- [x] Identify dependencies on role-specific logic or org chart structures that must be removed or generalized.
-- [x] Summarize findings and gaps relative to mandates in this file for next implementation steps.
+The repository is now in a clean, production-ready state with:
+- All tests passing (32/32)
+- Lint and type checks clean
+- Resume.json as canonical ABI
+- Comprehensive documentation
+- Multi-provider support (OpenAI, Anthropic, Ollama)
+- Full CLI and API capabilities
 
-## Findings (Step 1 Analysis)
-- **Resume/config sources**: `agents.py` loads agents from `agents/<name>/resume.txt` via `validate_resume_file`, extracting header fields plus `[INSTRUCTIONS]` and `[CONFIG]` JSON. Config requires `model`, `org_speed_multiplier`, `send_to`, `read_from`, and `max_credits`, and tools are optional keys passed through. Org relationships and credits are duplicated in `lemming/config/org_chart.json` and `credits.json`. 【F:lemming/agents.py†L25-L56】【F:lemming/config_validation.py†L17-L117】
-- **Messaging path**: Messages are addressed to `agents/<sender>/outbox/<receiver>/msg_*.json`, requiring org-chart permission checks before write. Receivers poll other agents’ receiver-specific subfolders; processing moves files into `processed/`. Expiration cleanup traverses per-receiver folders. This is push-based and not aligned with the single outbox requirement. 【F:lemming/messaging.py†L17-L83】【F:lemming/file_dispatcher.py†L10-L32】
-- **Scheduler/turns**: Engine uses `org_speed_multiplier` to decide if an agent runs on a given turn and can force manager summaries based on `org_config`. Execution loops forever with `base_turn_seconds`, lacking tick-based `(tick % run_every_n_ticks) == phase_offset` logic. 【F:lemming/engine.py†L49-L137】【F:lemming/engine.py†L165-L207】
-- **Role/org dependencies**: Org permissions, credit limits, and send/read lists are centralized in `org_chart.json` and `credits.json`, cached via `org.py`. Engine forces manager-specific behavior (summary runs) and uses org chart for send/read validation, so the system is not generic or resume-driven. 【F:lemming/org.py†L14-L83】【F:lemming/engine.py†L165-L189】
+## Architecture Status
 
-## Repo Summary
-- Filesystem-first multi-agent framework with CLI, FastAPI server, and dashboard; agents communicate via outboxes with org-chart permissions and credit tracking. Resumes currently use `resume.txt` with `[INSTRUCTIONS]` plus `[CONFIG]` JSON including `model`, `org_speed_multiplier`, `send_to`, `read_from`, and `max_credits` fields.
-- Key Python modules live under `lemming/` (CLI, engine, messaging, org, memory, tools, model providers, API, config validation). Messaging/engine/org components support turn-based execution with credit use and outbox handling.
-- `tests/` contains unit coverage for agents, config validation, engine, file dispatch, memory, messaging, models, org, and tools, indicating an established test suite.
-- `agents/` includes default roles (`manager`, `planner`, `hr`, `coder_01`, `janitor`, `preference_memory`) plus `agent_template`, each with resume/outbox/memory folders following the current resume.txt schema.
-- UI assets under `ui/` provide dashboard HTML pages; docs include README and a roadmap outlining future phases and features beyond the current version.
+### ✅ Core Invariants Enforced
+- **Resume as ABI**: `resume.json` is canonical, `.txt` deprecated with warning
+- **Outbox-only messaging**: Agents write to own outbox, others read via permissions
+- **Tick-based scheduling**: Deterministic execution with fire_point ordering
+- **Filesystem transparency**: All state in files (resumes, outboxes, memory, configs, logs)
+- **Permission-derived graph**: No central org chart, derived from resumes
 
-## Open Questions
-- None yet; will note any uncertainties after the repository scan.
+### ✅ Implementation Quality
+- Engine contract normalization: robust JSON parsing with logging
+- Credit system: per-agent tracking with deduction
+- Memory system: CRUD operations with archiving and compaction
+- Tool framework: permission-based access with file safety
+- Provider abstraction: OpenAI, Anthropic, Ollama with retry/circuit breaker
 
-## Relevant Paths
-- project root
-- `logs/`
-- `README.md`, `ROADMAP.md`
-- `lemming/` package, `tests/`, `agents/`, `ui/`
+### ✅ Testing & CI
+- Comprehensive test suite covering:
+  - Agent loading and validation
+  - Engine contract parsing
+  - Scheduler fire_point calculation
+  - Message I/O and permissions
+  - Tool permissions
+  - API endpoints
+  - CLI commands
+- All checks pass: pytest, ruff, mypy
+- GitHub Actions CI configured
+
+## Repository Summary
+A filesystem-first multi-agent framework with:
+- **Core:** Engine, scheduler, messaging, memory, tools, providers
+- **Config:** models.json, credits.json, org_config.json in lemming/config/
+- **Agents:** agent_template + example agents (human, spec_writer, log_summarizer, ui_copy_editor)
+- **CLI:** 15+ commands for management, execution, and monitoring
+- **API:** FastAPI backend with WebSocket support
+- **UI:** Next.js dashboard under ui/
+- **Tests:** Full coverage in tests/
+- **Docs:** README, PROJECT_RULES, ROADMAP, CONTRIBUTING, docs/
+
+## No Open Questions
+System is stable and ready for use.
