@@ -17,12 +17,25 @@ _credits_cache: dict[str, Any] | None = None
 _config_dir: Path = DEFAULT_CONFIG_DIR
 
 
-def set_config_dir(base_path: Path | None) -> None:
-    global _config_dir
+def _resolve_config_dir(base_path: Path | None) -> Path:
     if base_path is None:
-        _config_dir = DEFAULT_CONFIG_DIR
-    else:
-        _config_dir = get_config_dir(base_path)
+        return DEFAULT_CONFIG_DIR
+    return get_config_dir(base_path)
+
+
+def set_config_dir(base_path: Path | None) -> None:
+    """Point config helpers at the provided base path.
+
+    Cache entries are cleared when the target directory changes to avoid using
+    stale data across different repositories or temporary test fixtures.
+    """
+
+    global _config_dir, _org_config_cache, _credits_cache
+    new_dir = _resolve_config_dir(base_path)
+    if new_dir != _config_dir:
+        _config_dir = new_dir
+        _org_config_cache = None
+        _credits_cache = None
 
 
 def _load_json(filename: str) -> dict[str, Any]:
@@ -135,6 +148,7 @@ def save_credits(base_path: Path | None = None) -> None:
 
 
 def reset_caches() -> None:
-    global _org_config_cache, _credits_cache
+    global _org_config_cache, _credits_cache, _config_dir
     _org_config_cache = None
     _credits_cache = None
+    _config_dir = DEFAULT_CONFIG_DIR
