@@ -150,11 +150,33 @@ def _load_resume_json(resume_path: Path) -> dict[str, Any]:
 
 def _apply_defaults(data: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(data)
+
+    # Normalize description fields; prefer explicit description but fall back to short_description
+    description = normalized.get("description")
+    short_description = normalized.get("short_description") or description or ""
+    normalized["short_description"] = short_description
+    normalized.setdefault("description", short_description)
     normalized.setdefault("workflow_description", "")
-    normalized.setdefault("short_description", "")
     normalized.setdefault("title", "")
-    normalized.setdefault("permissions", {"read_outboxes": [], "tools": []})
-    normalized.setdefault("schedule", {"run_every_n_ticks": 1, "phase_offset": 0})
+
+    # Permissions defaults and normalization
+    permissions = normalized.get("permissions") or {}
+    permissions.setdefault("read_outboxes", [])
+    permissions.setdefault("tools", [])
+    permissions.setdefault("send_outboxes", [])
+    file_access = permissions.get("file_access") or {}
+    if not isinstance(file_access, dict):
+        file_access = {}
+    file_access.setdefault("allow_read", [])
+    file_access.setdefault("allow_write", [])
+    permissions["file_access"] = file_access
+    normalized["permissions"] = permissions
+
+    schedule = normalized.get("schedule") or {}
+    schedule.setdefault("run_every_n_ticks", 1)
+    schedule.setdefault("phase_offset", 0)
+    normalized["schedule"] = schedule
+
     normalized.setdefault("credits", DEFAULT_CREDITS.copy())
     normalized.setdefault("instructions", "")
     normalized.setdefault("model", DEFAULT_MODEL_KEY)
@@ -233,37 +255,40 @@ def _load_resume(base_path: Path, name: str) -> tuple[dict[str, Any], Path] | tu
 
 def _validate_resume_dict(resume_path: Path, data: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    required_fields = [
-        "name",
-        "title",
-        "short_description",
-        "workflow_description",
-        "model",
-        "permissions",
-        "instructions",
-        "schedule",
-        "credits",
-    ]
+    required_fields = ["name", "title", "model", "permissions", "schedule", "instructions"]
     for field_name in required_fields:
         if field_name not in data:
             errors.append(f"Missing required field: {field_name}")
 
-    permissions = data.get("permissions", {})
-    if permissions:
-        if "read_outboxes" not in permissions:
-            errors.append("Missing permissions.read_outboxes")
-        if "tools" not in permissions:
-            errors.append("Missing permissions.tools")
+    if not data.get("short_description") and not data.get("description"):
+        errors.append("Missing short_description or description")
 
-    schedule = data.get("schedule", {})
-    if schedule:
-        n = schedule.get("run_every_n_ticks")
-        if n is None or int(n) <= 0:
-            errors.append("schedule.run_every_n_ticks must be > 0")
-        if "phase_offset" not in schedule:
-            errors.append("Missing schedule.phase_offset")
+    permissions = data.get("permissions", {}) or {}
+    if "read_outboxes" not in permissions:
+        errors.append("Missing permissions.read_outboxes")
+    if "tools" not in permissions:
+        errors.append("Missing permissions.tools")
+    for field_name in ["read_outboxes", "tools", "send_outboxes"]:
+        value = permissions.get(field_name, [])
+        if value is not None and not isinstance(value, list):
+            errors.append(f"permissions.{field_name} must be a list")
 
-    credits = data.get("credits", {})
+    file_access = permissions.get("file_access") or {}
+    if not isinstance(file_access, dict):
+        errors.append("permissions.file_access must be a dict when provided")
+    else:
+        for key in ["allow_read", "allow_write"]:
+            if key in file_access and not isinstance(file_access.get(key, []), list):
+                errors.append(f"permissions.file_access.{key} must be a list")
+
+    schedule = data.get("schedule", {}) or {}
+    n = schedule.get("run_every_n_ticks")
+    if n is None or int(n) <= 0:
+        errors.append("schedule.run_every_n_ticks must be > 0")
+    if "phase_offset" not in schedule:
+        errors.append("Missing schedule.phase_offset")
+
+    credits = data.get("credits", {}) or {}
     if credits:
         if "max_credits" not in credits:
             errors.append("Missing credits.max_credits")
