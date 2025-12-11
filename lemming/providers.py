@@ -271,8 +271,8 @@ class CircuitBreaker:
                     extra={"event": "circuit_closed", "state": "CLOSED"},
                 )
                 self.state = "CLOSED"
-                self.failure_count = 0
-                return result
+            self.failure_count = 0
+            return result
 
         except Exception as exc:
             self.failure_count += 1
