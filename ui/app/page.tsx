@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAgents, useOrgGraph, useStatus, useMessages } from "@/lib/api";
+import { useAgents, useOrgGraph, useStatus, useMessages, useWebSocketStream } from "@/lib/api";
 import { AgentCard } from "@/components/AgentCard";
 import { OrgGraphView } from "@/components/OrgGraph";
-import { Activity, Clock, Server, Terminal, Play, Pause, SkipForward, Plus } from "lucide-react";
+import { Activity, Clock, Server, Terminal, Plus, Wifi, WifiOff } from "lucide-react";
 import clsx from "clsx";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
 
 export default function Dashboard() {
@@ -15,9 +15,9 @@ export default function Dashboard() {
   const { graph } = useOrgGraph();
   const { status } = useStatus();
   const { messages } = useMessages();
+  const { isConnected } = useWebSocketStream();
 
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false); // For visual simulation only if backend matches
   const [visualTick, setVisualTick] = useState(1);
 
   // Sync visual tick with backend status
@@ -26,15 +26,6 @@ export default function Dashboard() {
       setVisualTick(status.tick);
     }
   }, [status?.tick]);
-
-  // Demo: Auto-increment tick if playing (and mock mode essentially)
-  useEffect(() => {
-    if (!isPlaying) return;
-    const interval = setInterval(() => {
-      setVisualTick(t => t + 1);
-    }, 1000); // 1 tick per second
-    return () => clearInterval(interval);
-  }, [isPlaying]);
 
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);
 
@@ -69,27 +60,29 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Activity size={14} className="text-brand-lime" />
-            <span>CREDITS: {status?.total_credits.toFixed(0) || 0}</span>
+            <span>CREDITS: {status?.total_credits !== undefined ? status.total_credits.toFixed(0) : 0}</span>
           </div>
         </div>
 
         {/* Controls */}
         <div className="flex items-center gap-2">
+          <div
+            className={clsx(
+              "flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono border",
+              isConnected
+                ? "border-brand-cyan text-brand-cyan bg-brand-cyan/10"
+                : "border-red-500 text-red-400 bg-red-500/10"
+            )}
+            title={isConnected ? "Connected to backend" : "Disconnected from backend"}
+          >
+            {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
+            {isConnected ? "LIVE" : "DISCONNECTED"}
+          </div>
           <Link href="/wizard">
             <button className="flex items-center gap-2 px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/50 text-brand-cyan rounded text-xs font-mono hover:bg-brand-cyan/20 transition-colors mr-2">
               <Plus size={14} /> DEPLOY_UNIT
             </button>
           </Link>
-
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className={clsx("p-2 rounded hover:bg-white/10 transition-colors", isPlaying ? "text-brand-lime" : "text-gray-400")}
-          >
-            {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-          </button>
-          <button className="p-2 rounded hover:bg-white/10 text-gray-400">
-            <SkipForward size={18} />
-          </button>
         </div>
       </header>
 
