@@ -60,9 +60,16 @@ def _ensure_credit_entry(agent: Agent, credits: dict[str, Any]) -> None:
         credits[agent.name] = {}
     record = credits[agent.name]
     record.setdefault("model", agent.model.key)
-    record.setdefault("max_credits", agent.credits.max_credits)
-    record.setdefault("soft_cap", agent.credits.soft_cap)
-    record.setdefault("credits_left", agent.credits.max_credits)
+
+    if agent.credits:
+        record.setdefault("max_credits", agent.credits.max_credits)
+        record.setdefault("soft_cap", agent.credits.soft_cap)
+        record.setdefault("credits_left", agent.credits.max_credits)
+    else:
+        record.setdefault("max_credits", DEFAULT_CREDITS["max_credits"])
+        record.setdefault("soft_cap", DEFAULT_CREDITS["soft_cap"])
+        record.setdefault("credits_left", DEFAULT_CREDITS["max_credits"])
+
     record.setdefault("cost_per_action", 0.01)
 
 
