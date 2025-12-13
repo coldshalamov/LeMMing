@@ -1,0 +1,533 @@
+LeMMing (Lenticular Multi-Model Ingestion): A Filesystem-First Multi-Agent Orchestration Engine
+A Comprehensive Technical Whitepaper (v1.0)
+Lightweight Multi-Model Engine (LeMMing)
+A System for Modular, Transparent, Governable LLM Organizations
+
+
+
+Abstract
+LeMMing is a multi-agent orchestration framework designed around a simple but powerful principle: everything an AI organization does should be visible, inspectable, and understandable as plain files on disk. Unlike traditional monolithic “super-agents,” LeMMing models an AI team as a collection of lightweight agents, each with a single purpose, limited responsibilities, explicit permissions, and an independently configurable model backend.
+This whitepaper provides a complete top-to-bottom description of LeMMing’s architecture, philosophy, scheduling model, file layout, execution loop, UI design considerations, and future roadmap. It is intended as a self-contained, canonical technical document suitable for ingestion into systems like NotebookLM, or for onboarding developers, researchers, and LLM coding models tasked with expanding or completing the project.
+
+
+
+1. Introduction
+Large Language Models are powerful but inherently limited:
+context windows are finite, reasoning often muddles when tasks are mixed, and a single prompt cannot cleanly manage large, multi-step workflows with shifting state.
+LeMMing solves this through organizational decomposition:
+•Break work into specialized agents.
+
+•Store each agent’s knowledge in files, not ephemeral context.
+
+•Have agents communicate via permissioned outboxes, not hidden internal channels.
+
+•Coordinate everything using a predictable clock called the org tick.
+
+•Let each agent use its own model, temperature, and reasoning mode.
+
+•Make the entire system transparent, modular, and debuggable.
+
+Instead of “one big AI,” LeMMing gives you an AI company inside your filesystem.
+
+
+
+2. Design Philosophy
+LeMMing follows a strict set of architectural principles:
+2.1. No Magical Black Boxes
+Every computation, message, memory, and tool call ends up as a file.
+This makes debugging as simple as browsing folders.
+2.2. Narrow Agents, Not Giant Brains
+Each agent has a single job:
+planner plans, coder writes code, manager summarizes, historian logs.
+This reduces hallucination and bloated context.
+2.3. The Resume Is The ABI
+An agent is defined by:
+•A resume.json containing structured metadata
+
+•A resume.txt containing instructions
+
+The engine treats this as a contract.
+2.4. Explicit Communication
+Agents cannot “just talk.”
+They write messages to their own outbox; others may read those messages only if permissions allow.
+This creates clean boundaries and trustable, auditable workflows.
+2.5. Model-Agnostic
+Agents are allowed to use different LLM providers and models:
+•OpenAI GPT-4.1
+
+•OpenAI GPT-4.1-mini
+
+•Local models (Ollama, Llama 3, Mistral)
+
+•Anthropic Claude
+
+•Any future backend
+
+Model selection is part of the resume, not hardcoded.
+2.6. Predictable Timing
+A global clock called the org tick dictates when agents run.
+Each agent has:
+•a frequency (how often it runs),
+
+•a phase offset (when in the cycle it fires).
+
+This creates a rhythmic, predictable cadence.
+2.7. Composable and Scalable
+The architecture must scale from:
+•2 agents (a manager and a coder)
+
+ up to
+
+•100+ agents across departments, each with their own memory base and schedules.
+
+
+
+3. System Overview
+At a high level, LeMMing consists of:
+•The filesystem — the single source of truth
+
+•Agents — small LLM-driven processes
+
+•The engine — the scheduler and message router
+
+•The messaging layer — outboxes and permissions
+
+•The memory layer — structured persistent storage
+
+•The model provider system — dynamic backends
+
+•The tool registry — file, shell, creation, and memory tools
+
+•The API and UI — dashboards and visual controls
+
+•Credits & cost accounting — compute budgets per agent
+
+Together, these pieces create a modular, governable “AI workplace.”
+
+
+
+4. Filesystem as Operating System
+The core idea:
+everything the AI does exists as folders, text files, and JSON files.
+4.1. Directory Layout
+/LeMMing/
+    /agents/
+        /manager/
+            resume.json
+            resume.txt
+            inbox/
+            outbox/
+            memory/
+            logs/
+        /planner/
+        /coder_01/
+        /janitor/
+        /preference_memory/
+        /agent_template/
+    /lemming/
+        engine.py
+        agents.py
+        messages.py
+        memory.py
+        tools.py
+        providers.py
+        models.py
+        org.py
+        config_validation.py
+        cli.py
+        api.py
+    /config/
+        models.json
+        org_config.json
+        credits.json
+        org_chart.json   (optional, transitional)
+    /ui/
+        lemming_dashboard.html
+        lemming_dashboard_live.html
+    /tests/
+Everything—agents, memory, communication—happens here.
+
+
+
+5. Agents
+An agent is a directory-backed LLM persona with explicit capabilities.
+5.1. Resume JSON Structure
+Example:
+{
+  "name": "manager",
+  "title": "Manager",
+  "description": "Coordinates all agents. Summarizes progress.",
+  "model": "gpt-4.1-mini",
+  "schedule": {
+    "run_every_n_ticks": 1,
+    "phase_offset": 0
+  },
+  "permissions": {
+    "send_outboxes": ["planner", "coder_01", "janitor"],
+    "read_outboxes": ["planner", "coder_01"],
+    "tools": ["file_read", "file_write", "list_files"],
+    "file_access": {
+        "allow_read": ["./projects"],
+        "allow_write": ["./projects"]
+    }
+  }
+}
+5.2. Resume TXT
+Human-readable instructions. Treated as the “mind” of the agent.
+5.3. Agent Folder Structure
+•inbox/ – not used (inbox is virtual)
+
+•outbox/ – JSON messages written here
+
+•memory/ – JSON files stored by memory tools
+
+•logs/ – optional activity logs
+
+5.4. Permissions
+Agents have strict limits:
+•Who they may send messages to
+
+•Whose outboxes they may read
+
+•Which tools they may use
+
+•Which files they may access
+
+These permissions shape the org graph.
+
+
+
+6. Messaging Layer
+LeMMing uses a write-only outbox model.
+6.1. Outbox Entries
+A message is a file like:
+agents/planner/outbox/2025-12-01T12:00:03Z_manager_to_planner.json
+Content:
+{
+  "id": "uuid",
+  "agent": "manager",
+  "tick": 42,
+  "kind": "message",
+  "payload": {
+    "text": "Here is the next task."
+  },
+  "timestamp": "2025-12-01T12:00:03Z"
+}
+6.2. Reading Messages
+Agent A may read B’s outbox only if B is listed in:
+permissions.read_outboxes
+This becomes the org chart.
+6.3. Inbox-as-view, not a folder
+Inbox is not a directory; it is computed:
+Incoming = union(all readable outboxes)
+Filtered and summarized per agent.
+
+
+
+7. Memory Layer
+Each agent has a private memory directory.
+7.1. Memory Format
+Key/value stored as:
+memory/<key>.json
+7.2. Memory Summary in Prompts
+During run, the engine inserts memory summaries into prompts, keeping context small.
+7.3. Tools for Memory
+Tools:
+•memory_read
+
+•memory_write
+
+This allows agents to externalize knowledge beyond context windows.
+
+
+
+8. Scheduling and the Org Tick
+The org tick is the heartbeat.
+Every agent runs based on:
+•Frequency (ticks between runs)
+
+•Phase offset (where in the global cycle it runs)
+
+8.1. Global Clock
+The engine sets:
+•base_turn_seconds – e.g. 60 seconds
+
+•One full rotation of the global clock circle = one tick
+
+8.2. Agent-Specific Timing
+Agents run:
+if (tick + phase_offset) % run_every_n_ticks == 0
+This becomes visually intuitive when displayed as a circle:
+•global red arc = time progress
+
+•agent’s gray dot = its scheduled trigger point
+
+When the arc hits the dot → the agent fires.
+8.3. Starvation and Bottlenecks
+The engine tracks:
+•Did the agent have new input?
+
+•Did it produce output?
+
+•Did it run before upstream agents finished?
+
+This is used in UI to show:
+•red (active)
+
+•gray (idle)
+
+•black/orange (starved)
+
+•warning-colored connector edges (bottlenecks)
+
+
+
+9. Execution Loop
+The heart of LeMMing is engine.py.
+Each tick:
+1Discover agents
+
+2Build org schedule
+
+3For each agent whose turn it is:
+
+◦Build prompt
+
+◦Insert memory
+
+◦Insert incoming messages
+
+◦Insert instructions
+
+◦Insert JSON output schema
+
+4Call provider / model
+
+5Parse JSON
+
+6Write outbox messages
+
+7Execute tool calls
+
+8Update memory
+
+9Deduct compute credits
+
+10Log results
+
+11Clean up old outbox entries
+
+It is simple but powerful.
+
+
+
+10. Model Provider System
+10.1. Abstract Provider
+providers.py defines:
+class LLMProvider:
+    def call(self, model_name, messages, temperature):
+        raise NotImplementedError
+10.2. Concrete Providers (Pluggable)
+Examples:
+•OpenAIProvider
+
+•ClaudeProvider
+
+•OllamaProvider
+
+•LocalLlamaProvider
+
+Configured in models.json.
+10.3. Model Registry
+call_llm(model_key, messages...) does:
+•Look up provider
+
+•Instantiate provider
+
+•Make API call
+
+•Return content
+
+Agents can use different models per resume.
+
+
+
+11. Tooling Layer
+Agents may invoke tools via JSON:
+"tool_calls": [
+  {
+    "tool": "file_write",
+    "args": { "path": "project/plan.txt", "content": "..." }
+  }
+]
+Tools include:
+•File read, write, list
+
+•Shell execution
+
+•Memory read/write
+
+•Create new agent
+
+•List agents
+
+Tools obey:
+•Allowed tool list
+
+•Allowed file paths
+
+This prevents runaway behaviors.
+
+
+
+12. Credits and Cost Accounting
+Each agent has a compute budget in credits.json:
+{
+  "manager": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 1.0,
+    "credits_left": 100
+  }
+}
+On every run, credits decrement.
+When credits hit zero:
+•engine can disable the agent
+
+•UI can show “out of credits”
+
+
+
+13. API Layer
+FastAPI provides:
+•/api/agents
+
+•/api/agents/{name}
+
+•/api/agents/{name}/outbox
+
+•/api/credits
+
+•/api/status
+
+•/api/config
+
+This allows dashboards, external tools, or other orgs to inspect and control LeMMing.
+
+
+
+14. UI and Visual Layer
+This is where your most powerful contribution is emerging.
+14.1. The Org Board
+A canvas of agent nodes, each represented as:
+•a circle
+
+•an icon
+
+•colored state
+
+Connections represent read permissions.
+14.2. Always-Visible Baseball Card
+In the top-right:
+•detailed agent info
+
+•model settings (“intelligence,” “creativity”)
+
+•schedule diagram
+
+14.3. The Org Timer Circle
+A global circular arc:
+•red arc = progress of current tick
+
+•dot = when selected agent fires
+
+•inner fill = running (red), idle (gray), starved (black/orange)
+
+14.4. Bottleneck Indicators
+Edges turn warning-colored if:
+•upstream agent didn’t produce before downstream agent’s scheduled fire
+
+14.5. Add Agent Workflow
+A “+ Add Agent” button opens:
+•template picker
+
+•resume importer
+
+•marketplace (future)
+
+
+
+15. Example Agent Flow
+At tick 42:
+1Global arc reaches 90°
+
+2Planner’s phase dot is at 90°
+
+3Planner fires
+
+4Planner reads:
+
+◦manager’s outbox
+
+◦coder’s outbox
+
+5Planner writes tasks into its own outbox
+
+6Manager and Coder read these next tick
+
+7Coder writes a file via a tool
+
+8Manager summarizes progress every N ticks
+
+Simple, modular, transparent.
+
+
+
+16. Future Directions
+16.1. Stronger Provider Layer
+•full OpenAI provider
+
+•streaming support
+
+•response validation and fallback
+
+16.2. Org-Chart-as-Ground-Truth
+Eventually retire org_chart.json and derive all relations from resumes.
+16.3. Advanced Memory
+•long-term archival
+
+•memory compaction
+
+•vector search or semantic anchors
+
+16.4. UI Enhancements
+•drag-and-drop agent layout
+
+•real-time streaming state
+
+•tool management interface
+
+16.5. Distributed Execution
+•agents run on multiple machines
+
+•remote workers communicating via shared FS or API
+
+16.6. Modular “Departments”
+•pre-built bundles of agents
+
+•domain-specific templates
+
+
+
+17. Conclusion
+LeMMing is not just another orchestration system — it is an organizational metaphor turned into code, engineered so that:
+•everything is a file,
+
+•every agent is small and replaceable,
+
+•every message is explicit,
+
+•every decision is inspectable,
+
+•and the entire engine can scale without losing clarity.
+
+This whitepaper outlines the full architecture and philosophy needed to design, build, extend, or complete the system.
