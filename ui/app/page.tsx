@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAgents, useOrgGraph, useStatus, useMessages, useWebSocketStream } from "@/lib/api";
 import { AgentCard } from "@/components/AgentCard";
 import { OrgGraphView } from "@/components/OrgGraph";
@@ -18,15 +18,8 @@ export default function Dashboard() {
   const { isConnected } = useWebSocketStream();
 
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
-  const [visualTick, setVisualTick] = useState(1);
 
-  // Sync visual tick with backend status
-  useEffect(() => {
-    if (status?.tick) {
-      setVisualTick(status.tick);
-    }
-  }, [status?.tick]);
-
+  const visualTick = status?.tick || 1;
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);
 
   if (agentsLoading) {
@@ -113,14 +106,14 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-1 gap-2">
               {agents?.map(agent => (
-                <div key={agent.name} onClick={() => setSelectedAgentName(agent.name)}>
-                  <AgentCard
-                    agent={agent}
-                    currentTick={visualTick}
-                    isSelected={agent.name === selectedAgentName}
-                    variant="compact"
-                  />
-                </div>
+                <AgentCard
+                  key={agent.name}
+                  agent={agent}
+                  currentTick={visualTick}
+                  isSelected={agent.name === selectedAgentName}
+                  onSelect={() => setSelectedAgentName(agent.name)}
+                  variant="compact"
+                />
               ))}
             </div>
           </div>

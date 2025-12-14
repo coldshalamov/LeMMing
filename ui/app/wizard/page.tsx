@@ -113,7 +113,7 @@ export default function WizardPage() {
                                                 value={formData.description}
                                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none h-32"
-                                                placeholder="What is this agent's purpose?"
+                                                placeholder="What is this agent&apos;s purpose?"
                                             />
                                         </div>
                                     </div>
@@ -135,7 +135,7 @@ export default function WizardPage() {
                                         <div className="p-4 rounded border border-neo-border bg-neo-surface/50">
                                             <h4 className="text-sm font-bold text-white mb-2">System Instructions Preamble</h4>
                                             <p className="text-xs text-gray-400">
-                                                "You are a LeMMing agent operating in a multi-agent organization..."
+                                                &quot;You are a LeMMing agent operating in a multi-agent organization...&quot;
                                             </p>
                                             <textarea
                                                 className="w-full mt-2 bg-black/20 border border-white/10 p-2 text-xs font-mono text-gray-300 h-40"
