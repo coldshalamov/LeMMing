@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -16,39 +16,43 @@ DEFAULT_MAX_TOKENS = 2048
 DEFAULT_CREDITS = {"max_credits": 1000.0, "soft_cap": 500.0}
 
 
+def _default_credits() -> "AgentCredits":
+    return AgentCredits(max_credits=DEFAULT_CREDITS["max_credits"], soft_cap=DEFAULT_CREDITS["soft_cap"])
+
+
 @dataclass
 class AgentSchedule:
-    run_every_n_ticks: int
-    phase_offset: int
+    run_every_n_ticks: int = 1
+    phase_offset: int = 0
 
 
 @dataclass
 class AgentModel:
-    key: str
-    temperature: float | None = None
-    max_tokens: int | None = None
+    key: str = DEFAULT_MODEL_KEY
+    temperature: float | None = DEFAULT_TEMPERATURE
+    max_tokens: int | None = DEFAULT_MAX_TOKENS
 
 
 @dataclass
 class FileAccess:
     """File access permissions for agents."""
 
-    allow_read: list[str]
-    allow_write: list[str]
+    allow_read: list[str] = field(default_factory=list)
+    allow_write: list[str] = field(default_factory=list)
 
 
 @dataclass
 class AgentPermissions:
-    read_outboxes: list[str]
-    send_outboxes: list[str] | None
-    tools: list[str]
-    file_access: FileAccess | None
+    read_outboxes: list[str] = field(default_factory=list)
+    send_outboxes: list[str] | None = None
+    tools: list[str] = field(default_factory=list)
+    file_access: FileAccess | None = None
 
 
 @dataclass
 class AgentCredits:
-    max_credits: float
-    soft_cap: float
+    max_credits: float = DEFAULT_CREDITS["max_credits"]
+    soft_cap: float = DEFAULT_CREDITS["soft_cap"]
 
 
 @dataclass
@@ -61,9 +65,9 @@ class Agent:
     model: AgentModel
     permissions: AgentPermissions
     schedule: AgentSchedule
-    instructions: str
-    credits: AgentCredits | None
     resume_path: Path
+    instructions: str = ""
+    credits: AgentCredits = field(default_factory=_default_credits)
 
     @classmethod
     def from_resume_data(cls, resume_path: Path, data: dict[str, Any]) -> Agent:
@@ -77,7 +81,7 @@ class Agent:
         permissions_data = normalized["permissions"]
         credits_data = normalized.get("credits")
 
-        model = _parse_model(model_data)
+        model = _parse_model(model_data) if model_data is not None else AgentModel()
 
         file_access_data = permissions_data.get("file_access")
         file_access = None
@@ -101,12 +105,14 @@ class Agent:
             run_every_n_ticks=int(schedule_data["run_every_n_ticks"]),
             phase_offset=int(schedule_data["phase_offset"]),
         )
-        credits = None
-        if credits_data is not None:
-            credits = AgentCredits(
+        credits = (
+            AgentCredits(
                 max_credits=float(credits_data["max_credits"]),
                 soft_cap=float(credits_data["soft_cap"]),
             )
+            if credits_data is not None
+            else _default_credits()
+        )
 
         return cls(
             name=normalized["name"],
@@ -228,8 +234,8 @@ def _validate_resume_dict(resume_path: Path, data: dict[str, Any]) -> list[str]:
                     except (TypeError, ValueError):
                         errors.append(f"credits.{key} must be a number")
 
-    if not isinstance(data.get("instructions"), str) or not data.get("instructions"):
-        errors.append("instructions must be a non-empty string")
+    if "instructions" not in data or not isinstance(data.get("instructions"), str):
+        errors.append("instructions must be a string")
 
     if not isinstance(data.get("title"), str) or not data.get("title"):
         errors.append("title must be a non-empty string")
