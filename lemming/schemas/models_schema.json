@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LeMMing Models Config",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["provider", "model_name"],
+    "additionalProperties": false,
+    "properties": {
+      "provider": {"type": "string", "minLength": 1},
+      "model_name": {"type": "string", "minLength": 1},
+      "provider_config": {"type": "object"}
+    }
+  }
+}
