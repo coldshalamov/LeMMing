@@ -1,6 +1,28 @@
 """Centralized filesystem path helpers for LeMMing."""
 
+import re
 from pathlib import Path
+
+
+def validate_agent_name(agent_name: str) -> None:
+    """Validates that the agent name is safe to use in file paths.
+
+    Raises:
+        ValueError: If the agent name contains invalid characters or path traversal components.
+    """
+    if not agent_name:
+        raise ValueError("Agent name cannot be empty")
+
+    # Check for path separators and traversal components explicitly for better error messages
+    if "/" in agent_name or "\\" in agent_name:
+        raise ValueError(f"Agent name '{agent_name}' contains path separators")
+
+    if agent_name in {".", ".."}:
+        raise ValueError(f"Agent name '{agent_name}' is invalid")
+
+    # Enforce safe characters: alphanumeric, underscore, hyphen
+    if not re.match(r"^[a-zA-Z0-9_-]+$", agent_name):
+        raise ValueError(f"Agent name '{agent_name}' contains invalid characters. Allowed: a-z, A-Z, 0-9, _, -")
 
 
 def get_config_dir(base_path: Path) -> Path:
@@ -12,6 +34,7 @@ def get_agents_dir(base_path: Path) -> Path:
 
 
 def get_agent_dir(base_path: Path, agent_name: str) -> Path:
+    validate_agent_name(agent_name)
     return get_agents_dir(base_path) / agent_name
 
 
