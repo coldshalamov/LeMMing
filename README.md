@@ -6,6 +6,15 @@
 
 LeMMing is a **filesystem-first multi-agent orchestration framework** that simulates an organization of LLM workers communicating via permissioned outboxes in discrete ticks.
 
+## Start here
+- [Overview](docs/Overview.md) — mental model for “AI company in a folder”
+- [Concepts](docs/Concepts.md) — core primitives and glossary
+- [Architecture](docs/Architecture.md) — how the engine executes each tick
+- [Scheduling](docs/Scheduling.md) — exact firing math and visuals
+- [Tools & Connectors](docs/Tools_and_Connectors.md) — permissions and forward compatibility
+- [Modularity & Departments](docs/Modularity_and_Departments.md) — how to share bundles of agents
+- [UI Vision](docs/UI_Vision.md) — dashboard north star
+
 ## ✨ Key Features
 
 - 📄 **Resume as ABI** - Agent configuration via `resume.json` files
