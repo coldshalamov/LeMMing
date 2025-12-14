@@ -349,9 +349,10 @@ def main() -> None:
     elif args.command == "validate":
         errors = validate_everything(base_path)
         if errors:
-            print("Validation errors:")
+            print(f"Validation errors ({len(errors)}):")
             for err in errors:
                 print(f" - {err}")
+            print("Fix the issues above and re-run `python -m lemming.cli validate`.")
             sys.exit(1)
         print("All configs and resumes are valid.")
     elif args.command == "bootstrap":
