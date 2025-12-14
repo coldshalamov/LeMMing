@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAgents, useOrgGraph, useStatus, useMessages, useWebSocketStream } from "@/lib/api";
 import { AgentCard } from "@/components/AgentCard";
 import { OrgGraphView } from "@/components/OrgGraph";
@@ -18,14 +18,8 @@ export default function Dashboard() {
   const { isConnected } = useWebSocketStream();
 
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
-  const [visualTick, setVisualTick] = useState(1);
 
-  // Sync visual tick with backend status
-  useEffect(() => {
-    if (status?.tick) {
-      setVisualTick(status.tick);
-    }
-  }, [status?.tick]);
+  const visualTick = status?.tick || 1;
 
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);
 

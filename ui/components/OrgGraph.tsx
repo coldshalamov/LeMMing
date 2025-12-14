@@ -27,20 +27,35 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
 
     // Initialize random positions
     useEffect(() => {
-        const initial: Record<string, Point> = {};
-        const width = containerRef.current?.clientWidth || 800;
-        const height = containerRef.current?.clientHeight || 600;
+        // Check if we need to initialize positions for new agents
+        if (agents.length === 0) return;
 
-        agents.forEach(a => {
-            initial[a.name] = {
-                x: Math.random() * width * 0.6 + width * 0.2, // Center-ish
-                y: Math.random() * height * 0.6 + height * 0.2,
-                vx: 0,
-                vy: 0
-            };
+        // We only want to set initial positions if they don't exist yet
+        // or if the agent count significantly changed (reset)
+        // But doing it in useEffect with setPositions is fine as long as we don't do it on every render
+
+        setPositions(prev => {
+            const width = containerRef.current?.clientWidth || 800;
+            const height = containerRef.current?.clientHeight || 600;
+
+            const next = { ...prev };
+            let changed = false;
+
+            agents.forEach(a => {
+                if (!next[a.name]) {
+                    next[a.name] = {
+                        x: Math.random() * width * 0.6 + width * 0.2,
+                        y: Math.random() * height * 0.6 + height * 0.2,
+                        vx: 0,
+                        vy: 0
+                    };
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
         });
-        setPositions(initial);
-    }, [agents.length]); // Only reset if count changes
+    }, [agents]);
 
     // Simulation Loop
     useEffect(() => {
