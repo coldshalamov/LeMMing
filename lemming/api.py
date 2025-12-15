@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from .agents import discover_agents, load_agent
 from .engine import load_tick
-from .messages import OutboxEntry, read_outbox_entries
+from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
@@ -157,7 +157,7 @@ async def get_config() -> dict[str, Any]:
 async def status() -> dict[str, Any]:
     agents, credits = _load_agents_with_credits(BASE_PATH)
     tick = load_tick(BASE_PATH)
-    total_messages = sum(len(read_outbox_entries(BASE_PATH, agent.name, limit=10_000)) for agent in agents)
+    total_messages = sum(count_outbox_entries(BASE_PATH, agent.name) for agent in agents)
     total_credits = sum(entry.get("credits_left", 0.0) for entry in credits.values())
     return {
         "tick": tick,

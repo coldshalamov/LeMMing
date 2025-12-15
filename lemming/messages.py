@@ -6,6 +6,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+import os
 from typing import Any
 
 from .paths import get_agents_dir, get_outbox_dir
@@ -135,6 +136,26 @@ def read_outbox_entries(
 
     entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
+
+
+def count_outbox_entries(base_path: Path, agent_name: str) -> int:
+    """Efficiently count the number of outbox entries for an agent.
+
+    This avoids reading and parsing the JSON files, which is significantly faster.
+    """
+    outbox_dir = get_outbox_dir(base_path, agent_name)
+    if not outbox_dir.exists():
+        return 0
+
+    try:
+        count = 0
+        with os.scandir(outbox_dir) as it:
+            for entry in it:
+                if entry.name.endswith(".json") and entry.is_file():
+                    count += 1
+        return count
+    except FileNotFoundError:
+        return 0
 
 
 def collect_readable_outboxes(
