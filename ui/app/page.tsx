@@ -18,14 +18,6 @@ export default function Dashboard() {
   const { isConnected } = useWebSocketStream();
 
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
-  const [visualTick, setVisualTick] = useState(1);
-
-  // Sync visual tick with backend status
-  useEffect(() => {
-    if (status?.tick) {
-      setVisualTick(status.tick);
-    }
-  }, [status?.tick]);
 
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);
 
@@ -52,7 +44,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-6 text-xs font-mono text-gray-400">
           <div className="flex items-center gap-2">
             <Clock size={14} className="text-brand-cyan" />
-            <span className="text-white">TICK: {visualTick}</span>
+            <span className="text-white">TICK: {status?.tick || 1}</span>
           </div>
           <div className="flex items-center gap-2">
             <Server size={14} className="text-brand-purple" />
@@ -116,7 +108,7 @@ export default function Dashboard() {
                 <div key={agent.name} onClick={() => setSelectedAgentName(agent.name)}>
                   <AgentCard
                     agent={agent}
-                    currentTick={visualTick}
+                    currentTick={status?.tick || 1}
                     isSelected={agent.name === selectedAgentName}
                     variant="compact"
                   />
@@ -141,7 +133,7 @@ export default function Dashboard() {
                 >
                   <AgentCard
                     agent={selectedAgent}
-                    currentTick={visualTick}
+                    currentTick={status?.tick || 1}
                     isSelected={true}
                     variant="full"
                   />
