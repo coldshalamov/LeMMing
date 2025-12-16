@@ -121,18 +121,32 @@ def read_outbox_entries(
     if not outbox_dir.exists():
         return []
 
-    entries: list[OutboxEntry] = []
+    files_by_tick: dict[int, list[Path]] = {}
     for entry_path in outbox_dir.glob("*.json"):
-        if since_tick is not None:
-            tick_val = _tick_from_filename(entry_path)
-            if tick_val is not None and tick_val < since_tick:
+        tick_val = _tick_from_filename(entry_path)
+        if tick_val is None:
+            continue
+        if since_tick is not None and tick_val < since_tick:
+            continue
+        if tick_val not in files_by_tick:
+            files_by_tick[tick_val] = []
+        files_by_tick[tick_val].append(entry_path)
+
+    entries: list[OutboxEntry] = []
+    sorted_ticks = sorted(files_by_tick.keys(), reverse=True)
+
+    for tick in sorted_ticks:
+        for entry_path in files_by_tick[tick]:
+            entry = _load_entry(entry_path)
+            if entry is None:
                 continue
-        entry = _load_entry(entry_path)
-        if entry is None:
-            continue
-        if since_tick is not None and entry.tick < since_tick:
-            continue
-        entries.append(entry)
+            # Re-check tick condition from content just in case, though filename check should suffice
+            if since_tick is not None and entry.tick < since_tick:
+                continue
+            entries.append(entry)
+
+        if len(entries) >= limit:
+            break
 
     entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
