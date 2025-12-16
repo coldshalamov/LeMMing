@@ -40,6 +40,7 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
             };
         });
         setPositions(initial);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [agents.length]); // Only reset if count changes
 
     // Simulation Loop
@@ -194,8 +195,19 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
                     <div
                         key={agent.name}
                         onClick={() => onSelectAgent(agent.name)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onSelectAgent(agent.name);
+                            }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Select agent ${agent.name}`}
+                        aria-pressed={isSel}
                         className={clsx(
                             "absolute transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-colors border",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-black",
                             isSel
                                 ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan shadow-[0_0_15px_rgba(6,182,212,0.4)]"
                                 : "bg-neo-surface border-neo-border text-gray-400 hover:border-gray-500"

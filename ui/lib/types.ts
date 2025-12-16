@@ -43,7 +43,9 @@ export interface OutboxEntry {
   tick: number;
   agent: string;
   kind: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: Record<string, any>;
   tags?: string[] | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   meta?: Record<string, any> | null;
 }
