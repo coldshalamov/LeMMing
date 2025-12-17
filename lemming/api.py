@@ -16,6 +16,8 @@ from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
+MAX_LIMIT = 1000
+
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.0")
 
 # Configure CORS
@@ -125,6 +127,8 @@ async def get_agent(agent_name: str) -> AgentInfo:
 
 @app.get("/api/agents/{agent_name}/outbox", response_model=list[OutboxEntryModel])
 async def get_agent_outbox(agent_name: str, limit: int = 20, since_tick: int | None = None) -> list[OutboxEntryModel]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
     entries = read_outbox_entries(BASE_PATH, agent_name, limit=limit, since_tick=since_tick)
     return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries]
 
@@ -177,6 +181,8 @@ async def status() -> dict[str, Any]:
 async def list_messages(
     agent: str | None = None, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntryModel]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
     agent_names: list[str]
     if agent:
         try:
