@@ -11,31 +11,38 @@ class TestPathsSecurity:
         validate_agent_name("valid_agent")
         validate_agent_name("agent-123")
         validate_agent_name("agent_name")
+        validate_agent_name("AgentName")
+        validate_agent_name("123")
 
     def test_validate_agent_name_empty(self):
         """Test empty agent name raises ValueError."""
         with pytest.raises(ValueError, match="Agent name cannot be empty"):
             validate_agent_name("")
 
+    def test_validate_agent_name_invalid_chars(self):
+        """Test names with invalid characters raise ValueError."""
+        invalid_names = [
+            "agent name",  # Space
+            "agent.name",  # Dot
+            "agent/name",  # Slash
+            "agent\\name", # Backslash
+            "agent@name",  # Special char
+            "<script>",    # HTML/XML
+            "foo\0bar",    # Null byte
+        ]
+        for name in invalid_names:
+            with pytest.raises(ValueError, match="Only alphanumeric characters"):
+                validate_agent_name(name)
+
     def test_validate_agent_name_dot(self):
         """Test '.' raises ValueError."""
-        with pytest.raises(ValueError, match="is invalid"):
+        with pytest.raises(ValueError, match="Only alphanumeric characters"):
             validate_agent_name(".")
 
     def test_validate_agent_name_dotdot(self):
         """Test '..' raises ValueError."""
-        with pytest.raises(ValueError, match="is invalid"):
+        with pytest.raises(ValueError, match="Only alphanumeric characters"):
             validate_agent_name("..")
-
-    def test_validate_agent_name_slash(self):
-        """Test names with forward slash raise ValueError."""
-        with pytest.raises(ValueError, match="contains path separators"):
-            validate_agent_name("path/traversal")
-
-    def test_validate_agent_name_absolute(self):
-        """Test absolute paths raise ValueError."""
-        with pytest.raises(ValueError, match="contains path separators"):
-            validate_agent_name("/etc/passwd")
 
     def test_get_agent_dir_security(self, tmp_path):
         """Test get_agent_dir enforces validation."""
@@ -50,3 +57,7 @@ class TestPathsSecurity:
 
         with pytest.raises(ValueError):
             get_agent_dir(base_path, "/tmp/bad_agent")
+
+        # Should fail for spaces
+        with pytest.raises(ValueError):
+            get_agent_dir(base_path, "bad agent")

@@ -1,6 +1,7 @@
 """Centralized filesystem path helpers for LeMMing."""
 
 import os
+import re
 from pathlib import Path
 
 
@@ -9,13 +10,12 @@ def validate_agent_name(name: str) -> None:
     if not name:
         raise ValueError("Agent name cannot be empty")
 
-    # Check for path separators
-    if os.path.sep in name or (os.path.altsep and os.path.altsep in name):
-        raise ValueError(f"Agent name '{name}' contains path separators")
-
-    # Check for current/parent directory references
-    if name in (".", ".."):
-        raise ValueError(f"Agent name '{name}' is invalid")
+    # Strict allowlist: alphanumeric, underscores, hyphens
+    if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+        raise ValueError(
+            f"Agent name '{name}' is invalid. Only alphanumeric characters, "
+            "underscores, and hyphens are allowed."
+        )
 
 
 def get_config_dir(base_path: Path) -> Path:
