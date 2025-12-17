@@ -80,7 +80,7 @@ export default function WizardPage() {
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-bold">{STEPS[stepIdx].label}</h2>
-                                            <p className="text-white/50">Configure your agent&apos;s {STEPS[stepIdx].label.toLowerCase()}</p>
+                                        <p className="text-white/50">Configure your agent&apos;s {STEPS[stepIdx].label.toLowerCase()}</p>
                                     </div>
                                 </div>
 
