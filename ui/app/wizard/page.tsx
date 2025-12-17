@@ -80,7 +80,7 @@ export default function WizardPage() {
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-bold">{STEPS[stepIdx].label}</h2>
-                                        <p className="text-white/50">Configure your agent's {STEPS[stepIdx].label.toLowerCase()}</p>
+                                        <p className="text-white/50">Configure your agent&apos;s {STEPS[stepIdx].label.toLowerCase()}</p>
                                     </div>
                                 </div>
 
@@ -113,7 +113,7 @@ export default function WizardPage() {
                                                 value={formData.description}
                                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none h-32"
-                                                placeholder="What is this agent's purpose?"
+                                                placeholder="What is this agent&apos;s purpose?"
                                             />
                                         </div>
                                     </div>
@@ -135,7 +135,7 @@ export default function WizardPage() {
                                         <div className="p-4 rounded border border-neo-border bg-neo-surface/50">
                                             <h4 className="text-sm font-bold text-white mb-2">System Instructions Preamble</h4>
                                             <p className="text-xs text-gray-400">
-                                                "You are a LeMMing agent operating in a multi-agent organization..."
+                                                &quot;You are a LeMMing agent operating in a multi-agent organization...&quot;
                                             </p>
                                             <textarea
                                                 className="w-full mt-2 bg-black/20 border border-white/10 p-2 text-xs font-mono text-gray-300 h-40"
@@ -189,14 +189,16 @@ export default function WizardPage() {
                                             <div className="flex flex-wrap gap-2">
                                                 {TOOLS.map(tool => (
                                                     <button
+                                                        type="button"
                                                         key={tool}
+                                                        aria-pressed={formData.tools.includes(tool)}
                                                         onClick={() => {
                                                             const tools = formData.tools.includes(tool)
                                                                 ? formData.tools.filter(t => t !== tool)
                                                                 : [...formData.tools, tool];
                                                             setFormData({ ...formData, tools });
                                                         }}
-                                                        className={clsx("px-3 py-1.5 rounded border text-xs font-mono transition-colors",
+                                                        className={clsx("px-3 py-1.5 rounded border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                                                             formData.tools.includes(tool)
                                                                 ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan"
                                                                 : "bg-neo-surface border-neo-border text-gray-500 hover:border-gray-400"
