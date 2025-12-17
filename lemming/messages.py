@@ -114,14 +114,16 @@ def _tick_from_filename(entry_path: Path) -> int | None:
         return None
 
 
-def _outbox_sort_key(p: Path) -> tuple[int, str]:
-    """Helper to sort outbox files by tick first, then filename.
+def _tick_from_filename_str(filename: str) -> int:
+    """Helper to extract tick from filename string.
 
-    Returns (tick, filename). If tick cannot be parsed, returns (-1, filename)
-    so these files appear at the end (or beginning, depending on sort order).
+    Returns -1 if parsing fails so it sorts to the end.
     """
-    tick = _tick_from_filename(p)
-    return (tick if tick is not None else -1, p.name)
+    try:
+        tick_part = filename.split("_", 1)[0]
+        return int(tick_part)
+    except (ValueError, IndexError):
+        return -1
 
 
 def read_outbox_entries(
@@ -137,14 +139,22 @@ def read_outbox_entries(
     entries: list[OutboxEntry] = []
 
     # Sort files by tick descending.
-    # We use a custom key to extract the tick from the filename, ensuring numerical sort.
-    # This allows us to stop reading files once we have enough entries from
-    # recent ticks, avoiding reading the entire history.
-    files = sorted(outbox_dir.glob("*.json"), key=_outbox_sort_key, reverse=True)
+    # Optimization: Use os.scandir to avoid creating Path objects for all files.
+    # We sort by tick extracted from the filename string.
+    try:
+        with os.scandir(outbox_dir) as it:
+            filenames = sorted(
+                (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json")),
+                key=lambda name: (_tick_from_filename_str(name), name),
+                reverse=True
+            )
+    except FileNotFoundError:
+        return []
 
     min_collected_tick = float('inf')
 
-    for entry_path in files:
+    for name in filenames:
+        entry_path = outbox_dir / name
         tick_val = _tick_from_filename(entry_path)
 
         # If we encounter a file with a tick older than since_tick, we can stop
