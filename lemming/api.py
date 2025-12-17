@@ -18,9 +18,14 @@ from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.0")
 
+# Configure CORS
+# Default to localhost:3000 for local development
+allowed_origins_str = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
