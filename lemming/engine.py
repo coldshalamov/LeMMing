@@ -9,7 +9,7 @@ from typing import Any
 
 from .agents import Agent, discover_agents
 from .logging_config import log_agent_action, log_engine_event
-from .memory import get_memory_context, save_memory
+from .memory import delete_memory, get_memory_context, save_memory
 from .messages import (
     OutboxEntry,
     cleanup_old_outbox_entries,
@@ -65,7 +65,10 @@ def load_tick(base_path: Path) -> int:
                 data = json.load(f)
             return int(data.get("current_tick", 1))
         except Exception:  # pragma: no cover - defensive
-            logger.warning("Could not parse tick file %s; defaulting to 1", tick_file)
+            logger.warning(
+                "tick_load_failed",
+                extra={"event": "tick_load_failed", "path": str(tick_file)},
+            )
     return 1
 
 
@@ -95,7 +98,7 @@ def compute_fire_point(agent: Agent) -> float:
 def should_run(agent: Agent, tick: int) -> bool:
     n = agent.schedule.run_every_n_ticks or 1
     offset = agent.schedule.phase_offset or 0
-    return (tick % n) == (offset % n)
+    return (tick + (offset % n)) % n == 0
 
 
 def get_firing_agents(agents: list[Agent], tick: int) -> list[Agent]:
@@ -143,31 +146,131 @@ def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, st
     return messages
 
 
-def _parse_llm_output(raw: str) -> dict[str, Any]:
+def _strip_fences(raw: str) -> str:
+    """Remove Markdown fences from an LLM response.
+
+    Supports fenced blocks with or without language annotations. Only the first
+    fenced block is considered to avoid mixing content from multiple blocks.
+    """
+
+    lines = raw.split("\n")
+    body: list[str] = []
+    in_block = False
+    for line in lines:
+        if line.startswith("```"):
+            if not in_block:
+                in_block = True
+                continue
+            break
+        if in_block:
+            body.append(line)
+    return "\n".join(body) if body else raw
+
+
+def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
+    """Parse and validate LLM output against the JSON contract.
+
+    Any contract violation is logged with enough detail to debug while ensuring
+    the engine keeps running without writing malformed data.
+    """
+
+    default = {"outbox_entries": [], "tool_calls": [], "memory_updates": [], "notes": ""}
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = _strip_fences(raw)
+
+    def _log_violation(reason: str) -> None:
+        snippet = raw[:200].replace("\n", " ")
+        logger.warning(
+            "llm_contract_violation: %s",
+            reason,
+            extra={
+                "event": "llm_contract_violation",
+                "agent": agent_name,
+                "tick": tick,
+                "reason": reason,
+                "snippet": snippet,
+            },
+        )
+
     try:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            lines = raw.split("\n")
-            body: list[str] = []
-            in_block = False
-            for line in lines:
-                if line.startswith("```"):
-                    in_block = not in_block
-                    continue
-                if in_block:
-                    body.append(line)
-            raw = "\n".join(body)
         data = json.loads(raw)
-        return {
-            "outbox_entries": data.get("outbox_entries", []),
-            "tool_calls": data.get("tool_calls", []),
-            "memory_updates": data.get("memory_updates", []),
-            "notes": data.get("notes", ""),
-        }
     except json.JSONDecodeError as exc:
-        logger.error("LLM output was not valid JSON: %s", exc)
-        logger.debug("Raw response: %s", raw)
-        return {"outbox_entries": [], "tool_calls": [], "memory_updates": [], "notes": ""}
+        _log_violation(f"response was not valid JSON ({exc})")
+        return default
+
+    if not isinstance(data, dict):
+        _log_violation(f"expected a JSON object but got {type(data).__name__}")
+        return default
+
+    def _ensure_list(value: Any, field: str) -> list[Any]:
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            _log_violation(f"field '{field}' must be a list; defaulting to []")
+            return []
+        return value
+
+    def _sanitize_outbox(entries: list[Any]) -> list[dict[str, Any]]:
+        sanitized: list[dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                _log_violation("outbox entry was not an object; skipping")
+                continue
+            kind = entry.get("kind", "message")
+            payload = entry.get("payload", {}) if isinstance(entry.get("payload", {}), dict) else {}
+            tags = entry.get("tags", []) if isinstance(entry.get("tags", []), list) else []
+            meta = entry.get("meta", {}) if isinstance(entry.get("meta", {}), dict) else {}
+
+            recipients: list[str] | None = None
+            to_field = entry.get("to", meta.get("to"))
+            if isinstance(to_field, str):
+                recipients = [to_field]
+            elif isinstance(to_field, list) and all(isinstance(item, str) for item in to_field):
+                recipients = to_field
+            elif to_field is not None:
+                _log_violation("outbox entry 'to' field must be string or list of strings; ignoring")
+
+            sanitized.append(
+                {"kind": kind, "payload": payload, "tags": tags, "meta": meta, "recipients": recipients}
+            )
+        return sanitized
+
+    def _sanitize_memory(updates: list[Any]) -> list[dict[str, Any]]:
+        sanitized: list[dict[str, Any]] = []
+        for update in updates:
+            if not isinstance(update, dict):
+                _log_violation("memory update was not an object; skipping")
+                continue
+            if "key" not in update:
+                _log_violation("memory update missing 'key'; skipping")
+                continue
+            sanitized.append({"key": update.get("key"), "value": update.get("value"), "op": update.get("op")})
+        return sanitized
+
+    required_keys = {"outbox_entries", "tool_calls", "memory_updates", "notes"}
+    missing_keys = [key for key in required_keys if key not in data]
+    if missing_keys:
+        _log_violation(f"missing keys {missing_keys}; applying defaults")
+
+    extra_keys = sorted(set(data.keys()) - required_keys)
+    if extra_keys:
+        _log_violation(f"ignoring unknown output fields: {extra_keys}")
+
+    outbox_entries = _sanitize_outbox(_ensure_list(data.get("outbox_entries", []), "outbox_entries"))
+    tool_calls = _ensure_list(data.get("tool_calls", []), "tool_calls")
+    memory_updates = _sanitize_memory(_ensure_list(data.get("memory_updates", []), "memory_updates"))
+    notes = data.get("notes", "")
+    if not isinstance(notes, str):
+        _log_violation("field 'notes' must be a string; coercing to string")
+        notes = str(notes)
+
+    return {
+        "outbox_entries": outbox_entries,
+        "tool_calls": tool_calls,
+        "memory_updates": memory_updates,
+        "notes": notes,
+    }
 
 
 def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> list[ToolResult]:
@@ -199,7 +302,15 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     cost_per_action = credits_info.get("cost_per_action", 0.01)
 
     if credits_left <= 0:
-        logger.warning("Agent %s has no credits; skipping", agent.name)
+        logger.warning(
+            "agent_skipped_no_credits",
+            extra={
+                "event": "agent_skipped_no_credits",
+                "agent": agent.name,
+                "tick": tick,
+                "credits_left": credits_left,
+            },
+        )
         log_agent_action(
             base_path,
             agent.name,
@@ -221,7 +332,15 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
             config_dir=get_config_dir(base_path),
         )
     except Exception as exc:
-        logger.error("LLM call failed for agent %s: %s", agent.name, exc)
+        logger.error(
+            "llm_call_failed",
+            extra={
+                "event": "llm_call_failed",
+                "agent": agent.name,
+                "tick": tick,
+                "error": str(exc),
+            },
+        )
         log_agent_action(
             base_path,
             agent.name,
@@ -233,16 +352,50 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         raise
 
     llm_duration_ms = int((time.time() - llm_start) * 1000)
-    parsed = _parse_llm_output(raw_output)
+    parsed = _parse_llm_output(raw_output, agent.name, tick)
 
     # Write outbox entries
+    send_permissions = agent.permissions.send_outboxes
+    allowed_targets: list[str] | None
+    if send_permissions is None or send_permissions == []:
+        allowed_targets = None  # unrestricted
+    else:
+        allowed_targets = list(send_permissions)
+
     for entry_data in parsed.get("outbox_entries", []):
+        recipients = entry_data.get("recipients")
+
+        if allowed_targets is not None and allowed_targets != ["*"]:
+            if recipients is None:
+                logger.warning(
+                    "outbox_recipient_missing",
+                    extra={
+                        "event": "outbox_recipient_missing",
+                        "agent": agent.name,
+                        "tick": tick,
+                    },
+                )
+                continue
+            if any(recipient not in allowed_targets for recipient in recipients):
+                logger.warning(
+                    "outbox_recipient_disallowed: disallowed recipients %s",
+                    recipients,
+                    extra={
+                        "event": "outbox_recipient_disallowed",
+                        "agent": agent.name,
+                        "tick": tick,
+                        "recipients": recipients,
+                    },
+                )
+                continue
+
         entry = OutboxEntry.create(
             agent=agent.name,
             tick=tick,
             kind=entry_data.get("kind", "message"),
             payload=entry_data.get("payload", {}),
             tags=entry_data.get("tags", []),
+            recipients=recipients,
             meta=entry_data.get("meta", {}),
         )
         write_outbox_entry(base_path, agent.name, entry)
@@ -254,6 +407,31 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     for update in parsed.get("memory_updates", []):
         key = update.get("key")
         if not key:
+            continue
+        op = (update.get("op") or "write").lower()
+        if op == "delete":
+            deleted = delete_memory(base_path, agent.name, key)
+            if not deleted:
+                logger.warning(
+                    "memory_delete_missing",
+                    extra={
+                        "event": "memory_delete_missing",
+                        "agent": agent.name,
+                        "tick": tick,
+                        "key": key,
+                    },
+                )
+            continue
+        if op != "write":
+            logger.warning(
+                "memory_op_unknown",
+                extra={
+                    "event": "memory_op_unknown",
+                    "agent": agent.name,
+                    "tick": tick,
+                    "op": op,
+                },
+            )
             continue
         save_memory(base_path, agent.name, key, update.get("value"))
 
@@ -295,8 +473,9 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
 
 def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
     tick_start = time.time()
-    logger.info("=== Tick %s ===", tick)
+    logger.info("tick_started", extra={"event": "tick_started", "tick": tick})
     log_engine_event("tick_started", tick=tick)
+    config = get_org_config(base_path)
 
     results: dict[str, Any] = {}
     agents = discover_agents(base_path)
@@ -313,13 +492,25 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
 
     for agent in firing_agents:
         fire_point = compute_fire_point(agent)
-        logger.info("Running agent: %s (fire_point=%.3f)", agent.name, fire_point)
+        logger.info(
+            "agent_running",
+            extra={
+                "event": "agent_running",
+                "agent": agent.name,
+                "tick": tick,
+                "fire_point": round(fire_point, 3),
+            },
+        )
         results[agent.name] = run_agent(base_path, agent, tick)
 
     # Cleanup old outbox entries
-    removed = cleanup_old_outbox_entries(base_path, tick)
+    max_age_ticks = config.get("max_outbox_age_ticks", 100)
+    removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
     if removed:
-        logger.info("Cleaned up %s expired outbox entries", removed)
+        logger.info(
+            "outbox_cleanup",
+            extra={"event": "outbox_cleanup", "tick": tick, "entries_removed": removed},
+        )
         log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
 
     tick_duration_ms = int((time.time() - tick_start) * 1000)

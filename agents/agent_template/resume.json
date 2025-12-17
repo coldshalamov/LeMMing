@@ -3,7 +3,7 @@
   "title": "Replace with agent title",
   "short_description": "Single-sentence summary of what this agent does.",
   "workflow_description": "Numbered or bulleted list of how the agent processes inputs and produces outputs.",
-  "instructions": "Plain-language directions for the agent. Keep this synced with resume.txt and avoid tool-specific jargon unless required.",
+  "instructions": "Plain-language directions for the agent. Avoid tool-specific jargon unless required.",
   "model": {
     "key": "gpt-4.1-mini",
     "temperature": 0.2,
@@ -11,7 +11,12 @@
   },
   "permissions": {
     "read_outboxes": ["*"],
-    "tools": ["memory_read", "memory_write"]
+    "tools": ["memory_read", "memory_write"],
+    "send_outboxes": [],
+    "file_access": {
+      "allow_read": [],
+      "allow_write": []
+    }
   },
   "schedule": {
     "run_every_n_ticks": 1,

@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +44,31 @@ class OpenAIProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call OpenAI API."""
-        logger.info("Calling OpenAI model %s with %d messages", model_name, len(messages))
+        logger.info(
+            "openai_call",
+            extra={
+                "event": "openai_call",
+                "model_name": model_name,
+                "message_count": len(messages),
+            },
+        )
 
         response = self.client.chat.completions.create(
-            model=model_name, messages=messages, temperature=temperature, **kwargs
+            model=model_name,
+            messages=cast(Any, messages),
+            temperature=temperature,
+            **kwargs,
         )
 
         content = response.choices[0].message.content
-        logger.debug("OpenAI response content length: %s", len(content) if content else 0)
+        logger.debug(
+            "openai_response",
+            extra={
+                "event": "openai_response",
+                "model_name": model_name,
+                "content_length": len(content) if content else 0,
+            },
+        )
         return content or ""
 
 
@@ -67,7 +85,14 @@ class AnthropicProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call Anthropic Claude API."""
-        logger.info("Calling Anthropic model %s with %d messages", model_name, len(messages))
+        logger.info(
+            "anthropic_call",
+            extra={
+                "event": "anthropic_call",
+                "model_name": model_name,
+                "message_count": len(messages),
+            },
+        )
 
         # Anthropic requires system messages to be separate
         system_messages = [m["content"] for m in messages if m["role"] == "system"]
@@ -80,12 +105,21 @@ class AnthropicProvider(LLMProvider):
             model=model_name,
             max_tokens=kwargs.get("max_tokens", 4096),
             temperature=temperature,
-            system=system,
-            messages=other_messages,
+            system=cast(Any, system),
+            messages=cast(Any, other_messages),
         )
 
-        content = response.content[0].text if response.content else ""
-        logger.debug("Anthropic response content length: %s", len(content))
+        content_blocks = cast(list[Any], response.content or [])
+        text_block = next((block for block in content_blocks if getattr(block, "text", None)), None)
+        content = cast(str, getattr(text_block, "text", "")) if text_block else ""
+        logger.debug(
+            "anthropic_response",
+            extra={
+                "event": "anthropic_response",
+                "model_name": model_name,
+                "content_length": len(content),
+            },
+        )
         return content
 
 
@@ -97,9 +131,16 @@ class OllamaProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
-        logger.info("Calling Ollama model %s with %d messages", model_name, len(messages))
+        logger.info(
+            "ollama_call",
+            extra={
+                "event": "ollama_call",
+                "model_name": model_name,
+                "message_count": len(messages),
+            },
+        )
 
         try:
             response = requests.post(
@@ -110,12 +151,26 @@ class OllamaProvider(LLMProvider):
             response.raise_for_status()
 
             data = response.json()
-            content = data.get("message", {}).get("content", "")
-            logger.debug("Ollama response content length: %s", len(content))
+            content = str(data.get("message", {}).get("content", ""))
+            logger.debug(
+                "ollama_response",
+                extra={
+                    "event": "ollama_response",
+                    "model_name": model_name,
+                    "content_length": len(content),
+                },
+            )
             return content
 
         except Exception as exc:
-            logger.error("Ollama API call failed: %s", exc)
+            logger.error(
+                "ollama_call_failed",
+                extra={
+                    "event": "ollama_call_failed",
+                    "model_name": model_name,
+                    "error": str(exc),
+                },
+            )
             return f"Error calling Ollama: {exc}"
 
 
@@ -161,7 +216,13 @@ def register_provider(name: str, provider_class: type[LLMProvider]) -> None:
         raise TypeError("Provider class must inherit from LLMProvider")
 
     _PROVIDERS[name.lower()] = provider_class
-    logger.info("Registered custom provider: %s", name)
+    logger.info(
+        "provider_registered",
+        extra={"event": "provider_registered", "provider": name},
+    )
+
+
+T = TypeVar("T")
 
 
 class CircuitBreaker:
@@ -185,7 +246,7 @@ class CircuitBreaker:
         self.last_failure_time: float | None = None
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
 
-    def call(self, func, *args, **kwargs):
+    def call(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """Execute a function with circuit breaker protection."""
         if self.state == "OPEN":
             # Check if we should attempt recovery
@@ -193,7 +254,10 @@ class CircuitBreaker:
                 self.last_failure_time
                 and time.time() - self.last_failure_time >= self.recovery_timeout
             ):
-                logger.info("Circuit breaker entering HALF_OPEN state")
+                logger.info(
+                    "circuit_half_open",
+                    extra={"event": "circuit_half_open", "state": self.state},
+                )
                 self.state = "HALF_OPEN"
             else:
                 raise RuntimeError("Circuit breaker is OPEN - too many recent failures")
@@ -202,9 +266,13 @@ class CircuitBreaker:
             result = func(*args, **kwargs)
             # Success - reset failure count
             if self.state == "HALF_OPEN":
-                logger.info("Circuit breaker recovery successful, entering CLOSED state")
-            self.state = "CLOSED"
-            self.failure_count = 0
+                logger.info(
+                    "circuit_closed",
+                    extra={"event": "circuit_closed", "state": "CLOSED"},
+                )
+                self.state = "CLOSED"
+                self.failure_count = 0
+
             return result
 
         except Exception as exc:
@@ -213,14 +281,20 @@ class CircuitBreaker:
 
             if self.failure_count >= self.failure_threshold:
                 logger.error(
-                    "Circuit breaker opening after %d failures: %s",
-                    self.failure_count,
-                    exc,
+                    "circuit_opened",
+                    extra={
+                        "event": "circuit_opened",
+                        "failures": self.failure_count,
+                        "error": str(exc),
+                    },
                 )
                 self.state = "OPEN"
             elif self.state == "HALF_OPEN":
                 # Failed during recovery attempt
-                logger.warning("Circuit breaker recovery failed, returning to OPEN state")
+                logger.warning(
+                    "circuit_recovery_failed",
+                    extra={"event": "circuit_recovery_failed", "state": "OPEN"},
+                )
                 self.state = "OPEN"
 
             raise
@@ -267,15 +341,25 @@ class RetryingLLMProvider(LLMProvider):
                     # Exponential backoff: 1s, 2s, 4s, 8s
                     backoff = 2**attempt
                     logger.warning(
-                        "LLM call failed (attempt %d/%d), retrying in %ds: %s",
-                        attempt + 1,
-                        self.max_retries + 1,
-                        backoff,
-                        exc,
+                        "llm_retrying",
+                        extra={
+                            "event": "llm_retrying",
+                            "attempt": attempt + 1,
+                            "max_attempts": self.max_retries + 1,
+                            "backoff_seconds": backoff,
+                            "error": str(exc),
+                        },
                     )
                     time.sleep(backoff)
                 else:
-                    logger.error("LLM call failed after %d attempts: %s", self.max_retries + 1, exc)
+                    logger.error(
+                        "llm_failed",
+                        extra={
+                            "event": "llm_failed",
+                            "max_attempts": self.max_retries + 1,
+                            "error": str(exc),
+                        },
+                    )
 
         # All retries exhausted
         if last_exception:

@@ -6,6 +6,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+import os
 from typing import Any
 
 from .paths import get_agents_dir, get_outbox_dir
@@ -31,6 +32,7 @@ class OutboxEntry:
     payload: dict[str, Any]
     tags: list[str]
     created_at: str
+    recipients: list[str] | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -41,8 +43,9 @@ class OutboxEntry:
         kind: str,
         payload: dict[str, Any],
         tags: list[str] | None = None,
+        recipients: list[str] | None = None,
         meta: dict[str, Any] | None = None,
-    ) -> "OutboxEntry":
+    ) -> OutboxEntry:
         created_at = datetime.now(UTC).isoformat()
         entry_id = uuid.uuid4().hex
         return cls(
@@ -53,6 +56,7 @@ class OutboxEntry:
             payload=payload,
             tags=tags or [],
             created_at=created_at,
+            recipients=recipients,
             meta=meta or {},
         )
 
@@ -60,11 +64,14 @@ class OutboxEntry:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "OutboxEntry":
+    def from_dict(cls, data: dict[str, Any]) -> OutboxEntry:
         # Backward compatibility: older entries used ``timestamp``.
         if "created_at" not in data and "timestamp" in data:
             data = dict(data)
             data["created_at"] = data.pop("timestamp")
+        if "recipients" not in data:
+            data = dict(data)
+            data["recipients"] = None
         return cls(**data)
 
 
@@ -87,7 +94,14 @@ def _load_entry(entry_path: Path) -> OutboxEntry | None:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Failed to read outbox entry %s: %s", entry_path, exc)
+        logger.warning(
+            "outbox_read_failed",
+            extra={
+                "event": "outbox_read_failed",
+                "path": str(entry_path),
+                "error": str(exc),
+            },
+        )
         return None
 
 
@@ -100,6 +114,16 @@ def _tick_from_filename(entry_path: Path) -> int | None:
         return None
 
 
+def _outbox_sort_key(p: Path) -> tuple[int, str]:
+    """Helper to sort outbox files by tick first, then filename.
+
+    Returns (tick, filename). If tick cannot be parsed, returns (-1, filename)
+    so these files appear at the end (or beginning, depending on sort order).
+    """
+    tick = _tick_from_filename(p)
+    return (tick if tick is not None else -1, p.name)
+
+
 def read_outbox_entries(
     base_path: Path, agent_name: str, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntry]:
@@ -107,21 +131,74 @@ def read_outbox_entries(
     if not outbox_dir.exists():
         return []
 
+    if limit <= 0:
+        return []
+
     entries: list[OutboxEntry] = []
-    for entry_path in outbox_dir.glob("*.json"):
+
+    # Sort files by tick descending.
+    # We use a custom key to extract the tick from the filename, ensuring numerical sort.
+    # This allows us to stop reading files once we have enough entries from
+    # recent ticks, avoiding reading the entire history.
+    files = sorted(outbox_dir.glob("*.json"), key=_outbox_sort_key, reverse=True)
+
+    min_collected_tick = float('inf')
+
+    for entry_path in files:
+        tick_val = _tick_from_filename(entry_path)
+
+        # If we encounter a file with a tick older than since_tick, we can stop
+        # because subsequent files (sorted by tick desc) will have even smaller ticks.
+        # We only break if tick_val is valid (not None).
         if since_tick is not None:
-            tick_val = _tick_from_filename(entry_path)
             if tick_val is not None and tick_val < since_tick:
-                continue
+                break
+
+        # Optimization: If we have collected enough entries, check if we can stop.
+        if len(entries) >= limit:
+            # We have at least 'limit' entries.
+            # We maintain min_collected_tick as we go.
+            # If the current file's tick is strictly less than the minimum tick
+            # we have already accepted, then this file (and all subsequent ones)
+            # are definitely older than what we have, so we can stop.
+            if tick_val is not None and min_collected_tick > tick_val:
+                break
+
         entry = _load_entry(entry_path)
         if entry is None:
             continue
+
+        # Still need to check since_tick in case filename parsing failed or logic differed
         if since_tick is not None and entry.tick < since_tick:
             continue
+
         entries.append(entry)
+
+        if entry.tick < min_collected_tick:
+            min_collected_tick = entry.tick
 
     entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
+
+
+def count_outbox_entries(base_path: Path, agent_name: str) -> int:
+    """Efficiently count the number of outbox entries for an agent.
+
+    This avoids reading and parsing the JSON files, which is significantly faster.
+    """
+    outbox_dir = get_outbox_dir(base_path, agent_name)
+    if not outbox_dir.exists():
+        return 0
+
+    try:
+        count = 0
+        with os.scandir(outbox_dir) as it:
+            for entry in it:
+                if entry.name.endswith(".json") and entry.is_file():
+                    count += 1
+        return count
+    except FileNotFoundError:
+        return 0
 
 
 def collect_readable_outboxes(
@@ -169,7 +246,14 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
                     entry_path.unlink()
                     removed += 1
                 except Exception as exc:  # pragma: no cover
-                    logger.error("Failed to clean outbox entry %s: %s", entry_path, exc)
+                    logger.error(
+                        "outbox_cleanup_failed",
+                        extra={
+                            "event": "outbox_cleanup_failed",
+                            "path": str(entry_path),
+                            "error": str(exc),
+                        },
+                    )
     return removed
 
 

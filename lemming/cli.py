@@ -10,8 +10,8 @@ from .agents import discover_agents, load_agent
 from .bootstrap import bootstrap as run_bootstrap
 from .config_validation import validate_everything
 from .engine import load_tick, run_forever, run_once
-from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
 from .memory import get_memory_summary
+from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
 from .org import derive_org_graph, get_agent_credits, get_credits, save_derived_org_graph
 from .paths import get_logs_dir
 
@@ -139,9 +139,9 @@ def inspect_cmd(base_path: Path, name: str, outbox_limit: int = 5) -> None:
 
 def logs_cmd(base_path: Path, name: str, lines: int) -> None:
     log_dir = get_logs_dir(base_path, name)
-    log_path = log_dir / "activity.log"
+    log_path = log_dir / "structured.jsonl"
     if not log_path.exists():
-        print(f"No log file found for agent '{name}'. It will be created on first run.")
+        print(f"No structured log file found for agent '{name}'. It will be created on first run.")
         return
 
     content = log_path.read_text(encoding="utf-8").splitlines()
@@ -200,7 +200,7 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
         # Sort by tick and created_at, most recent first
         entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
         entries = entries[:limit]
-        print(f"\n📥 Recent messages from all agents:")
+        print("\n📥 Recent messages from all agents:")
 
     if not entries:
         print("  (no messages)")
@@ -349,9 +349,10 @@ def main() -> None:
     elif args.command == "validate":
         errors = validate_everything(base_path)
         if errors:
-            print("Validation errors:")
+            print(f"Validation errors ({len(errors)}):")
             for err in errors:
                 print(f" - {err}")
+            print("Fix the issues above and re-run `python -m lemming.cli validate`.")
             sys.exit(1)
         print("All configs and resumes are valid.")
     elif args.command == "bootstrap":

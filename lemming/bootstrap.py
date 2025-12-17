@@ -1,10 +1,10 @@
-from __future__ import annotations
-
-"""Bootstrap utilities for preparing a LeMMing workspace.
+"""Bootstrap helpers for preparing a LeMMing workspace.
 
 The helpers here are intentionally conservative: they only create missing files
 or directories and never overwrite user edits.
 """
+
+from __future__ import annotations
 
 import json
 import shutil

@@ -23,9 +23,10 @@ def _dummy_agent(tmp_path: Path, run_every: int, offset: int) -> Agent:
 
 def test_should_run_matches_phase(tmp_path: Path) -> None:
     agent = _dummy_agent(tmp_path, run_every=3, offset=1)
-    assert should_run(agent, 1)
-    assert not should_run(agent, 2)
-    assert should_run(agent, 4)
+    assert not should_run(agent, 1)
+    assert should_run(agent, 2)
+    assert not should_run(agent, 4)
+    assert should_run(agent, 5)
 
 
 def test_should_run_handles_zero_offset(tmp_path: Path) -> None:

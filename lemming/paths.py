@@ -1,8 +1,21 @@
-from __future__ import annotations
-
 """Centralized filesystem path helpers for LeMMing."""
 
+import os
+import re
 from pathlib import Path
+
+
+def validate_agent_name(name: str) -> None:
+    """Validate that the agent name is safe to use in paths."""
+    if not name:
+        raise ValueError("Agent name cannot be empty")
+
+    # Strict allowlist: alphanumeric, underscores, hyphens
+    if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+        raise ValueError(
+            f"Agent name '{name}' is invalid. Only alphanumeric characters, "
+            "underscores, and hyphens are allowed."
+        )
 
 
 def get_config_dir(base_path: Path) -> Path:
@@ -14,6 +27,7 @@ def get_agents_dir(base_path: Path) -> Path:
 
 
 def get_agent_dir(base_path: Path, agent_name: str) -> Path:
+    validate_agent_name(agent_name)
     return get_agents_dir(base_path) / agent_name
 
 

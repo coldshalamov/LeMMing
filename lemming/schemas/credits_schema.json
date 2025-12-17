@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LeMMing Credits Config",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["model", "cost_per_action", "credits_left"],
+    "additionalProperties": false,
+    "properties": {
+      "model": {"type": "string", "minLength": 1},
+      "cost_per_action": {"type": "number", "minimum": 0},
+      "credits_left": {"type": "number"}
+    }
+  }
+}

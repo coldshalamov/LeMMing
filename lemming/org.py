@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .agents import DEFAULT_CREDITS, Agent, discover_agents
 from .paths import get_config_dir
@@ -17,12 +17,25 @@ _credits_cache: dict[str, Any] | None = None
 _config_dir: Path = DEFAULT_CONFIG_DIR
 
 
-def set_config_dir(base_path: Path | None) -> None:
-    global _config_dir
+def _resolve_config_dir(base_path: Path | None) -> Path:
     if base_path is None:
-        _config_dir = DEFAULT_CONFIG_DIR
-    else:
-        _config_dir = get_config_dir(base_path)
+        return DEFAULT_CONFIG_DIR
+    return get_config_dir(base_path)
+
+
+def set_config_dir(base_path: Path | None) -> None:
+    """Point config helpers at the provided base path.
+
+    Cache entries are cleared when the target directory changes to avoid using
+    stale data across different repositories or temporary test fixtures.
+    """
+
+    global _config_dir, _org_config_cache, _credits_cache
+    new_dir = _resolve_config_dir(base_path)
+    if new_dir != _config_dir:
+        _config_dir = new_dir
+        _org_config_cache = None
+        _credits_cache = None
 
 
 def _load_json(filename: str) -> dict[str, Any]:
@@ -30,7 +43,8 @@ def _load_json(filename: str) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Missing configuration file: {path}")
     with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+        data: dict[str, Any] = json.load(f)
+    return data
 
 
 def get_org_config(base_path: Path | None = None) -> dict[str, Any]:
@@ -46,9 +60,16 @@ def _ensure_credit_entry(agent: Agent, credits: dict[str, Any]) -> None:
         credits[agent.name] = {}
     record = credits[agent.name]
     record.setdefault("model", agent.model.key)
-    record.setdefault("max_credits", agent.credits.max_credits)
-    record.setdefault("soft_cap", agent.credits.soft_cap)
-    record.setdefault("credits_left", agent.credits.max_credits)
+
+    if agent.credits:
+        record.setdefault("max_credits", agent.credits.max_credits)
+        record.setdefault("soft_cap", agent.credits.soft_cap)
+        record.setdefault("credits_left", agent.credits.max_credits)
+    else:
+        record.setdefault("max_credits", DEFAULT_CREDITS["max_credits"])
+        record.setdefault("soft_cap", DEFAULT_CREDITS["soft_cap"])
+        record.setdefault("credits_left", DEFAULT_CREDITS["max_credits"])
+
     record.setdefault("cost_per_action", 0.01)
 
 
@@ -65,7 +86,7 @@ def get_credits(base_path: Path | None = None, agents: list[Agent] | None = None
 
 def derive_org_graph(base_path: Path) -> dict[str, dict[str, list[str]]]:
     agents = discover_agents(base_path)
-    credits = get_credits(base_path, agents)
+    get_credits(base_path, agents)
     save_credits(base_path)  # Persist any new credit entries.
 
     agent_names = {agent.name for agent in agents}
@@ -98,13 +119,16 @@ def save_derived_org_graph(base_path: Path) -> Path:
 
 def get_agent_credits(agent: str, base_path: Path | None = None) -> dict[str, Any]:
     credits = get_credits(base_path)
-    return credits.get(
-        agent,
-        {
-            "model": "gpt-4.1-mini",
-            "cost_per_action": 0.01,
-            "credits_left": 0.0,
-        },
+    return cast(
+        dict[str, Any],
+        credits.get(
+            agent,
+            {
+                "model": "gpt-4.1-mini",
+                "cost_per_action": 0.01,
+                "credits_left": 0.0,
+            },
+        ),
     )
 
 
@@ -131,6 +155,7 @@ def save_credits(base_path: Path | None = None) -> None:
 
 
 def reset_caches() -> None:
-    global _org_config_cache, _credits_cache
+    global _org_config_cache, _credits_cache, _config_dir
     _org_config_cache = None
     _credits_cache = None
+    _config_dir = DEFAULT_CONFIG_DIR

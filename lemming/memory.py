@@ -33,7 +33,10 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
     with memory_file.open("w", encoding="utf-8") as f:
         json.dump(entry, f, indent=2)
 
-    logger.debug("Saved memory for %s: %s", agent_name, key)
+    logger.debug(
+        "memory_saved",
+        extra={"event": "memory_saved", "agent": agent_name, "key": key},
+    )
 
 
 def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
@@ -58,7 +61,15 @@ def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
             entry = json.load(f)
         return entry.get("value")
     except Exception as exc:
-        logger.error("Failed to load memory for %s/%s: %s", agent_name, key, exc)
+        logger.error(
+            "memory_load_failed",
+            extra={
+                "event": "memory_load_failed",
+                "agent": agent_name,
+                "key": key,
+                "error": str(exc),
+            },
+        )
         return None
 
 
@@ -99,7 +110,10 @@ def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
         return False
 
     memory_file.unlink()
-    logger.info("Deleted memory for %s: %s", agent_name, key)
+    logger.info(
+        "memory_deleted",
+        extra={"event": "memory_deleted", "agent": agent_name, "key": key},
+    )
     return True
 
 
@@ -253,7 +267,14 @@ def compact_memory_list(
     if current is None:
         return 0
     if not isinstance(current, list):
-        logger.warning("Cannot compact non-list memory key: %s", key)
+        logger.warning(
+            "memory_compact_skipped",
+            extra={
+                "event": "memory_compact_skipped",
+                "agent": agent_name,
+                "key": key,
+            },
+        )
         return 0
 
     original_count = len(current)
@@ -265,7 +286,15 @@ def compact_memory_list(
     save_memory(base_path, agent_name, key, compacted)
 
     removed = original_count - len(compacted)
-    logger.info("Compacted memory %s/%s: removed %d entries", agent_name, key, removed)
+    logger.info(
+        "memory_compacted",
+        extra={
+            "event": "memory_compacted",
+            "agent": agent_name,
+            "key": key,
+            "removed": removed,
+        },
+    )
     return removed
 
 
@@ -314,10 +343,25 @@ def archive_old_memories(
                 archive_path = archive_dir / memory_file.name
                 shutil.move(str(memory_file), str(archive_path))
                 archived_count += 1
-                logger.info("Archived memory: %s/%s", agent_name, memory_file.name)
+                logger.info(
+                    "memory_archived",
+                    extra={
+                        "event": "memory_archived",
+                        "agent": agent_name,
+                        "key": memory_file.stem,
+                    },
+                )
 
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Failed to process memory file %s: %s", memory_file, exc)
+            logger.warning(
+                "memory_archive_failed",
+                extra={
+                    "event": "memory_archive_failed",
+                    "agent": agent_name,
+                    "key": memory_file.stem,
+                    "error": str(exc),
+                },
+            )
 
     return archived_count
 

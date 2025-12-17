@@ -1,0 +1,21 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251214012900
+Username: DESKTOP-2FQV0JL\User
+RunAs User: DESKTOP-2FQV0JL\User
+Configuration Name: 
+Machine: DESKTOP-2FQV0JL (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File .\auto_agent_task.ps1
+Process ID: 77720
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is c:\Users\User\Documents\GitHub\Telomere\LeMMing\agent_workflow_log.txt
+Started Agent Workflow at 12/14/2025 01:29:00
+Waiting for 7200 seconds (2 hours)...
