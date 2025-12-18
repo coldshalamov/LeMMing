@@ -247,23 +247,32 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
         outbox_dir = get_outbox_dir(base_path, agent_dir.name)
         if not outbox_dir.exists():
             continue
-        for entry_path in outbox_dir.glob("*.json"):
-            tick_val = _tick_from_filename(entry_path)
-            if tick_val is None:
-                continue
-            if current_tick - tick_val > max_age_ticks:
-                try:
-                    entry_path.unlink()
-                    removed += 1
-                except Exception as exc:  # pragma: no cover
-                    logger.error(
-                        "outbox_cleanup_failed",
-                        extra={
-                            "event": "outbox_cleanup_failed",
-                            "path": str(entry_path),
-                            "error": str(exc),
-                        },
-                    )
+        try:
+            with os.scandir(outbox_dir) as it:
+                for entry in it:
+                    if not entry.is_file() or not entry.name.endswith(".json"):
+                        continue
+
+                    tick_val = _tick_from_filename_str(entry.name)
+                    if tick_val == -1:
+                        continue
+
+                    if current_tick - tick_val > max_age_ticks:
+                        entry_path = outbox_dir / entry.name
+                        try:
+                            entry_path.unlink()
+                            removed += 1
+                        except Exception as exc:  # pragma: no cover
+                            logger.error(
+                                "outbox_cleanup_failed",
+                                extra={
+                                    "event": "outbox_cleanup_failed",
+                                    "path": str(entry_path),
+                                    "error": str(exc),
+                                },
+                            )
+        except OSError:
+            pass
     return removed
 
 
