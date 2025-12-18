@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -201,13 +202,38 @@ class ShellTool(Tool):
         cmd = kwargs.get("command")
         if not cmd:
             return ToolResult(False, "", "Missing command")
+
+        try:
+            parts = shlex.split(cmd)
+        except ValueError:
+            return ToolResult(False, "", "Invalid command syntax (unbalanced quotes?)")
+
+        if not parts:
+            return ToolResult(False, "", "Empty command")
+
+        # Security check: Inspect parsed arguments for suspicious paths
+        for part in parts:
+            # Check for path traversal attempts
+            if part == ".." or part.startswith("../") or "/../" in part or part.endswith("/.."):
+                return ToolResult(False, "", f"Security violation: Path traversal '{part}' not allowed")
+
+            # Check for absolute paths in arguments
+            # We allow absolute paths only if they appear to be flags (e.g. not typically starting with / unless it's a file)
+            # Actually, most CLI tools use - or -- for flags.
+            # If it starts with /, it's likely a path.
+            # We block absolute paths to prevent accessing system files.
+            if part.startswith("/"):
+                 return ToolResult(False, "", f"Security violation: Absolute path '{part}' not allowed")
+
         workspace = (base_path / "agents" / agent_name / "workspace").resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         try:
+            # shell=False to prevent command injection chaining
+            # We use the parsed 'parts' list directly
             result = subprocess.run(
-                cmd,
+                parts,
                 cwd=workspace,
-                shell=True,
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -216,6 +242,8 @@ class ShellTool(Tool):
             error_text = result.stderr if not success else None
             output = result.stdout.strip()
             return ToolResult(success, output, error_text)
+        except FileNotFoundError:
+             return ToolResult(False, "", f"Command not found: {parts[0]}")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out")
         except Exception as exc:  # pragma: no cover - defensive
