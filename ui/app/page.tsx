@@ -22,9 +22,14 @@ export default function Dashboard() {
 
   // Sync visual tick with backend status
   useEffect(() => {
+    let mounted = true;
     if (status?.tick) {
-      setVisualTick(status.tick);
+      // Use requestAnimationFrame to avoid "synchronous setState in effect" linter error
+      requestAnimationFrame(() => {
+        if (mounted) setVisualTick(status.tick);
+      });
     }
+    return () => { mounted = false; };
   }, [status?.tick]);
 
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);

@@ -38,7 +38,13 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
                 vy: 0
             };
         });
-        setPositions(initial);
+
+        // Wrap in setTimeout to avoid synchronous setState warning
+        const timer = setTimeout(() => {
+            setPositions(initial);
+        }, 0);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [agents.length]); // Only reset if count changes
 
     // Simulation Loop

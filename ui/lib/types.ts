@@ -29,7 +29,7 @@ export interface OrgGraphNode {
 
 export type OrgGraph = Record<string, OrgGraphNode>;
 
-export interface StatusResponse {
+export interface OrgStatus {
   tick: number;
   total_agents: number;
   total_messages: number;
@@ -43,7 +43,9 @@ export interface OutboxEntry {
   tick: number;
   agent: string;
   kind: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: Record<string, any>;
   tags?: string[] | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   meta?: Record<string, any> | null;
 }
