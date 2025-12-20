@@ -88,9 +88,11 @@ export default function WizardPage() {
                                 {stepIdx === 0 && (
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-1">AGENT_SLUG (Folder Name)</label>
+                                            <label htmlFor="agent-slug" className="block text-xs font-mono text-gray-400 mb-1">AGENT_SLUG (Folder Name)</label>
                                             <input
+                                                id="agent-slug"
                                                 type="text"
+                                                required
                                                 value={formData.name}
                                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none font-mono"
@@ -98,9 +100,11 @@ export default function WizardPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-1">TITLE</label>
+                                            <label htmlFor="agent-title" className="block text-xs font-mono text-gray-400 mb-1">TITLE</label>
                                             <input
+                                                id="agent-title"
                                                 type="text"
+                                                required
                                                 value={formData.title}
                                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none"
@@ -108,8 +112,15 @@ export default function WizardPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-1">DESCRIPTION</label>
+                                            <div className="flex justify-between items-baseline mb-1">
+                                                <label htmlFor="agent-desc" className="block text-xs font-mono text-gray-400">DESCRIPTION</label>
+                                                <span className={clsx("text-[10px] font-mono", formData.description.length > 200 ? "text-orange-400" : "text-gray-600")}>
+                                                    {formData.description.length} chars
+                                                </span>
+                                            </div>
                                             <textarea
+                                                id="agent-desc"
+                                                required
                                                 value={formData.description}
                                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none h-32"
@@ -123,8 +134,9 @@ export default function WizardPage() {
                                 {stepIdx === 1 && (
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-1">MODEL</label>
+                                            <label htmlFor="agent-model" className="block text-xs font-mono text-gray-400 mb-1">MODEL</label>
                                             <select
+                                                id="agent-model"
                                                 value={formData.model}
                                                 onChange={e => setFormData({ ...formData, model: e.target.value })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none"
@@ -151,8 +163,9 @@ export default function WizardPage() {
                                     <div className="space-y-6">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-xs font-mono text-gray-400 mb-1">RUN EVERY N TICKS</label>
+                                                <label htmlFor="agent-schedule" className="block text-xs font-mono text-gray-400 mb-1">RUN EVERY N TICKS</label>
                                                 <input
+                                                    id="agent-schedule"
                                                     type="number"
                                                     min={1}
                                                     value={formData.schedule.run_every_n_ticks}
@@ -161,8 +174,9 @@ export default function WizardPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-mono text-gray-400 mb-1">PHASE OFFSET</label>
+                                                <label htmlFor="agent-offset" className="block text-xs font-mono text-gray-400 mb-1">PHASE OFFSET</label>
                                                 <input
+                                                    id="agent-offset"
                                                     type="number"
                                                     min={0}
                                                     value={formData.schedule.phase_offset}
@@ -210,11 +224,12 @@ export default function WizardPage() {
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-2">READ ACCESS (Outboxes)</label>
+                                            <label htmlFor="agent-read-access" className="block text-xs font-mono text-gray-400 mb-2">READ ACCESS (Outboxes)</label>
                                             <div className="p-4 border border-neo-border bg-neo-surface rounded flex items-center justify-center text-gray-500 text-sm italic">
                                                 [Graph Selector Would Go Here]
                                             </div>
                                             <input
+                                                id="agent-read-access"
                                                 type="text"
                                                 placeholder="Comma separated agent names (e.g. overmind, backend)"
                                                 className="w-full mt-2 bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none font-mono text-xs"
