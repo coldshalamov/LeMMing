@@ -230,6 +230,8 @@ class ShellTool(Tool):
         workspace = (base_path / "agents" / agent_name / "workspace").resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         try:
+            # shell=False to prevent command injection chaining
+            # We use the parsed 'parts' list directly
             result = subprocess.run(
                 args,
                 cwd=workspace,

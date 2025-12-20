@@ -1,5 +1,5 @@
 
-import { AgentInfo, OutboxEntry, OrgGraph, OrgStatus } from "./types";
+import { AgentInfo, OutboxEntry, OrgGraph, StatusResponse as OrgStatus } from "./types";
 
 export const MOCK_AGENTS: AgentInfo[] = [
     {

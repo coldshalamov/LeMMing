@@ -22,9 +22,10 @@ export default function Dashboard() {
 
   // Sync visual tick with backend status
   useEffect(() => {
-    if (status?.tick) {
+    if (status?.tick && visualTick !== status.tick) {
       setVisualTick(status.tick);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.tick]);
 
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);
