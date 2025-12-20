@@ -204,26 +204,28 @@ class ShellTool(Tool):
             return ToolResult(False, "", "Missing command")
 
         try:
-            parts = shlex.split(cmd)
-        except ValueError:
-            return ToolResult(False, "", "Invalid command syntax (unbalanced quotes?)")
+            args = shlex.split(cmd)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid command format: {e}")
 
-        if not parts:
+        if not args:
             return ToolResult(False, "", "Empty command")
 
-        # Security check: Inspect parsed arguments for suspicious paths
-        for part in parts:
-            # Check for path traversal attempts
-            if part == ".." or part.startswith("../") or "/../" in part or part.endswith("/.."):
-                return ToolResult(False, "", f"Security violation: Path traversal '{part}' not allowed")
+        # Security checks
+        # Allow first arg (executable) to be absolute (e.g. /usr/bin/python)
+        # Check subsequent args for absolute paths or traversal attempts
+        for i, arg in enumerate(args):
+            # Check for directory traversal in any argument
+            if ".." in arg:
+                # Naive check for traversal: ".." segment or start/end with ".."
+                # We want to allow "loading..." but block "../secret"
+                # Standard traversal patterns:
+                if arg == ".." or arg.startswith("../") or arg.endswith("/..") or "/../" in arg:
+                     return ToolResult(False, "", f"Security violation: directory traversal '{arg}' not allowed")
 
-            # Check for absolute paths in arguments
-            # We allow absolute paths only if they appear to be flags (e.g. not typically starting with / unless it's a file)
-            # Actually, most CLI tools use - or -- for flags.
-            # If it starts with /, it's likely a path.
-            # We block absolute paths to prevent accessing system files.
-            if part.startswith("/"):
-                 return ToolResult(False, "", f"Security violation: Absolute path '{part}' not allowed")
+            # Block absolute paths in arguments (allow only for the command itself at index 0)
+            if i > 0 and Path(arg).is_absolute():
+                return ToolResult(False, "", f"Security violation: absolute path argument '{arg}' not allowed")
 
         workspace = (base_path / "agents" / agent_name / "workspace").resolve()
         workspace.mkdir(parents=True, exist_ok=True)
@@ -231,7 +233,7 @@ class ShellTool(Tool):
             # shell=False to prevent command injection chaining
             # We use the parsed 'parts' list directly
             result = subprocess.run(
-                parts,
+                args,
                 cwd=workspace,
                 shell=False,
                 capture_output=True,
@@ -243,7 +245,7 @@ class ShellTool(Tool):
             output = result.stdout.strip()
             return ToolResult(success, output, error_text)
         except FileNotFoundError:
-             return ToolResult(False, "", f"Command not found: {parts[0]}")
+            return ToolResult(False, "", f"Command not found: {args[0]}")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out")
         except Exception as exc:  # pragma: no cover - defensive
