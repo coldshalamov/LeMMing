@@ -23,14 +23,14 @@ export default function Dashboard() {
   // Sync visual tick with backend status
   useEffect(() => {
     let mounted = true;
-    if (status?.tick) {
+    if (status?.tick && visualTick !== status.tick) {
       // Use requestAnimationFrame to avoid "synchronous setState in effect" linter error
       requestAnimationFrame(() => {
         if (mounted) setVisualTick(status.tick);
       });
     }
     return () => { mounted = false; };
-  }, [status?.tick]);
+  }, [status?.tick]); // removed visualTick from deps to avoid loop if possible, but logic above checks diff
 
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);
 

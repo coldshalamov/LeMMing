@@ -26,10 +26,15 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
 
     // Initialize random positions
     useEffect(() => {
-        const initial: Record<string, Point> = {};
+        if (agents.length === 0) return;
+
         const width = containerRef.current?.clientWidth || 800;
         const height = containerRef.current?.clientHeight || 600;
 
+        // Check if we need to initialize
+        if (Object.keys(positions).length === agents.length) return;
+
+        const initial: Record<string, Point> = {};
         agents.forEach(a => {
             initial[a.name] = {
                 x: Math.random() * width * 0.6 + width * 0.2, // Center-ish
