@@ -199,28 +199,32 @@ export default function WizardPage() {
                                 {stepIdx === 3 && (
                                     <div className="space-y-6">
                                         <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-2">TOOLS</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {TOOLS.map(tool => (
-                                                    <button
-                                                        type="button"
-                                                        key={tool}
-                                                        aria-pressed={formData.tools.includes(tool)}
-                                                        onClick={() => {
-                                                            const tools = formData.tools.includes(tool)
-                                                                ? formData.tools.filter(t => t !== tool)
-                                                                : [...formData.tools, tool];
-                                                            setFormData({ ...formData, tools });
-                                                        }}
-                                                        className={clsx("px-3 py-1.5 rounded border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
-                                                            formData.tools.includes(tool)
-                                                                ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan"
-                                                                : "bg-neo-surface border-neo-border text-gray-500 hover:border-gray-400"
-                                                        )}
-                                                    >
-                                                        {tool}
-                                                    </button>
-                                                ))}
+                                            <label id="tools-label" className="block text-xs font-mono text-gray-400 mb-2">TOOLS</label>
+                                            <div className="flex flex-wrap gap-2" role="group" aria-labelledby="tools-label">
+                                                {TOOLS.map(tool => {
+                                                    const isSelected = formData.tools.includes(tool);
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            key={tool}
+                                                            aria-pressed={isSelected}
+                                                            onClick={() => {
+                                                                const tools = isSelected
+                                                                    ? formData.tools.filter(t => t !== tool)
+                                                                    : [...formData.tools, tool];
+                                                                setFormData({ ...formData, tools });
+                                                            }}
+                                                            className={clsx("px-3 py-1.5 rounded border text-xs font-mono transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan flex items-center gap-2",
+                                                                isSelected
+                                                                    ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                                                                    : "bg-neo-surface border-neo-border text-gray-500 hover:border-gray-400 hover:text-gray-300"
+                                                            )}
+                                                        >
+                                                            {isSelected && <Check size={12} className="animate-in fade-in zoom-in duration-200" />}
+                                                            {tool}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                         <div>
