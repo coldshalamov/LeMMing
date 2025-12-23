@@ -208,9 +208,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         while True:
             status_payload = await status()
             messages = await list_messages(limit=20)
-            await websocket.send_json(
-                {"status": status_payload, "messages": [m.model_dump() for m in messages]}
-            )
+            await websocket.send_json({"status": status_payload, "messages": [m.model_dump() for m in messages]})
             await asyncio.sleep(2.0)
     except WebSocketDisconnect:
         return

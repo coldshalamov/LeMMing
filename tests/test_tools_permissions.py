@@ -14,9 +14,7 @@ def test_explicit_empty_file_access_blocks_workspace(monkeypatch, tmp_path: Path
         short_description="",
         workflow_description="",
         model=AgentModel(),
-        permissions=AgentPermissions(
-            read_outboxes=[], send_outboxes=None, tools=[], file_access=FileAccess([], [])
-        ),
+        permissions=AgentPermissions(read_outboxes=[], send_outboxes=None, tools=[], file_access=FileAccess([], [])),
         schedule=AgentSchedule(),
         instructions="",
         credits=AgentCredits(),
