@@ -198,8 +198,8 @@ export default function WizardPage() {
                                 {/* STEP 4: PERMISSIONS */}
                                 {stepIdx === 3 && (
                                     <div className="space-y-6">
-                                        <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-2">TOOLS</label>
+                                        <div role="group" aria-labelledby="tools-label">
+                                            <label id="tools-label" className="block text-xs font-mono text-gray-400 mb-2">TOOLS</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {TOOLS.map(tool => (
                                                     <button
@@ -212,12 +212,13 @@ export default function WizardPage() {
                                                                 : [...formData.tools, tool];
                                                             setFormData({ ...formData, tools });
                                                         }}
-                                                        className={clsx("px-3 py-1.5 rounded border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+                                                        className={clsx("flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                                                             formData.tools.includes(tool)
                                                                 ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan"
                                                                 : "bg-neo-surface border-neo-border text-gray-500 hover:border-gray-400"
                                                         )}
                                                     >
+                                                        {formData.tools.includes(tool) && <Check size={12} />}
                                                         {tool}
                                                     </button>
                                                 ))}
