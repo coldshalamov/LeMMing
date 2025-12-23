@@ -5,3 +5,7 @@
 ## 2025-12-16 - Toggle Button Accessibility
 **Learning:** Icon-only or custom toggle buttons (like tool selectors) often lack semantic state feedback for screen readers.
 **Action:** Use `aria-pressed={isActive}` on toggle buttons to explicitly communicate their state, and ensure `type="button"` is set to prevent accidental form submission.
+
+## 2025-12-17 - Grouping Related Controls
+**Learning:** When multiple toggle buttons or controls act as a set (e.g., selecting multiple tools), screen readers need context that they are related.
+**Action:** Wrap related controls in a container with `role="group"` and provide a descriptive `aria-label` or `aria-labelledby` to the group.
