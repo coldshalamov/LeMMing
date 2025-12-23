@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-import os
 from typing import Any
 
 from .paths import get_agents_dir, get_outbox_dir
@@ -146,12 +146,12 @@ def read_outbox_entries(
             filenames = sorted(
                 (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json")),
                 key=lambda name: (_tick_from_filename_str(name), name),
-                reverse=True
+                reverse=True,
             )
     except FileNotFoundError:
         return []
 
-    min_collected_tick = float('inf')
+    min_collected_tick = float("inf")
 
     for name in filenames:
         entry_path = outbox_dir / name
@@ -223,9 +223,7 @@ def collect_readable_outboxes(
         agents_dir = get_agents_dir(base_path)
         if agents_dir.exists():
             read_outboxes = [
-                d.name
-                for d in agents_dir.iterdir()
-                if d.is_dir() and d.name not in {agent_name, "agent_template"}
+                d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
             ]
     for other in read_outboxes:
         if other == agent_name:

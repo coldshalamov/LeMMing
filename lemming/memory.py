@@ -172,9 +172,7 @@ def append_memory_event(
     save_memory(base_path, agent_name, key, current)
 
 
-def load_recent_memory_events(
-    base_path: Path, agent_name: str, key: str, limit: int = 5
-) -> list[dict[str, Any]]:
+def load_recent_memory_events(base_path: Path, agent_name: str, key: str, limit: int = 5) -> list[dict[str, Any]]:
     """Load up to ``limit`` most recent events from a list-based memory key."""
 
     events = load_memory(base_path, agent_name, key)
@@ -186,9 +184,7 @@ def load_recent_memory_events(
     return events[-limit:]
 
 
-def summarize_memory_events(
-    base_path: Path, agent_name: str, key: str, limit: int = 5
-) -> str:
+def summarize_memory_events(base_path: Path, agent_name: str, key: str, limit: int = 5) -> str:
     """
     Provide a short, human-readable summary of recent events for an agent.
     """

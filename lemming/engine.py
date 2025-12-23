@@ -231,9 +231,7 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
             elif to_field is not None:
                 _log_violation("outbox entry 'to' field must be string or list of strings; ignoring")
 
-            sanitized.append(
-                {"kind": kind, "payload": payload, "tags": tags, "meta": meta, "recipients": recipients}
-            )
+            sanitized.append({"kind": kind, "payload": payload, "tags": tags, "meta": meta, "recipients": recipients})
         return sanitized
 
     def _sanitize_memory(updates: list[Any]) -> list[dict[str, Any]]:

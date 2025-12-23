@@ -41,9 +41,7 @@ def test_send_and_inbox_flow(tmp_path: Path, capsys) -> None:
     human_entries = list((tmp_path / "agents" / "human" / "outbox").glob("*.json"))
     assert human_entries, "send_cmd should write to human outbox"
 
-    response = OutboxEntry.create(
-        agent="alpha", tick=1, kind="message", payload={"text": "hi human"}, tags=[]
-    )
+    response = OutboxEntry.create(agent="alpha", tick=1, kind="message", payload={"text": "hi human"}, tags=[])
     write_outbox_entry(tmp_path, "alpha", response)
 
     inbox_cmd(tmp_path)

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
 import os
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -19,13 +19,14 @@ def reset_agents_cache() -> None:
     global _agent_cache
     _agent_cache.clear()
 
+
 DEFAULT_MODEL_KEY = "gpt-4.1-mini"
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_MAX_TOKENS = 2048
 DEFAULT_CREDITS = {"max_credits": 1000.0, "soft_cap": 500.0}
 
 
-def _default_credits() -> "AgentCredits":
+def _default_credits() -> AgentCredits:
     return AgentCredits(max_credits=DEFAULT_CREDITS["max_credits"], soft_cap=DEFAULT_CREDITS["soft_cap"])
 
 
