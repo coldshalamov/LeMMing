@@ -221,7 +221,7 @@ class ShellTool(Tool):
                 # We want to allow "loading..." but block "../secret"
                 # Standard traversal patterns:
                 if arg == ".." or arg.startswith("../") or arg.endswith("/..") or "/../" in arg:
-                     return ToolResult(False, "", f"Security violation: directory traversal '{arg}' not allowed")
+                    return ToolResult(False, "", f"Security violation: directory traversal '{arg}' not allowed")
 
             # Block absolute paths in arguments (allow only for the command itself at index 0)
             if i > 0 and Path(arg).is_absolute():
@@ -310,10 +310,7 @@ class ListAgentsTool(Tool):
         from .agents import discover_agents
 
         agents = discover_agents(base_path)
-        info = [
-            {"name": ag.name, "title": ag.title, "description": ag.short_description}
-            for ag in agents
-        ]
+        info = [{"name": ag.name, "title": ag.title, "description": ag.short_description} for ag in agents]
         return ToolResult(True, json.dumps(info, indent=2))
 
 
@@ -326,4 +323,3 @@ ToolRegistry.register(MemoryReadTool())
 ToolRegistry.register(MemoryWriteTool())
 ToolRegistry.register(CreateAgentTool())
 ToolRegistry.register(ListAgentsTool())
-

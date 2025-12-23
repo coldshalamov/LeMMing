@@ -59,7 +59,7 @@ def test_malformed_resume_json_fails_fast(tmp_path: Path) -> None:
         "model": {"key": "gpt-4.1-mini"},
         "permissions": {"read_outboxes": "*", "tools": ["memory_read"]},
         "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
-        "instructions": ""
+        "instructions": "",
     }
     (agent_dir / "resume.json").write_text(json.dumps(resume), encoding="utf-8")
 

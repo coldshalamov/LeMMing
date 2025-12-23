@@ -33,9 +33,7 @@ def _make_agent(tmp_path: Path, name: str, send_outboxes: list[str] | None = Non
     resume_path = agent_dir / "resume.json"
     resume_path.write_text("{}")
 
-    permissions = AgentPermissions(
-        read_outboxes=[], send_outboxes=send_outboxes, tools=[], file_access=None
-    )
+    permissions = AgentPermissions(read_outboxes=[], send_outboxes=send_outboxes, tools=[], file_access=None)
     return Agent(
         name=name,
         path=agent_dir,
