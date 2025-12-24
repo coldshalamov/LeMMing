@@ -15,6 +15,7 @@ from .agents import discover_agents, load_agent
 from .engine import load_tick
 from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
+from .paths import get_logs_dir, validate_agent_name
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
 MAX_LIMIT = 1000
@@ -114,7 +115,12 @@ def _build_agent_info(agent: Any, credits: dict[str, Any]) -> AgentInfo:
 
 
 def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
-    log_path = base_path / "agents" / agent_name / "logs" / "structured.jsonl"
+    try:
+        validate_agent_name(agent_name)
+    except ValueError:
+        return []
+
+    log_path = get_logs_dir(base_path, agent_name) / "structured.jsonl"
     try:
         lines = log_path.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
