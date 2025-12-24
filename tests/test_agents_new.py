@@ -15,7 +15,7 @@ def test_load_from_json_resume(tmp_path: Path) -> None:
         "short_description": "A test agent",
         "workflow_description": "",
         "model": {"key": "gpt-4.1-mini", "temperature": 0.1},
-        "permissions": {"read_outboxes": ["*"], "tools": ["memory_read"], "send_outboxes": []},
+        "permissions": {"read_outboxes": ["*"], "tools": ["memory_read"]},
         "schedule": {"run_every_n_ticks": 2, "phase_offset": 0},
         "instructions": "Test instructions",
         "credits": {"max_credits": 10.0, "soft_cap": 5.0},

@@ -355,39 +355,14 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     parsed = _parse_llm_output(raw_output, agent.name, tick)
 
     # Write outbox entries
-    send_permissions = agent.permissions.send_outboxes
-    allowed_targets: list[str] | None
-    if send_permissions is None or send_permissions == []:
-        allowed_targets = None  # unrestricted
-    else:
-        allowed_targets = list(send_permissions)
-
     for entry_data in parsed.get("outbox_entries", []):
         recipients = entry_data.get("recipients")
-
-        if allowed_targets is not None and allowed_targets != ["*"]:
-            if recipients is None:
-                logger.warning(
-                    "outbox_recipient_missing",
-                    extra={
-                        "event": "outbox_recipient_missing",
-                        "agent": agent.name,
-                        "tick": tick,
-                    },
-                )
-                continue
-            if any(recipient not in allowed_targets for recipient in recipients):
-                logger.warning(
-                    "outbox_recipient_disallowed: disallowed recipients %s",
-                    recipients,
-                    extra={
-                        "event": "outbox_recipient_disallowed",
-                        "agent": agent.name,
-                        "tick": tick,
-                        "recipients": recipients,
-                    },
-                )
-                continue
+        if recipients is None and "to" in entry_data:
+            to_field = entry_data.get("to")
+            if isinstance(to_field, str) and to_field:
+                recipients = [to_field]
+            elif isinstance(to_field, list):
+                recipients = [item for item in to_field if isinstance(item, str) and item]
 
         entry = OutboxEntry.create(
             agent=agent.name,

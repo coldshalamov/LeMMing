@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
-from .paths import validate_agent_name
 
 
 @dataclass
@@ -54,48 +53,13 @@ class ToolRegistry:
         cls._tools.clear()
 
 
-def _get_allowed_paths(base_path: Path, agent_name: str, mode: str) -> list[Path]:
-    """Get allowed paths for an agent based on their file_access permissions.
+def _get_allowed_paths(base_path: Path, agent_name: str) -> list[Path]:
+    """Get allowed paths for an agent.
 
-    Args:
-        base_path: Repository base path
-        agent_name: Name of the agent
-        mode: Either "read" or "write"
-
-    Returns:
-        List of allowed paths (resolved to absolute)
+    Agents are sandboxed to their own workspace plus the shared directory. This
+    keeps file operations deterministic without additional per-agent overrides.
     """
-    from .agents import load_agent
 
-    try:
-        agent = load_agent(base_path, agent_name)
-    except Exception:  # pragma: no cover - defensive
-        # Fallback to default if agent not found
-        workspace = (base_path / "agents" / agent_name / "workspace").resolve()
-        shared = (base_path / "shared").resolve()
-        return [workspace, shared]
-
-    # Check if agent has file_access permissions configured
-    if agent.permissions.file_access is not None:
-        if mode == "read":
-            allow_list = agent.permissions.file_access.allow_read
-        elif mode == "write":
-            allow_list = agent.permissions.file_access.allow_write
-        else:
-            allow_list = []
-
-        # If the allow list is explicitly provided (even empty), respect it
-        allowed_paths = []
-        for path_str in allow_list:
-            path = Path(path_str)
-            if not path.is_absolute():
-                path = (base_path / path).resolve()
-            else:
-                path = path.resolve()
-            allowed_paths.append(path)
-        return allowed_paths
-
-    # Default: workspace + shared
     workspace = (base_path / "agents" / agent_name / "workspace").resolve()
     shared = (base_path / "shared").resolve()
     return [workspace, shared]
@@ -127,7 +91,7 @@ def _is_path_allowed(base_path: Path, agent_name: str, path: Path, mode: str) ->
     canonical_path = path.resolve()
 
     # Get allowed paths for this mode
-    allowed_paths = _get_allowed_paths(base_path, agent_name, mode)
+    allowed_paths = _get_allowed_paths(base_path, agent_name)
 
     # Check if canonical path has a prefix match with any allowed path
     for allowed in allowed_paths:

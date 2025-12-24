@@ -7,15 +7,15 @@
 
 ## GAP ANALYSIS
 - **PROJECT_RULES.md alignment gaps:**
-  - `agents.py` still loads legacy `resume.txt` files and accepts extra fields like `send_outboxes`/`file_access`, conflicting with resume-json-only ABI and minimal permissions surface.【F:lemming/agents.py†L186-L242】【F:lemming/agents.py†L91-L100】
-  - Engine enforces sender recipients via `permissions.send_outboxes`, which is outside the stated resume ABI (only read_outboxes/tools/schedule).【F:lemming/engine.py†L250-L288】
-  - Memory/tools/filesystem access allow arbitrary workspace paths via defaults; tighter scoping to resume permissions and safety rules is unspecified in the mandates.【F:lemming/tools.py†L57-L123】【F:lemming/tools.py†L148-L215】
+  - **Addressed:** resume ABI is now JSON-only with `permissions` limited to `read_outboxes` and `tools`; templates and schema were updated accordingly.【F:lemming/agents.py†L91-L149】【F:agents/agent_template/resume.json†L1-L23】【F:lemming/schemas/resume_schema.json†L1-L69】
+  - **Addressed:** engine no longer blocks outbox entries based on sender allowlists and preserves `to` recipients for compatibility.【F:lemming/engine.py†L355-L401】
+  - File tools are now sandboxed to workspace/shared with no per-agent overrides, but further validation/logging hardening is still needed.【F:lemming/tools.py†L53-L99】
   - Org/credits still cached from config files; while derived org graph exists, schema validation and bootstrap safeguards are light compared to “validate on load” mandate.【F:lemming/org.py†L17-L83】
 - **ROADMAP.md divergence/staleness:**
   - Roadmap claims “No tests” but repository has extensive pytest suite, so doc is stale regarding quality baseline.【F:ROADMAP.md†L12-L21】【F:tests/test_engine_contract.py†L1-L25】
   - Phases mention org-chart permissions and human agent CLI features that are only partially present (no human-in-loop CLI yet; org graph is derived but documentation still references outdated gaps).【F:ROADMAP.md†L29-L70】【F:lemming/api.py†L70-L116】
   - Dashboard phase expects real-time metrics; current API provides a websocket loop but Next.js UI is static and not wired for live data (needs reconciliation).【F:lemming/api.py†L147-L204】【F:ui/README.md†L1-L60】
-- **Other stale docs:** `workflow_state.md` references legacy push-based messaging and resume.txt schema, conflicting with current engine/outbox model.【F:workflow_state.md†L5-L33】
+- **Other stale docs:** Architecture/troubleshooting docs still reference legacy `file_access` overrides; these need to be rewritten to reflect the sandbox default. Workflow state was refreshed to track the new contract.【F:workflow_state.md†L1-L34】
 
 ## PHASED IMPLEMENTATION PLAN
 

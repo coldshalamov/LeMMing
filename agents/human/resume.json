@@ -7,7 +7,6 @@
   "model": {"key": "none", "temperature": 0},
   "permissions": {
     "read_outboxes": ["*"],
-    "send_outboxes": ["*"],
     "tools": []
   },
   "schedule": {"run_every_n_ticks": 999999, "phase_offset": 0},
