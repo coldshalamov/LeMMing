@@ -106,12 +106,24 @@ const AgentCardContent = memo(function AgentCardContent({ agent, isSelected, var
 export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = "compact" }: AgentCardProps) {
     const isFiring = (currentTick % agent.schedule.run_every_n_ticks) === (agent.schedule.phase_offset % agent.schedule.run_every_n_ticks);
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (onSelect && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onSelect();
+        }
+    };
+
     return (
         <motion.div
             layoutId={`agent-card-${agent.name}`}
             onClick={onSelect}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            aria-selected={!!isSelected}
+            aria-label={`Select agent ${agent.name}`}
             className={clsx(
-                "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group",
+                "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                 isSelected
                     ? "border-brand-cyan shadow-[0_0_25px_rgba(6,182,212,0.15)] bg-neo-panel z-10 scale-105"
                     : "border-neo-border bg-neo-surface hover:border-white/20 hover:bg-neo-surface-highlight"
@@ -128,42 +140,26 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
             <div className="p-4 flex flex-col gap-4">
                 {/* Header */}
                 <div className="flex justify-between items-start">
-                    {/* The static content logic was here, but now we have to split it because OrgTimer is inside the header flex container */}
-
-                    {/*
-                       Wait, the original design had OrgTimer at the top right of the card, next to the name/title.
-
-                       Original:
-                       <div className="flex justify-between items-start">
-                            <div>...Name/Title...</div>
-                            <OrgTimer ... />
-                       </div>
-                    */}
-
-                    <div className="flex-1 flex flex-col gap-4">
-                         <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className={clsx("font-bold font-mono tracking-tight", isSelected ? "text-white text-lg" : "text-gray-200")}>
-                                    {agent.name}
-                                </h3>
-                                <div className="text-xs text-brand-cyan font-mono uppercase tracking-widest opacity-80 mt-1">
-                                    {agent.title}
-                                </div>
-                            </div>
-
-                             <OrgTimer
-                                n={agent.schedule.run_every_n_ticks}
-                                offset={agent.schedule.phase_offset}
-                                currentTick={currentTick}
-                                size={isSelected ? 48 : 32}
-                                className={clsx("transition-transform", isFiring ? "scale-110" : "scale-100")}
-                            />
+                    <div>
+                        <h3 className={clsx("font-bold font-mono tracking-tight", isSelected ? "text-white text-lg" : "text-gray-200")}>
+                            {agent.name}
+                        </h3>
+                        <div className="text-xs text-brand-cyan font-mono uppercase tracking-widest opacity-80 mt-1">
+                            {agent.title}
                         </div>
-
-                         {/* We can memoize the rest of the content below the header */}
-                         <AgentCardContent agent={agent} isSelected={isSelected} variant={variant} />
                     </div>
+
+                    <OrgTimer
+                        n={agent.schedule.run_every_n_ticks}
+                        offset={agent.schedule.phase_offset}
+                        currentTick={currentTick}
+                        size={isSelected ? 48 : 32}
+                        className={clsx("transition-transform", isFiring ? "scale-110" : "scale-100")}
+                    />
                 </div>
+
+                {/* Memoized static content below */}
+                <AgentCardContent agent={agent} isSelected={isSelected} variant={variant} />
             </div>
         </motion.div>
     );

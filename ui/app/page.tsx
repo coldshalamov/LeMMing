@@ -19,6 +19,7 @@ export default function Dashboard() {
 
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
 
+  // Derive visualTick directly from status instead of using state to avoid extra re-renders
   const visualTick = status?.tick || 1;
 
   const selectedAgent = agents?.find(a => a.name === selectedAgentName);
@@ -73,7 +74,11 @@ export default function Dashboard() {
             {isConnected ? "LIVE" : "DISCONNECTED"}
           </div>
           <Link href="/wizard">
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/50 text-brand-cyan rounded text-xs font-mono hover:bg-brand-cyan/20 transition-colors mr-2">
+            <button 
+              type="button"
+              aria-label="Deploy new agent unit"
+              className="flex items-center gap-2 px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/50 text-brand-cyan rounded text-xs font-mono hover:bg-brand-cyan/20 transition-colors mr-2"
+            >
               <Plus size={14} /> DEPLOY_UNIT
             </button>
           </Link>
@@ -165,8 +170,29 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center flex-col text-white/20">
-              <Activity size={64} className="mb-4 opacity-20" />
-              <p className="font-mono text-sm">SELECT AN AGENT NODE TO INSPECT</p>
+              {(!agents || agents.length === 0) ? (
+                <>
+                  <Terminal size={64} className="mb-4 opacity-20" />
+                  <p className="font-mono text-sm mb-4">SYSTEM_OFFLINE: NO AGENTS DETECTED</p>
+                  <Link href="/wizard">
+                    <button 
+                      type="button"
+                      aria-label="Initialize first agent"
+                      className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors"
+                    >
+                      <Plus size={18} /> INITIALIZE_FIRST_AGENT
+                    </button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Activity size={64} className="mb-4 opacity-20" />
+                  <p className="font-mono text-sm">SELECT AN AGENT NODE TO INSPECT</p>
+                  <p className="font-mono text-xs mt-2 text-white/10">
+                    Use <span className="px-1.5 py-0.5 bg-white/10 rounded">TAB</span> to navigate graph
+                  </p>
+                </>
+              )}
             </div>
           )}
 
