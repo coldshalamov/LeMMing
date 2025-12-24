@@ -29,7 +29,7 @@ export interface OrgGraphNode {
 
 export type OrgGraph = Record<string, OrgGraphNode>;
 
-export interface StatusResponse {
+export interface OrgStatus {
   tick: number;
   total_agents: number;
   total_messages: number;

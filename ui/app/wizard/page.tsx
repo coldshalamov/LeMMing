@@ -145,11 +145,13 @@ export default function WizardPage() {
                                             </select>
                                         </div>
                                         <div className="p-4 rounded border border-neo-border bg-neo-surface/50">
-                                            <h4 className="text-sm font-bold text-white mb-2">System Instructions Preamble</h4>
-                                            <p className="text-xs text-gray-400">
+                                            <h4 id="instructions-label" className="text-sm font-bold text-white mb-2">System Instructions Preamble</h4>
+                                            <p id="instructions-desc" className="text-xs text-gray-400">
                                                 &quot;You are a LeMMing agent operating in a multi-agent organization...&quot;
                                             </p>
                                             <textarea
+                                                aria-labelledby="instructions-label"
+                                                aria-describedby="instructions-desc"
                                                 className="w-full mt-2 bg-black/20 border border-white/10 p-2 text-xs font-mono text-gray-300 h-40"
                                                 placeholder="Add custom instructions here (e.g. coding style, specific rules)..."
                                             // In real app this would update instructions field
@@ -200,7 +202,7 @@ export default function WizardPage() {
                                     <div className="space-y-6">
                                         <div>
                                             <label className="block text-xs font-mono text-gray-400 mb-2">TOOLS</label>
-                                            <div className="flex flex-wrap gap-2">
+                                            <div role="group" aria-label="Tool selection" className="flex flex-wrap gap-2">
                                                 {TOOLS.map(tool => (
                                                     <button
                                                         type="button"
