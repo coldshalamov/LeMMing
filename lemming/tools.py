@@ -162,6 +162,7 @@ class FileListTool(Tool):
 class ShellTool(Tool):
     name = "shell"
     description = "Execute shell commands in the agent workspace."
+    ALLOWED_EXECUTABLES = {"python", "grep", "ls", "cat", "echo", "head", "tail", "jq"}
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         cmd = kwargs.get("command")
@@ -175,6 +176,14 @@ class ShellTool(Tool):
 
         if not args:
             return ToolResult(False, "", "Empty command")
+
+        exe = Path(args[0]).name
+        if exe not in self.ALLOWED_EXECUTABLES:
+            return ToolResult(
+                False,
+                "",
+                f"Security violation: '{exe}' is not in the allowed executables list.",
+            )
 
         # Security checks
         # Allow first arg (executable) to be absolute (e.g. /usr/bin/python)
