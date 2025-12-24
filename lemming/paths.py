@@ -14,16 +14,13 @@ def validate_agent_name(agent_name: str) -> None:
     if not agent_name:
         raise ValueError("Agent name cannot be empty")
 
-    # Check for path separators and traversal components explicitly for better error messages
-    if "/" in agent_name or "\\" in agent_name:
-        raise ValueError(f"Agent name '{agent_name}' contains path separators")
-
-    if agent_name in {".", ".."}:
-        raise ValueError(f"Agent name '{agent_name}' is invalid")
-
-    # Enforce safe characters: alphanumeric, underscore, hyphen
+    # Strict allowlist: alphanumeric, underscores, hyphens
+    # This blocks path separators (/, \), traversal components (., ..), and other special characters
     if not re.match(r"^[a-zA-Z0-9_-]+$", agent_name):
-        raise ValueError(f"Agent name '{agent_name}' contains invalid characters. Allowed: a-z, A-Z, 0-9, _, -")
+        raise ValueError(
+            f"Agent name '{agent_name}' is invalid. Only alphanumeric characters, "
+            "underscores, and hyphens are allowed."
+        )
 
 
 def get_config_dir(base_path: Path) -> Path:
