@@ -127,6 +127,32 @@ def _tick_from_filename_str(filename: str) -> int:
         return -1
 
 
+def scan_outbox_files(base_path: Path, agent_name: str, since_tick: int | None = None) -> list[tuple[int, str]]:
+    """Scans outbox files and returns list of (tick, full_path_str) without loading content.
+
+    This is faster than read_outbox_entries when we only need to sort by tick/filename
+    across multiple agents.
+    """
+    outbox_dir = get_outbox_dir(base_path, agent_name)
+    if not outbox_dir.exists():
+        return []
+
+    results = []
+    try:
+        with os.scandir(outbox_dir) as it:
+            for entry in it:
+                if entry.is_file() and entry.name.endswith(".json"):
+                    tick = _tick_from_filename_str(entry.name)
+                    if tick != -1:
+                        if since_tick is not None and tick < since_tick:
+                            continue
+                        results.append((tick, entry.path))
+    except FileNotFoundError:
+        pass
+    return results
+
+
+
 def read_outbox_entries(
     base_path: Path, agent_name: str, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntry]:
@@ -238,19 +264,52 @@ def collect_readable_outboxes(
     limit: int = 50,
     since_tick: int | None = None,
 ) -> list[OutboxEntry]:
-    entries: list[OutboxEntry] = []
     if read_outboxes == ["*"]:
         agents_dir = get_agents_dir(base_path)
-        if agents_dir.exists():
-            read_outboxes = [
-                d.name
-                for d in agents_dir.iterdir()
-                if d.is_dir() and d.name not in {agent_name, "agent_template"}
-            ]
+        if not agents_dir.exists():
+            return []
+        read_outboxes = [
+            d.name
+            for d in agents_dir.iterdir()
+            if d.is_dir() and d.name not in {agent_name, "agent_template"}
+        ]
+
+    # Optimization: Scan metadata first to avoid loading content of old messages
+    candidates: list[tuple[int, str]] = []
     for other in read_outboxes:
         if other == agent_name:
             continue
-        entries.extend(read_outbox_entries(base_path, other, limit=limit, since_tick=since_tick))
+        candidates.extend(scan_outbox_files(base_path, other, since_tick))
+
+    # Sort candidates by tick descending, then by filename descending (to match read_outbox_entries sort)
+    # Filename contains UUID so it's a stable tiebreaker
+    # x[1] is the full path, os.path.basename can extract filename but string sort on full path works
+    # if agents are different? No, we should probably sort by basename to exactly match read_outbox_entries
+    # but since agents are different, paths are different.
+    # read_outbox_entries sorts by name.
+
+    candidates.sort(key=lambda x: (x[0], os.path.basename(x[1])), reverse=True)
+
+    to_load = []
+    if len(candidates) <= limit:
+        to_load = candidates
+    else:
+        # We need at least 'limit' items.
+        # Find the tick of the (limit-1)-th item (0-indexed).
+        cutoff_tick = candidates[limit - 1][0]
+
+        # We must load all items with tick >= cutoff_tick to ensure we can sort by created_at correctly.
+        # Items with tick < cutoff_tick are strictly older and can be discarded.
+        to_load = [c for c in candidates if c[0] >= cutoff_tick]
+
+    entries: list[OutboxEntry] = []
+    for _, path_str in to_load:
+        entry = _load_entry(Path(path_str))
+        if entry is None:
+            continue
+        entries.append(entry)
+
+
     entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
 
