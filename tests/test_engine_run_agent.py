@@ -27,14 +27,14 @@ def _write_credits(base_path: Path, agent_name: str, credits_left: float = 1.0) 
     credits_path.write_text(json.dumps(credits))
 
 
-def _make_agent(tmp_path: Path, name: str, send_outboxes: list[str] | None = None) -> Agent:
+def _make_agent(tmp_path: Path, name: str) -> Agent:
     agent_dir = tmp_path / "agents" / name
     agent_dir.mkdir(parents=True, exist_ok=True)
     resume_path = agent_dir / "resume.json"
     resume_path.write_text("{}")
 
     permissions = AgentPermissions(
-        read_outboxes=[], send_outboxes=send_outboxes, tools=[], file_access=None
+        read_outboxes=[], tools=[]
     )
     return Agent(
         name=name,
@@ -73,10 +73,8 @@ def test_memory_delete_operation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert not (tmp_path / "agents" / agent.name / "memory" / "old.json").exists()
 
 
-def test_send_outboxes_enforced(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-) -> None:
-    agent = _make_agent(tmp_path, "sender", send_outboxes=["friend"])
+def test_outbox_recipients_are_preserved(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    agent = _make_agent(tmp_path, "sender")
     _write_credits(tmp_path, agent.name)
 
     monkeypatch.setattr(
@@ -85,7 +83,7 @@ def test_send_outboxes_enforced(
             {
                 "outbox_entries": [
                     {"kind": "message", "payload": {"text": "hi"}, "to": "friend"},
-                    {"kind": "message", "payload": {"text": "blocked"}, "to": "stranger"},
+                    {"kind": "message", "payload": {"text": "hey"}, "to": ["stranger", "ally"]},
                 ],
                 "tool_calls": [],
                 "memory_updates": [],
@@ -94,11 +92,11 @@ def test_send_outboxes_enforced(
         ),
     )
 
-    caplog.set_level("WARNING")
     run_agent(tmp_path, agent, tick=1)
 
     entries = read_outbox_entries(tmp_path, agent.name)
-    assert len(entries) == 1
-    assert entries[0].payload["text"] == "hi"
-    assert entries[0].recipients == ["friend"]
-    assert any("disallowed recipients" in message for message in caplog.messages)
+    recipients_by_text = {entry.payload["text"]: entry.recipients for entry in entries}
+    assert recipients_by_text == {
+        "hi": ["friend"],
+        "hey": ["stranger", "ally"],
+    }

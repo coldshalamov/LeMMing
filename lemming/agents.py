@@ -43,19 +43,9 @@ class AgentModel:
 
 
 @dataclass
-class FileAccess:
-    """File access permissions for agents."""
-
-    allow_read: list[str] = field(default_factory=list)
-    allow_write: list[str] = field(default_factory=list)
-
-
-@dataclass
 class AgentPermissions:
     read_outboxes: list[str] = field(default_factory=list)
-    send_outboxes: list[str] | None = None
     tools: list[str] = field(default_factory=list)
-    file_access: FileAccess | None = None
 
 
 @dataclass
@@ -92,23 +82,9 @@ class Agent:
 
         model = _parse_model(model_data) if model_data is not None else AgentModel()
 
-        file_access_data = permissions_data.get("file_access")
-        file_access = None
-        if isinstance(file_access_data, dict):
-            file_access = FileAccess(
-                allow_read=list(file_access_data.get("allow_read", [])),
-                allow_write=list(file_access_data.get("allow_write", [])),
-            )
-
-        send_outboxes = permissions_data.get("send_outboxes")
-        if send_outboxes is not None:
-            send_outboxes = list(send_outboxes)
-
         permissions = AgentPermissions(
             read_outboxes=list(permissions_data["read_outboxes"]),
-            send_outboxes=send_outboxes,
             tools=list(permissions_data["tools"]),
-            file_access=file_access,
         )
         schedule = AgentSchedule(
             run_every_n_ticks=int(schedule_data["run_every_n_ticks"]),
@@ -180,22 +156,6 @@ def _validate_resume_dict(resume_path: Path, data: dict[str, Any]) -> list[str]:
             errors.append(f"Missing permissions.{key}")
         elif not isinstance(permissions.get(key), list):
             errors.append(f"permissions.{key} must be a list")
-
-    for key in ["send_outboxes"]:
-        value = permissions.get(key)
-        if value is not None and not isinstance(value, list):
-            errors.append(f"permissions.{key} must be a list when provided")
-
-    file_access = permissions.get("file_access")
-    if file_access is not None:
-        if not isinstance(file_access, dict):
-            errors.append("permissions.file_access must be a dict when provided")
-        else:
-            for key in ["allow_read", "allow_write"]:
-                if key not in file_access:
-                    errors.append(f"Missing permissions.file_access.{key}")
-                elif not isinstance(file_access.get(key), list):
-                    errors.append(f"permissions.file_access.{key} must be a list")
 
     schedule = data.get("schedule")
     if not isinstance(schedule, dict):

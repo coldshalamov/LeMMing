@@ -163,7 +163,6 @@ Example:
     "phase_offset": 0
   },
   "permissions": {
-    "send_outboxes": ["planner", "coder_01", "janitor"],
     "read_outboxes": ["planner", "coder_01"],
     "tools": ["file_read", "file_write", "list_files"],
     "file_access": {
