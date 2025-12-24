@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any, cast
 
-from .agents import DEFAULT_CREDITS, Agent, discover_agents
+from .agents import DEFAULT_CREDITS, Agent, discover_agents, reset_agents_cache
 from .paths import get_config_dir
 
 logger = logging.getLogger(__name__)
@@ -60,9 +60,16 @@ def _ensure_credit_entry(agent: Agent, credits: dict[str, Any]) -> None:
         credits[agent.name] = {}
     record = credits[agent.name]
     record.setdefault("model", agent.model.key)
-    record.setdefault("max_credits", agent.credits.max_credits)
-    record.setdefault("soft_cap", agent.credits.soft_cap)
-    record.setdefault("credits_left", agent.credits.max_credits)
+
+    if agent.credits:
+        record.setdefault("max_credits", agent.credits.max_credits)
+        record.setdefault("soft_cap", agent.credits.soft_cap)
+        record.setdefault("credits_left", agent.credits.max_credits)
+    else:
+        record.setdefault("max_credits", DEFAULT_CREDITS["max_credits"])
+        record.setdefault("soft_cap", DEFAULT_CREDITS["soft_cap"])
+        record.setdefault("credits_left", DEFAULT_CREDITS["max_credits"])
+
     record.setdefault("cost_per_action", 0.01)
 
 
@@ -152,3 +159,4 @@ def reset_caches() -> None:
     _org_config_cache = None
     _credits_cache = None
     _config_dir = DEFAULT_CONFIG_DIR
+    reset_agents_cache()
