@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -140,13 +141,32 @@ def read_outbox_entries(
 
     # Sort files by tick descending.
     # Optimization: Use os.scandir to avoid creating Path objects for all files.
-    # We sort by tick extracted from the filename string.
+    # Use heapq.nlargest to avoid sorting all files when we only need the top K.
     try:
         with os.scandir(outbox_dir) as it:
-            filenames = sorted(
-                (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json")),
-                key=lambda name: (_tick_from_filename_str(name), name),
-                reverse=True
+            # We filter based on since_tick roughly here to avoid heapsizing old files if possible?
+            # But the primary sort key is tick.
+            # nlargest returns the largest elements, so highest tick (newest).
+            # This matches 'reverse=True' sort order.
+
+            # Helper generator to filter non-json files
+            candidate_files = (
+                entry.name for entry in it
+                if entry.is_file() and entry.name.endswith(".json")
+            )
+
+            # If since_tick is provided, we can pre-filter files that are definitely too old
+            # IF the filename tick parsing is reliable. It is.
+            if since_tick is not None:
+                candidate_files = (
+                    name for name in candidate_files
+                    if _tick_from_filename_str(name) >= since_tick
+                )
+
+            filenames = heapq.nlargest(
+                limit,
+                candidate_files,
+                key=lambda name: (_tick_from_filename_str(name), name)
             )
     except FileNotFoundError:
         return []

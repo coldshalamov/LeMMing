@@ -6,3 +6,7 @@
 **Vulnerability:** The `ShellTool` used `subprocess.run(shell=True)` which allowed arbitrary command execution and path traversal via chained commands or relative paths (e.g., `cat ../../secret`).
 **Learning:** Generic shell tools in AI agent frameworks are extremely dangerous. Even with `cwd` set, `shell=True` allows escaping the directory.
 **Prevention:** Always use `shell=False` and pass arguments as a list. Explicitly validate that file paths in arguments do not traverse outside the intended workspace using checks for `..` and absolute paths.
+## 2025-02-14 - CreateAgentTool Path Traversal
+**Vulnerability:** The `CreateAgentTool` accepted an arbitrary `agent_name` which was used to construct a directory path without validation. This allowed an attacker (via the 'hr' agent) to create directories outside the intended `agents/` folder using path traversal (e.g., `../evil`).
+**Learning:** Tool arguments that are used to construct file paths must be rigorously validated. Relying on "it's just a name" is insufficient when that name becomes part of a filesystem path.
+**Prevention:** Import and use the strict `validate_agent_name` function from `lemming.paths` in `CreateAgentTool` (and any other tool creating/accessing agent directories) to enforce alphanumeric-only names.
