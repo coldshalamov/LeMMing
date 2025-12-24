@@ -359,7 +359,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     if send_permissions in (None, []):
         allowed_targets = None  # unrestricted
     else:
-        allowed_targets = list(send_permissions) if send_permissions else None
+        allowed_targets = list(send_permissions)
 
     for entry_data in parsed.get("outbox_entries", []):
         recipients = entry_data.get("recipients")
