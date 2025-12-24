@@ -212,7 +212,7 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
                         }}
                         role="button"
                         tabIndex={0}
-                        aria-pressed={isSel}
+                        aria-pressed={!!isSel}
                         aria-label={`Select agent ${agent.name}`}
                         title={agent.name}
                         className={clsx(

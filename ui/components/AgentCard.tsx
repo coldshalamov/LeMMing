@@ -120,7 +120,7 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
             onKeyDown={handleKeyDown}
             role="button"
             tabIndex={0}
-            aria-pressed={isSelected}
+            aria-pressed={!!isSelected}
             aria-label={`Select agent ${agent.name}`}
             className={clsx(
                 "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
