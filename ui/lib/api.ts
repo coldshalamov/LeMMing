@@ -2,7 +2,7 @@
 
 import useSWR, { useSWRConfig } from "swr";
 import { useEffect, useMemo, useState } from "react";
-import { AgentInfo, OrgGraph, OutboxEntry, StatusResponse } from "./types";
+import { AgentInfo, OrgGraph, OutboxEntry, OrgStatus } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 const STATUS_KEY = `${API_BASE}/api/status`;
@@ -51,7 +51,7 @@ export function useOrgGraph() {
 }
 
 export function useStatus() {
-  const { data, error, isLoading, mutate } = useSWR<StatusResponse>(STATUS_KEY, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<OrgStatus>(STATUS_KEY, fetcher, {
     refreshInterval: 10_000,
   });
 
