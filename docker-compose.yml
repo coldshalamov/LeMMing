@@ -35,6 +35,17 @@ services:
     depends_on:
       - lemming-api
 
+  lemming-ui:
+    build: ./ui
+    container_name: lemming-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000
+    restart: unless-stopped
+    depends_on:
+      - lemming-api
+
 networks:
   default:
     name: lemming-network

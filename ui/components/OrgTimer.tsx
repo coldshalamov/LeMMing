@@ -76,11 +76,8 @@ export function OrgTimer({ n, offset, currentTick, size = 64, className }: OrgTi
                 style={{
                     top: size / 2 - 4, // center - half height
                     left: size / 2 - 4, // center - half width
-                    transform: `rotate(${targetAngle}deg) translate(${radius}px) rotate(-${targetAngle}deg)`, // Move to rim
-                    // Note: The rotation logic above rotates the frame, translates out, then un-rotates the dot so simple CSS works?
-                    // Actually simplest is:
-                    // transform: `rotate(${targetAngle}deg) translateY(-${radius}px)` if container is centered
-                    // But our container isn't rotated.
+                    transform: `rotate(${targetAngle - 90}deg) translate(${radius}px) rotate(${90 - targetAngle}deg)`, // Move to rim (start at top)
+                    // Note: Rotate frame to angle (starting from -90deg/Top), translate out, then un-rotate dot to keep it upright.
                 }}
             />
 

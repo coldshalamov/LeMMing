@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
+from .paths import validate_agent_name
 
 
 @dataclass
@@ -201,13 +203,40 @@ class ShellTool(Tool):
         cmd = kwargs.get("command")
         if not cmd:
             return ToolResult(False, "", "Missing command")
+
+        try:
+            args = shlex.split(cmd)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid command format: {e}")
+
+        if not args:
+            return ToolResult(False, "", "Empty command")
+
+        # Security checks
+        # Allow first arg (executable) to be absolute (e.g. /usr/bin/python)
+        # Check subsequent args for absolute paths or traversal attempts
+        for i, arg in enumerate(args):
+            # Check for directory traversal in any argument
+            if ".." in arg:
+                # Naive check for traversal: ".." segment or start/end with ".."
+                # We want to allow "loading..." but block "../secret"
+                # Standard traversal patterns:
+                if arg == ".." or arg.startswith("../") or arg.endswith("/..") or "/../" in arg:
+                    return ToolResult(False, "", f"Security violation: directory traversal '{arg}' not allowed")
+
+            # Block absolute paths in arguments (allow only for the command itself at index 0)
+            if i > 0 and Path(arg).is_absolute():
+                return ToolResult(False, "", f"Security violation: absolute path argument '{arg}' not allowed")
+
         workspace = (base_path / "agents" / agent_name / "workspace").resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         try:
+            # shell=False to prevent command injection chaining
+            # We use the parsed 'parts' list directly
             result = subprocess.run(
-                cmd,
+                args,
                 cwd=workspace,
-                shell=True,
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -216,6 +245,8 @@ class ShellTool(Tool):
             error_text = result.stderr if not success else None
             output = result.stdout.strip()
             return ToolResult(success, output, error_text)
+        except FileNotFoundError:
+            return ToolResult(False, "", f"Command not found: {args[0]}")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out")
         except Exception as exc:  # pragma: no cover - defensive
@@ -259,6 +290,12 @@ class CreateAgentTool(Tool):
         new_agent_name = kwargs.get("name")
         if not new_agent_name:
             return ToolResult(False, "", "Missing new agent name")
+
+        try:
+            validate_agent_name(new_agent_name)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid agent name: {e}")
+
         new_agent_path = base_path / "agents" / str(new_agent_name)
         if new_agent_path.exists():
             return ToolResult(False, "", "Agent already exists")
@@ -280,10 +317,7 @@ class ListAgentsTool(Tool):
         from .agents import discover_agents
 
         agents = discover_agents(base_path)
-        info = [
-            {"name": ag.name, "title": ag.title, "description": ag.short_description}
-            for ag in agents
-        ]
+        info = [{"name": ag.name, "title": ag.title, "description": ag.short_description} for ag in agents]
         return ToolResult(True, json.dumps(info, indent=2))
 
 
@@ -296,4 +330,3 @@ ToolRegistry.register(MemoryReadTool())
 ToolRegistry.register(MemoryWriteTool())
 ToolRegistry.register(CreateAgentTool())
 ToolRegistry.register(ListAgentsTool())
-
