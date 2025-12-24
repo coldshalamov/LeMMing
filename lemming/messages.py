@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -114,6 +115,18 @@ def _tick_from_filename(entry_path: Path) -> int | None:
         return None
 
 
+def _tick_from_filename_str(filename: str) -> int:
+    """Helper to extract tick from filename string.
+
+    Returns -1 if parsing fails so it sorts to the end.
+    """
+    try:
+        tick_part = filename.split("_", 1)[0]
+        return int(tick_part)
+    except (ValueError, IndexError):
+        return -1
+
+
 def read_outbox_entries(
     base_path: Path, agent_name: str, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntry]:
@@ -121,32 +134,78 @@ def read_outbox_entries(
     if not outbox_dir.exists():
         return []
 
-    files_by_tick: dict[int, list[Path]] = {}
-    for entry_path in outbox_dir.glob("*.json"):
-        tick_val = _tick_from_filename(entry_path)
-        if tick_val is None:
-            continue
-        if since_tick is not None and tick_val < since_tick:
-            continue
-        if tick_val not in files_by_tick:
-            files_by_tick[tick_val] = []
-        files_by_tick[tick_val].append(entry_path)
+    if limit <= 0:
+        return []
 
     entries: list[OutboxEntry] = []
-    sorted_ticks = sorted(files_by_tick.keys(), reverse=True)
 
-    for tick in sorted_ticks:
-        for entry_path in files_by_tick[tick]:
-            entry = _load_entry(entry_path)
-            if entry is None:
-                continue
-            # Re-check tick condition from content just in case, though filename check should suffice
-            if since_tick is not None and entry.tick < since_tick:
-                continue
-            entries.append(entry)
+    # Sort files by tick descending.
+    # Optimization: Use os.scandir to avoid creating Path objects for all files.
+    # Use heapq.nlargest to avoid sorting all files when we only need the top K.
+    try:
+        with os.scandir(outbox_dir) as it:
+            # We filter based on since_tick roughly here to avoid heapsizing old files if possible?
+            # But the primary sort key is tick.
+            # nlargest returns the largest elements, so highest tick (newest).
+            # This matches 'reverse=True' sort order.
 
+            # Helper generator to filter non-json files
+            candidate_files = (
+                entry.name for entry in it
+                if entry.is_file() and entry.name.endswith(".json")
+            )
+
+            # If since_tick is provided, we can pre-filter files that are definitely too old
+            # IF the filename tick parsing is reliable. It is.
+            if since_tick is not None:
+                candidate_files = (
+                    name for name in candidate_files
+                    if _tick_from_filename_str(name) >= since_tick
+                )
+
+            filenames = heapq.nlargest(
+                limit,
+                candidate_files,
+                key=lambda name: (_tick_from_filename_str(name), name)
+            )
+    except FileNotFoundError:
+        return []
+
+    min_collected_tick = float('inf')
+
+    for name in filenames:
+        entry_path = outbox_dir / name
+        tick_val = _tick_from_filename(entry_path)
+
+        # If we encounter a file with a tick older than since_tick, we can stop
+        # because subsequent files (sorted by tick desc) will have even smaller ticks.
+        # We only break if tick_val is valid (not None).
+        if since_tick is not None:
+            if tick_val is not None and tick_val < since_tick:
+                break
+
+        # Optimization: If we have collected enough entries, check if we can stop.
         if len(entries) >= limit:
-            break
+            # We have at least 'limit' entries.
+            # We maintain min_collected_tick as we go.
+            # If the current file's tick is strictly less than the minimum tick
+            # we have already accepted, then this file (and all subsequent ones)
+            # are definitely older than what we have, so we can stop.
+            if tick_val is not None and min_collected_tick > tick_val:
+                break
+
+        entry = _load_entry(entry_path)
+        if entry is None:
+            continue
+
+        # Still need to check since_tick in case filename parsing failed or logic differed
+        if since_tick is not None and entry.tick < since_tick:
+            continue
+
+        entries.append(entry)
+
+        if entry.tick < min_collected_tick:
+            min_collected_tick = entry.tick
 
     entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
@@ -208,23 +267,32 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
         outbox_dir = get_outbox_dir(base_path, agent_dir.name)
         if not outbox_dir.exists():
             continue
-        for entry_path in outbox_dir.glob("*.json"):
-            tick_val = _tick_from_filename(entry_path)
-            if tick_val is None:
-                continue
-            if current_tick - tick_val > max_age_ticks:
-                try:
-                    entry_path.unlink()
-                    removed += 1
-                except Exception as exc:  # pragma: no cover
-                    logger.error(
-                        "outbox_cleanup_failed",
-                        extra={
-                            "event": "outbox_cleanup_failed",
-                            "path": str(entry_path),
-                            "error": str(exc),
-                        },
-                    )
+        try:
+            with os.scandir(outbox_dir) as it:
+                for entry in it:
+                    if not entry.is_file() or not entry.name.endswith(".json"):
+                        continue
+
+                    tick_val = _tick_from_filename_str(entry.name)
+                    if tick_val == -1:
+                        continue
+
+                    if current_tick - tick_val > max_age_ticks:
+                        entry_path = outbox_dir / entry.name
+                        try:
+                            entry_path.unlink()
+                            removed += 1
+                        except Exception as exc:  # pragma: no cover
+                            logger.error(
+                                "outbox_cleanup_failed",
+                                extra={
+                                    "event": "outbox_cleanup_failed",
+                                    "path": str(entry_path),
+                                    "error": str(exc),
+                                },
+                            )
+        except OSError:
+            pass
     return removed
 
 
