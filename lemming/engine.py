@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
+from .config_validation import validate_everything
 from .logging_config import log_agent_action, log_engine_event
 from .memory import delete_memory, get_memory_context, save_memory
 from .messages import (
@@ -500,6 +501,13 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
 
 
 def run_once(base_path: Path, tick: int | None = None) -> dict[str, Any]:
+    errors = validate_everything(base_path)
+    if errors:
+        logger.critical(
+            "Startup validation failed:\n" + "\n".join(f"- {e}" for e in errors)
+        )
+        raise RuntimeError("Configuration validation failed. Check logs.")
+
     tick_to_run = tick if tick is not None else load_tick(base_path)
     results = run_tick(base_path, tick_to_run)
     persist_tick(base_path, tick_to_run + 1)
@@ -507,6 +515,13 @@ def run_once(base_path: Path, tick: int | None = None) -> dict[str, Any]:
 
 
 def run_forever(base_path: Path) -> None:
+    errors = validate_everything(base_path)
+    if errors:
+        logger.critical(
+            "Startup validation failed:\n" + "\n".join(f"- {e}" for e in errors)
+        )
+        raise RuntimeError("Configuration validation failed. Check logs.")
+
     config = get_org_config(base_path)
     base_turn_seconds = config.get("base_turn_seconds", 10)
     max_turns = config.get("max_turns")

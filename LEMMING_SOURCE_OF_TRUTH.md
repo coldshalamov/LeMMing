@@ -139,16 +139,8 @@ Deterministic within-tick ordering: stable sort by `(computed fire_point, agent_
 ---
 
 ## 5) Permissions and safety
-### File access
-Agent resume defines allowlists:
-- `allow_read`: [path prefixes]
-- `allow_write`: [path prefixes]
-
-Before any tool reads/writes:
-- resolve relative paths against repo root
-- normalize `.`, `..`
-- canonicalize symlinks where feasible
-- enforce prefix allowlist match
+### Sandbox model
+Agents are strictly confined to their own workspace (`agents/<name>/workspace/`) and the global shared folder (`shared/`). Path traversal (`..`) is blocked. No per-agent file permission overrides exist.
 
 ### Tool allowlist
 Agent resume defines allowed tools by name. Engine denies calls if not allowed. Tool calls should include tool name, args, intended file paths (if applicable), and optional rationale.
