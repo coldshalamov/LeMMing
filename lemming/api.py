@@ -12,15 +12,22 @@ from pydantic import BaseModel
 
 from .agents import discover_agents, load_agent
 from .engine import load_tick
-from .messages import OutboxEntry, read_outbox_entries
+from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
+MAX_LIMIT = 1000
+
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.0")
+
+# Configure CORS
+# Default to localhost:3000 for local development
+allowed_origins_str = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -120,6 +127,8 @@ async def get_agent(agent_name: str) -> AgentInfo:
 
 @app.get("/api/agents/{agent_name}/outbox", response_model=list[OutboxEntryModel])
 async def get_agent_outbox(agent_name: str, limit: int = 20, since_tick: int | None = None) -> list[OutboxEntryModel]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
     entries = read_outbox_entries(BASE_PATH, agent_name, limit=limit, since_tick=since_tick)
     return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries]
 
@@ -157,7 +166,7 @@ async def get_config() -> dict[str, Any]:
 async def status() -> dict[str, Any]:
     agents, credits = _load_agents_with_credits(BASE_PATH)
     tick = load_tick(BASE_PATH)
-    total_messages = sum(len(read_outbox_entries(BASE_PATH, agent.name, limit=10_000)) for agent in agents)
+    total_messages = sum(count_outbox_entries(BASE_PATH, agent.name) for agent in agents)
     total_credits = sum(entry.get("credits_left", 0.0) for entry in credits.values())
     return {
         "tick": tick,
@@ -172,6 +181,8 @@ async def status() -> dict[str, Any]:
 async def list_messages(
     agent: str | None = None, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntryModel]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
     agent_names: list[str]
     if agent:
         try:
