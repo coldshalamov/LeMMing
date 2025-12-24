@@ -74,7 +74,11 @@ export default function Dashboard() {
             {isConnected ? "LIVE" : "DISCONNECTED"}
           </div>
           <Link href="/wizard">
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/50 text-brand-cyan rounded text-xs font-mono hover:bg-brand-cyan/20 transition-colors mr-2">
+            <button 
+              type="button"
+              aria-label="Deploy new agent unit"
+              className="flex items-center gap-2 px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/50 text-brand-cyan rounded text-xs font-mono hover:bg-brand-cyan/20 transition-colors mr-2"
+            >
               <Plus size={14} /> DEPLOY_UNIT
             </button>
           </Link>
@@ -171,7 +175,11 @@ export default function Dashboard() {
                   <Terminal size={64} className="mb-4 opacity-20" />
                   <p className="font-mono text-sm mb-4">SYSTEM_OFFLINE: NO AGENTS DETECTED</p>
                   <Link href="/wizard">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors">
+                    <button 
+                      type="button"
+                      aria-label="Initialize first agent"
+                      className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors"
+                    >
                       <Plus size={18} /> INITIALIZE_FIRST_AGENT
                     </button>
                   </Link>
