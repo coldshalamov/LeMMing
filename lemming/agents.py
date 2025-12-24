@@ -3,12 +3,21 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
 from typing import Any
 
 from .paths import get_agents_dir, get_resume_json_path
 
 logger = logging.getLogger(__name__)
+
+# Cache for Agent objects: path -> (mtime, Agent)
+_agent_cache: dict[Path, tuple[float, Agent]] = {}
+
+
+def reset_agents_cache() -> None:
+    global _agent_cache
+    _agent_cache.clear()
 
 DEFAULT_MODEL_KEY = "gpt-4.1-mini"
 DEFAULT_TEMPERATURE = 0.2
@@ -266,66 +275,97 @@ def discover_agents(base_path: Path) -> list[Agent]:
     if not agents_dir.exists():
         return agents
 
-    for child in agents_dir.iterdir():
-        if not child.is_dir() or child.name == "agent_template":
-            continue
-        resume_path = get_resume_json_path(base_path, child.name)
-        if not resume_path.exists():
-            logger.warning(
-                "resume_missing",
-                extra={"event": "resume_missing", "path": str(child)},
-            )
-            continue
-        try:
-            data = _load_resume_json(resume_path)
-        except json.JSONDecodeError as exc:
-            logger.warning(
-                "resume_invalid_json",
-                extra={
-                    "event": "resume_invalid_json",
-                    "path": str(child),
-                    "error": str(exc),
-                },
-            )
-            continue
+    # Use scandir for better performance (avoids creating Path objects for every entry)
+    with os.scandir(agents_dir) as it:
+        for entry in it:
+            if not entry.is_dir() or entry.name == "agent_template":
+                continue
 
-        resume_name = data.get("name")
-        if resume_name and resume_name != child.name:
-            logger.warning(
-                "resume_name_mismatch",
-                extra={
-                    "event": "resume_name_mismatch",
-                    "folder": child.name,
-                    "resume": resume_name,
-                },
-            )
+            resume_path = get_resume_json_path(base_path, entry.name)
 
-        try:
-            agent = Agent.from_resume_data(resume_path, data)
-        except Exception as exc:  # pragma: no cover
-            logger.warning(
-                "resume_invalid",
-                extra={
-                    "event": "resume_invalid",
-                    "path": str(child),
-                    "error": str(exc),
-                },
-            )
-            continue
+            # Optimization: check cache based on mtime
+            try:
+                stat_result = resume_path.stat()
+                mtime = stat_result.st_mtime
 
-        if agent.name in seen_names:
-            logger.warning(
-                "duplicate_agent_name",
-                extra={
-                    "event": "duplicate_agent_name",
-                    "folder": child.name,
-                    "agent": agent.name,
-                },
-            )
-            continue
+                # If cached and mtime matches, use cached agent
+                if resume_path in _agent_cache:
+                    cached_mtime, cached_agent = _agent_cache[resume_path]
+                    if cached_mtime == mtime:
+                        if cached_agent.name in seen_names:
+                            logger.warning(
+                                "duplicate_agent_name",
+                                extra={
+                                    "event": "duplicate_agent_name",
+                                    "folder": entry.name,
+                                    "agent": cached_agent.name,
+                                },
+                            )
+                            continue
 
-        seen_names.add(agent.name)
-        agents.append(agent)
+                        seen_names.add(cached_agent.name)
+                        agents.append(cached_agent)
+                        continue
+            except FileNotFoundError:
+                logger.warning(
+                    "resume_missing",
+                    extra={"event": "resume_missing", "path": str(resume_path.parent)},
+                )
+                continue
+
+            # Fallback: load from disk
+            try:
+                data = _load_resume_json(resume_path)
+            except json.JSONDecodeError as exc:
+                logger.warning(
+                    "resume_invalid_json",
+                    extra={
+                        "event": "resume_invalid_json",
+                        "path": str(resume_path.parent),
+                        "error": str(exc),
+                    },
+                )
+                continue
+
+            resume_name = data.get("name")
+            if resume_name and resume_name != entry.name:
+                logger.warning(
+                    "resume_name_mismatch",
+                    extra={
+                        "event": "resume_name_mismatch",
+                        "folder": entry.name,
+                        "resume": resume_name,
+                    },
+                )
+
+            try:
+                agent = Agent.from_resume_data(resume_path, data)
+                # Update cache
+                _agent_cache[resume_path] = (mtime, agent)
+            except Exception as exc:  # pragma: no cover
+                logger.warning(
+                    "resume_invalid",
+                    extra={
+                        "event": "resume_invalid",
+                        "path": str(resume_path.parent),
+                        "error": str(exc),
+                    },
+                )
+                continue
+
+            if agent.name in seen_names:
+                logger.warning(
+                    "duplicate_agent_name",
+                    extra={
+                        "event": "duplicate_agent_name",
+                        "folder": entry.name,
+                        "agent": agent.name,
+                    },
+                )
+                continue
+
+            seen_names.add(agent.name)
+            agents.append(agent)
 
     return agents
 

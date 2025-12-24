@@ -164,8 +164,25 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center flex-col text-white/20">
-              <Activity size={64} className="mb-4 opacity-20" />
-              <p className="font-mono text-sm">SELECT AN AGENT NODE TO INSPECT</p>
+              {(!agents || agents.length === 0) ? (
+                <>
+                  <Terminal size={64} className="mb-4 opacity-20" />
+                  <p className="font-mono text-sm mb-4">SYSTEM_OFFLINE: NO AGENTS DETECTED</p>
+                  <Link href="/wizard">
+                    <button className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors">
+                      <Plus size={18} /> INITIALIZE_FIRST_AGENT
+                    </button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Activity size={64} className="mb-4 opacity-20" />
+                  <p className="font-mono text-sm">SELECT AN AGENT NODE TO INSPECT</p>
+                  <p className="font-mono text-xs mt-2 text-white/10">
+                    Use <span className="px-1.5 py-0.5 bg-white/10 rounded">TAB</span> to navigate graph
+                  </p>
+                </>
+              )}
             </div>
           )}
 
