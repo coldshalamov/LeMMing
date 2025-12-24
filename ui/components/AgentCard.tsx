@@ -42,12 +42,24 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
     const { intelligence, creativity } = getAgentStats(agent.model);
     const isFiring = (currentTick % agent.schedule.run_every_n_ticks) === (agent.schedule.phase_offset % agent.schedule.run_every_n_ticks);
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (onSelect && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onSelect();
+        }
+    };
+
     return (
         <motion.div
             layoutId={`agent-card-${agent.name}`}
             onClick={onSelect}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            aria-label={`Select agent ${agent.name}`}
             className={clsx(
-                "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group",
+                "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                 isSelected
                     ? "border-brand-cyan shadow-[0_0_25px_rgba(6,182,212,0.15)] bg-neo-panel z-10 scale-105"
                     : "border-neo-border bg-neo-surface hover:border-white/20 hover:bg-neo-surface-highlight"
@@ -87,7 +99,14 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
                     <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
                         <Brain size={12} />
                         <span className="w-16">INT</span>
-                        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                            className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
+                            role="progressbar"
+                            aria-label="Intelligence"
+                            aria-valuenow={intelligence}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                        >
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${intelligence}%` }}
@@ -99,7 +118,14 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
                     <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
                         <Sparkles size={12} />
                         <span className="w-16">CRE</span>
-                        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                            className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
+                            role="progressbar"
+                            aria-label="Creativity"
+                            aria-valuenow={creativity}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                        >
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${creativity}%` }}
