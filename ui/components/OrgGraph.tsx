@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AgentInfo, OrgGraph } from "@/lib/types";
-import { motion } from "framer-motion";
 import clsx from "clsx";
 
 interface Point {
@@ -25,14 +24,9 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
     const containerRef = useRef<HTMLDivElement>(null);
     const [positions, setPositions] = useState<Record<string, Point>>({});
 
-    // Initialize random positions
+    // Initialize random positions - only for new agents, preserving existing positions
     useEffect(() => {
-        // Check if we need to initialize positions for new agents
         if (agents.length === 0) return;
-
-        // We only want to set initial positions if they don't exist yet
-        // or if the agent count significantly changed (reset)
-        // But doing it in useEffect with setPositions is fine as long as we don't do it on every render
 
         setPositions(prev => {
             const width = containerRef.current?.clientWidth || 800;
@@ -41,6 +35,7 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
             const next = { ...prev };
             let changed = false;
 
+            // Add positions for new agents only
             agents.forEach(a => {
                 if (!next[a.name]) {
                     next[a.name] = {
@@ -209,8 +204,19 @@ export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, clas
                     <div
                         key={agent.name}
                         onClick={() => onSelectAgent(agent.name)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onSelectAgent(agent.name);
+                            }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSel}
+                        aria-label={`Select agent ${agent.name}`}
+                        title={agent.name}
                         className={clsx(
-                            "absolute transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-colors border",
+                            "absolute transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                             isSel
                                 ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan shadow-[0_0_15px_rgba(6,182,212,0.4)]"
                                 : "bg-neo-surface border-neo-border text-gray-400 hover:border-gray-500"
