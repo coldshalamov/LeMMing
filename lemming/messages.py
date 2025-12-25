@@ -174,25 +174,29 @@ def read_outbox_entries(
             # nlargest returns the largest elements, so highest tick (newest).
             # This matches 'reverse=True' sort order.
 
-            # Helper generator to filter non-json files
-            candidate_files = (
+            # Materialize candidate files within the context manager to ensure
+            # entry objects are accessed while scandir iterator is valid.
+            # Accessing scandir entries after the context manager closes would
+            # raise an exception or produce undefined behavior.
+            candidate_files = [
                 entry.name for entry in it
                 if entry.is_file() and entry.name.endswith(".json")
-            )
+            ]
 
             # If since_tick is provided, we can pre-filter files that are definitely too old
             # IF the filename tick parsing is reliable. It is.
             if since_tick is not None:
-                candidate_files = (
+                candidate_files = [
                     name for name in candidate_files
                     if _tick_from_filename_str(name) >= since_tick
-                )
+                ]
 
-            filenames = heapq.nlargest(
-                limit,
-                candidate_files,
-                key=lambda name: (_tick_from_filename_str(name), name)
-            )
+        # Now we can safely use heapq.nlargest on the materialized list
+        filenames = heapq.nlargest(
+            limit,
+            candidate_files,
+            key=lambda name: (_tick_from_filename_str(name), name)
+        )
     except FileNotFoundError:
         return []
 
