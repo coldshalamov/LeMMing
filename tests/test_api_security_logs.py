@@ -1,6 +1,6 @@
 
-import pytest
 from lemming.api import _read_agent_logs
+
 
 def test_read_agent_logs_traversal_blocked(tmp_path):
     """Test that _read_agent_logs BLOCKS traversal."""
