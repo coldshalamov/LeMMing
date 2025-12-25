@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import heapq
 import json
 import logging
+import os
 import uuid
-import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-import os
 from typing import Any
 
 from .paths import get_agents_dir, get_outbox_dir
@@ -297,11 +297,13 @@ def collect_readable_outboxes(
         agents_dir = get_agents_dir(base_path)
         if not agents_dir.exists():
             return []
-        read_outboxes = [
-            d.name
-            for d in agents_dir.iterdir()
-            if d.is_dir() and d.name not in {agent_name, "agent_template"}
-        ]
+        # Optimization: Use os.scandir to avoid creating Path objects
+        with os.scandir(agents_dir) as it:
+            read_outboxes = [
+                entry.name
+                for entry in it
+                if entry.is_dir() and entry.name not in {agent_name, "agent_template"}
+            ]
 
     # Optimization: Scan metadata first to avoid loading content of old messages
     candidates: list[tuple[int, str]] = []
@@ -350,12 +352,14 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
     if not agents_dir.exists():
         return 0
 
-    for agent_dir in agents_dir.iterdir():
-        if not agent_dir.is_dir():
-            continue
-        outbox_dir = get_outbox_dir(base_path, agent_dir.name)
-        if not outbox_dir.exists():
-            continue
+    # Optimization: Use os.scandir to iterate agents efficiently
+    with os.scandir(agents_dir) as it:
+        for agent_entry in it:
+            if not agent_entry.is_dir():
+                continue
+            outbox_dir = get_outbox_dir(base_path, agent_entry.name)
+            if not outbox_dir.exists():
+                continue
         try:
             with os.scandir(outbox_dir) as it:
                 for entry in it:
