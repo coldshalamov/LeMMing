@@ -1,7 +1,7 @@
-import os
 import pytest
-from pathlib import Path
-from lemming.paths import validate_agent_name, get_agent_dir
+
+from lemming.paths import get_agent_dir, validate_agent_name
+
 
 class TestPathsSecurity:
     """Tests for path traversal security vulnerability fix."""

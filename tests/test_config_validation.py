@@ -77,7 +77,16 @@ def test_validate_everything_reports_schema_path(tmp_path: Path) -> None:
 
 def test_validate_resume_uses_schema(tmp_path: Path) -> None:
     resume_path = tmp_path / "resume.json"
-    resume_path.write_text(json.dumps({"name": "alpha", "title": "", "model": {}, "permissions": {}, "schedule": {}}), encoding="utf-8")
+    resume_path.write_text(
+        json.dumps({
+            "name": "alpha",
+            "title": "",
+            "model": {},
+            "permissions": {},
+            "schedule": {},
+        }),
+        encoding="utf-8",
+    )
 
     try:
         validate_resume_file(resume_path)
