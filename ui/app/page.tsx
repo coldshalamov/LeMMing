@@ -1,11 +1,25 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAgents, useOrgGraph, useStatus, useMessages, useWebSocketStream } from "@/lib/api";
+import {
+  useAgents,
+  useOrgGraph,
+  useStatus,
+  useMessages,
+  useWebSocketStream,
+} from "@/lib/api";
 import { AgentCard } from "@/components/AgentCard";
 import { OrgGraphView } from "@/components/OrgGraph";
-import { Activity, Clock, Server, Terminal, Plus, Wifi, WifiOff } from "lucide-react";
+import { LogMessage } from "@/components/LogMessage";
+import {
+  Activity,
+  Clock,
+  Server,
+  Terminal,
+  Plus,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -17,7 +31,9 @@ export default function Dashboard() {
   const { messages } = useMessages();
   const { isConnected } = useWebSocketStream();
 
-  const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
+  const [selectedAgentName, setSelectedAgentName] = useState<string | null>(
+    null,
+  );
   const [visualTick, setVisualTick] = useState(1);
 
   // Sync visual tick with backend status
@@ -28,7 +44,7 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.tick]);
 
-  const selectedAgent = agents?.find(a => a.name === selectedAgentName);
+  const selectedAgent = agents?.find((a) => a.name === selectedAgentName);
 
   if (agentsLoading) {
     return (
@@ -46,7 +62,9 @@ export default function Dashboard() {
           <div className="w-8 h-8 rounded bg-gradient-to-br from-brand-cyan to-brand-purple flex items-center justify-center shadow-lg shadow-brand-cyan/20">
             <Terminal className="text-white w-5 h-5" />
           </div>
-          <h1 className="font-bold text-xl tracking-tight text-white">LeMMing <span className="text-white/30 font-light">OVERMIND</span></h1>
+          <h1 className="font-bold text-xl tracking-tight text-white">
+            LeMMing <span className="text-white/30 font-light">OVERMIND</span>
+          </h1>
         </div>
 
         {/* Global Stats */}
@@ -61,7 +79,12 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Activity size={14} className="text-brand-lime" />
-            <span>CREDITS: {status?.total_credits !== undefined ? status.total_credits.toFixed(0) : 0}</span>
+            <span>
+              CREDITS:{" "}
+              {status?.total_credits !== undefined
+                ? status.total_credits.toFixed(0)
+                : 0}
+            </span>
           </div>
         </div>
 
@@ -72,9 +95,11 @@ export default function Dashboard() {
               "flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono border",
               isConnected
                 ? "border-brand-cyan text-brand-cyan bg-brand-cyan/10"
-                : "border-red-500 text-red-400 bg-red-500/10"
+                : "border-red-500 text-red-400 bg-red-500/10",
             )}
-            title={isConnected ? "Connected to backend" : "Disconnected from backend"}
+            title={
+              isConnected ? "Connected to backend" : "Disconnected from backend"
+            }
           >
             {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
             {isConnected ? "LIVE" : "DISCONNECTED"}
@@ -89,13 +114,13 @@ export default function Dashboard() {
 
       {/* Main Layout */}
       <main className="flex-1 flex overflow-hidden">
-
         {/* LEFT COLUMN: Graph & List */}
         <div className="w-1/3 min-w-[400px] border-r border-neo-border flex flex-col bg-neo-bg/50 backdrop-blur-sm z-10">
-
           {/* Graph View */}
           <div className="flex-1 relative border-b border-neo-border">
-            <div className="absolute top-2 left-2 z-10 text-xs font-mono text-white/50 bg-black/50 px-2 py-1 rounded">ORG TOPOLOGY</div>
+            <div className="absolute top-2 left-2 z-10 text-xs font-mono text-white/50 bg-black/50 px-2 py-1 rounded">
+              ORG TOPOLOGY
+            </div>
             {agents && graph && (
               <OrgGraphView
                 agents={agents}
@@ -113,8 +138,11 @@ export default function Dashboard() {
               <span>{agents?.length || 0} UNITS</span>
             </div>
             <div className="grid grid-cols-1 gap-2">
-              {agents?.map(agent => (
-                <div key={agent.name} onClick={() => setSelectedAgentName(agent.name)}>
+              {agents?.map((agent) => (
+                <div
+                  key={agent.name}
+                  onClick={() => setSelectedAgentName(agent.name)}
+                >
                   <AgentCard
                     agent={agent}
                     currentTick={visualTick}
@@ -151,20 +179,43 @@ export default function Dashboard() {
                 {/* Context / Logs */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-xl border border-neo-border bg-neo-panel/50 p-4 h-64 overflow-hidden flex flex-col">
-                    <h3 className="text-xs font-mono text-brand-cyan mb-2">INCOMING_SIGNALS</h3>
+                    <h3 className="text-xs font-mono text-brand-cyan mb-2">
+                      INCOMING_SIGNALS
+                    </h3>
                     <div className="flex-1 overflow-y-auto text-xs font-mono text-gray-400 space-y-2">
                       {/* Fake incoming messages based on graph */}
-                      {messages?.filter(m => m.kind !== "status").slice(0, 5).map((m, i) => (
-                        <div key={i} className="p-2 bg-white/5 rounded border border-white/5">
-                          <span className="text-brand-purple">@{m.agent}</span>: {m.payload.text?.substring(0, 50)}...
-                        </div>
-                      ))}
+                      {messages
+                        ?.filter((m) => m.kind !== "status")
+                        .slice(0, 5)
+                        .map((m, i) => (
+                          <div
+                            key={i}
+                            className="p-2 bg-white/5 rounded border border-white/5"
+                          >
+                            <span className="text-brand-purple">
+                              @{m.agent}
+                            </span>
+                            : {m.payload.text?.substring(0, 50)}...
+                          </div>
+                        ))}
                     </div>
                   </div>
                   <div className="rounded-xl border border-neo-border bg-neo-panel/50 p-4 h-64 overflow-hidden flex flex-col">
-                    <h3 className="text-xs font-mono text-brand-lime mb-2">MEMORY_DUMP</h3>
+                    <h3 className="text-xs font-mono text-brand-lime mb-2">
+                      MEMORY_DUMP
+                    </h3>
                     <div className="flex-1 overflow-y-auto text-xs font-mono text-gray-500">
-                      <pre>{JSON.stringify({ last_run: "success", memory_slots: 4, context_window: "128k" }, null, 2)}</pre>
+                      <pre>
+                        {JSON.stringify(
+                          {
+                            last_run: "success",
+                            memory_slots: 4,
+                            context_window: "128k",
+                          },
+                          null,
+                          2,
+                        )}
+                      </pre>
                     </div>
                   </div>
                 </div>
@@ -172,10 +223,12 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center flex-col text-white/20">
-              {(!agents || agents.length === 0) ? (
+              {!agents || agents.length === 0 ? (
                 <>
                   <Terminal size={64} className="mb-4 opacity-20" />
-                  <p className="font-mono text-sm mb-4">SYSTEM_OFFLINE: NO AGENTS DETECTED</p>
+                  <p className="font-mono text-sm mb-4">
+                    SYSTEM_OFFLINE: NO AGENTS DETECTED
+                  </p>
                   <Link href="/wizard">
                     <button className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors">
                       <Plus size={18} /> INITIALIZE_FIRST_AGENT
@@ -185,9 +238,15 @@ export default function Dashboard() {
               ) : (
                 <>
                   <Activity size={64} className="mb-4 opacity-20" />
-                  <p className="font-mono text-sm">SELECT AN AGENT NODE TO INSPECT</p>
+                  <p className="font-mono text-sm">
+                    SELECT AN AGENT NODE TO INSPECT
+                  </p>
                   <p className="font-mono text-xs mt-2 text-white/10">
-                    Use <span className="px-1.5 py-0.5 bg-white/10 rounded">TAB</span> to navigate graph
+                    Use{" "}
+                    <span className="px-1.5 py-0.5 bg-white/10 rounded">
+                      TAB
+                    </span>{" "}
+                    to navigate graph
                   </p>
                 </>
               )}
@@ -196,22 +255,33 @@ export default function Dashboard() {
 
           {/* Bottom Feed (Global Log) */}
           <div className="h-48 border-t border-neo-border bg-neo-panel p-4 flex flex-col shrink-0">
-            <h3 className="text-[10px] font-mono text-white/30 mb-2 uppercase tracking-wider">System_Log</h3>
+            <h3 className="text-[10px] font-mono text-white/30 mb-2 uppercase tracking-wider">
+              System_Log
+            </h3>
             <div className="flex-1 overflow-y-auto font-mono text-xs space-y-1">
               {messages?.map((msg) => (
-                <div key={msg.id} className="flex gap-2 opacity-70 hover:opacity-100 transition-opacity">
-                  <span className="text-white/30 w-16">T-{msg.tick}</span>
-                  <span className={clsx("w-24 text-right", getColorForAgent(msg.agent))}>{msg.agent}</span>
-                  <span className="text-white/20">::</span>
-                  <span className={clsx(msg.kind === "report" ? "text-yellow-500" : msg.kind === "status" ? "text-gray-500" : "text-white")}>
-                    {JSON.stringify(msg.payload)}
+                <div
+                  key={msg.id}
+                  className="flex gap-2 opacity-70 hover:opacity-100 transition-opacity items-start"
+                >
+                  <span className="text-white/30 w-16 shrink-0 mt-0.5">
+                    T-{msg.tick}
                   </span>
+                  <span
+                    className={clsx(
+                      "w-24 text-right shrink-0 mt-0.5",
+                      getColorForAgent(msg.agent),
+                    )}
+                  >
+                    {msg.agent}
+                  </span>
+                  <span className="text-white/20 mt-0.5 shrink-0">::</span>
+                  <LogMessage payload={msg.payload} kind={msg.kind} />
                 </div>
               ))}
             </div>
           </div>
         </div>
-
       </main>
     </div>
   );
