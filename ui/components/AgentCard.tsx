@@ -3,7 +3,7 @@
 
 import { AgentInfo } from "@/lib/types";
 import { OrgTimer } from "./OrgTimer";
-import { Users, Zap, Brain, Sparkles, Terminal, FileText, Database, Globe } from "lucide-react";
+import { Brain, Sparkles, Terminal, FileText, Database, Globe } from "lucide-react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 
@@ -16,7 +16,7 @@ interface AgentCardProps {
 }
 
 // Helper to map model/temp to stats
-function getAgentStats(model: string, temperature: number = 0.7) {
+function getAgentStats(model: string) {
     let intelligence = 65; // Base
     if (model.includes("gpt-4")) intelligence = 92;
     if (model.includes("gpt-4-turbo")) intelligence = 95;
@@ -50,9 +50,16 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
     };
 
     return (
-        <motion.div
+        <motion.button
             layoutId={`agent-card-${agent.name}`}
             onClick={onSelect}
+<<<<<<< HEAD
+            type="button"
+            aria-label={`Select agent ${agent.name}`}
+            aria-pressed={isSelected}
+            className={clsx(
+                "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+=======
             onKeyDown={handleKeyDown}
             role="button"
             tabIndex={0}
@@ -60,6 +67,7 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
             aria-label={`Select agent ${agent.name}`}
             className={clsx(
                 "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+>>>>>>> origin/main
                 isSelected
                     ? "border-brand-cyan shadow-[0_0_25px_rgba(6,182,212,0.15)] bg-neo-panel z-10 scale-105"
                     : "border-neo-border bg-neo-surface hover:border-white/20 hover:bg-neo-surface-highlight"
@@ -163,6 +171,6 @@ export function AgentCard({ agent, currentTick, isSelected, onSelect, variant = 
                     </div>
                 )}
             </div>
-        </motion.div>
+        </motion.button>
     );
 }
