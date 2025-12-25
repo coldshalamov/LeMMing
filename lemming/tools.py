@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -52,48 +53,13 @@ class ToolRegistry:
         cls._tools.clear()
 
 
-def _get_allowed_paths(base_path: Path, agent_name: str, mode: str) -> list[Path]:
-    """Get allowed paths for an agent based on their file_access permissions.
+def _get_allowed_paths(base_path: Path, agent_name: str) -> list[Path]:
+    """Get allowed paths for an agent.
 
-    Args:
-        base_path: Repository base path
-        agent_name: Name of the agent
-        mode: Either "read" or "write"
-
-    Returns:
-        List of allowed paths (resolved to absolute)
+    Agents are sandboxed to their own workspace plus the shared directory. This
+    keeps file operations deterministic without additional per-agent overrides.
     """
-    from .agents import load_agent
 
-    try:
-        agent = load_agent(base_path, agent_name)
-    except Exception:  # pragma: no cover - defensive
-        # Fallback to default if agent not found
-        workspace = (base_path / "agents" / agent_name / "workspace").resolve()
-        shared = (base_path / "shared").resolve()
-        return [workspace, shared]
-
-    # Check if agent has file_access permissions configured
-    if agent.permissions.file_access is not None:
-        if mode == "read":
-            allow_list = agent.permissions.file_access.allow_read
-        elif mode == "write":
-            allow_list = agent.permissions.file_access.allow_write
-        else:
-            allow_list = []
-
-        # If the allow list is explicitly provided (even empty), respect it
-        allowed_paths = []
-        for path_str in allow_list:
-            path = Path(path_str)
-            if not path.is_absolute():
-                path = (base_path / path).resolve()
-            else:
-                path = path.resolve()
-            allowed_paths.append(path)
-        return allowed_paths
-
-    # Default: workspace + shared
     workspace = (base_path / "agents" / agent_name / "workspace").resolve()
     shared = (base_path / "shared").resolve()
     return [workspace, shared]
@@ -125,7 +91,7 @@ def _is_path_allowed(base_path: Path, agent_name: str, path: Path, mode: str) ->
     canonical_path = path.resolve()
 
     # Get allowed paths for this mode
-    allowed_paths = _get_allowed_paths(base_path, agent_name, mode)
+    allowed_paths = _get_allowed_paths(base_path, agent_name)
 
     # Check if canonical path has a prefix match with any allowed path
     for allowed in allowed_paths:
@@ -196,18 +162,54 @@ class FileListTool(Tool):
 class ShellTool(Tool):
     name = "shell"
     description = "Execute shell commands in the agent workspace."
+    ALLOWED_EXECUTABLES = {"python", "grep", "ls", "cat", "echo", "head", "tail", "jq"}
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         cmd = kwargs.get("command")
         if not cmd:
             return ToolResult(False, "", "Missing command")
+
+        try:
+            args = shlex.split(cmd)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid command format: {e}")
+
+        if not args:
+            return ToolResult(False, "", "Empty command")
+
+        exe = Path(args[0]).name
+        if exe not in self.ALLOWED_EXECUTABLES:
+            return ToolResult(
+                False,
+                "",
+                f"Security violation: '{exe}' is not in the allowed executables list.",
+            )
+
+        # Security checks
+        # Allow first arg (executable) to be absolute (e.g. /usr/bin/python)
+        # Check subsequent args for absolute paths or traversal attempts
+        for i, arg in enumerate(args):
+            # Check for directory traversal in any argument
+            if ".." in arg:
+                # Naive check for traversal: ".." segment or start/end with ".."
+                # We want to allow "loading..." but block "../secret"
+                # Standard traversal patterns:
+                if arg == ".." or arg.startswith("../") or arg.endswith("/..") or "/../" in arg:
+                    return ToolResult(False, "", f"Security violation: directory traversal '{arg}' not allowed")
+
+            # Block absolute paths in arguments (allow only for the command itself at index 0)
+            if i > 0 and Path(arg).is_absolute():
+                return ToolResult(False, "", f"Security violation: absolute path argument '{arg}' not allowed")
+
         workspace = (base_path / "agents" / agent_name / "workspace").resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         try:
+            # shell=False to prevent command injection chaining
+            # We use the parsed 'parts' list directly
             result = subprocess.run(
-                cmd,
+                args,
                 cwd=workspace,
-                shell=True,
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -216,6 +218,8 @@ class ShellTool(Tool):
             error_text = result.stderr if not success else None
             output = result.stdout.strip()
             return ToolResult(success, output, error_text)
+        except FileNotFoundError:
+            return ToolResult(False, "", f"Command not found: {args[0]}")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out")
         except Exception as exc:  # pragma: no cover - defensive
@@ -259,6 +263,12 @@ class CreateAgentTool(Tool):
         new_agent_name = kwargs.get("name")
         if not new_agent_name:
             return ToolResult(False, "", "Missing new agent name")
+
+        try:
+            validate_agent_name(new_agent_name)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid agent name: {e}")
+
         new_agent_path = base_path / "agents" / str(new_agent_name)
         if new_agent_path.exists():
             return ToolResult(False, "", "Agent already exists")
@@ -280,10 +290,7 @@ class ListAgentsTool(Tool):
         from .agents import discover_agents
 
         agents = discover_agents(base_path)
-        info = [
-            {"name": ag.name, "title": ag.title, "description": ag.short_description}
-            for ag in agents
-        ]
+        info = [{"name": ag.name, "title": ag.title, "description": ag.short_description} for ag in agents]
         return ToolResult(True, json.dumps(info, indent=2))
 
 
@@ -296,4 +303,3 @@ ToolRegistry.register(MemoryReadTool())
 ToolRegistry.register(MemoryWriteTool())
 ToolRegistry.register(CreateAgentTool())
 ToolRegistry.register(ListAgentsTool())
-

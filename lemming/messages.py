@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -114,14 +115,71 @@ def _tick_from_filename(entry_path: Path) -> int | None:
         return None
 
 
-def _outbox_sort_key(p: Path) -> tuple[int, str]:
-    """Helper to sort outbox files by tick first, then filename.
+def _tick_from_filename_str(filename: str) -> int:
+    """Helper to extract tick from filename string.
 
-    Returns (tick, filename). If tick cannot be parsed, returns (-1, filename)
-    so these files appear at the end (or beginning, depending on sort order).
+    Returns -1 if parsing fails so it sorts to the end.
     """
-    tick = _tick_from_filename(p)
-    return (tick if tick is not None else -1, p.name)
+    try:
+        tick_part = filename.split("_", 1)[0]
+        return int(tick_part)
+    except (ValueError, IndexError):
+        return -1
+
+
+def scan_outbox_files(
+    base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
+) -> list[tuple[int, str]]:
+    """Scans outbox files and returns list of (tick, full_path_str) without loading content.
+
+    This is faster than read_outbox_entries when we only need to sort by tick/filename
+    across multiple agents.
+
+    If limit > 0, returns only the most recent 'limit' entries using heapq.
+    """
+    outbox_dir = get_outbox_dir(base_path, agent_name)
+    if not outbox_dir.exists():
+        return []
+
+    results = []
+    try:
+        with os.scandir(outbox_dir) as it:
+            if limit > 0:
+                # Use a generator to avoid creating the full list of files
+                candidate_files = (
+                    entry
+                    for entry in it
+                    if entry.is_file() and entry.name.endswith(".json")
+                )
+
+                # nlargest returns the largest elements, so highest tick (newest).
+                # We need to include the full path in the result
+                largest_entries = heapq.nlargest(
+                    limit,
+                    candidate_files,
+                    key=lambda e: (_tick_from_filename_str(e.name), e.name),
+                )
+
+                for entry in largest_entries:
+                    tick = _tick_from_filename_str(entry.name)
+                    # No need to check tick != -1 strictly if we trust nlargest handles it,
+                    # but _tick_from_filename_str returns -1 on error.
+                    if tick != -1:
+                        if since_tick is not None and tick < since_tick:
+                            continue
+                        results.append((tick, entry.path))
+
+            else:
+                for entry in it:
+                    if entry.is_file() and entry.name.endswith(".json"):
+                        tick = _tick_from_filename_str(entry.name)
+                        if tick != -1:
+                            if since_tick is not None and tick < since_tick:
+                                continue
+                            results.append((tick, entry.path))
+    except FileNotFoundError:
+        pass
+    return results
 
 
 def read_outbox_entries(
@@ -137,14 +195,41 @@ def read_outbox_entries(
     entries: list[OutboxEntry] = []
 
     # Sort files by tick descending.
-    # We use a custom key to extract the tick from the filename, ensuring numerical sort.
-    # This allows us to stop reading files once we have enough entries from
-    # recent ticks, avoiding reading the entire history.
-    files = sorted(outbox_dir.glob("*.json"), key=_outbox_sort_key, reverse=True)
+    # Optimization: Use os.scandir to avoid creating Path objects for all files.
+    # Use heapq.nlargest to avoid sorting all files when we only need the top K.
+    try:
+        with os.scandir(outbox_dir) as it:
+            # We filter based on since_tick roughly here to avoid heapsizing old files if possible?
+            # But the primary sort key is tick.
+            # nlargest returns the largest elements, so highest tick (newest).
+            # This matches 'reverse=True' sort order.
+
+            # Helper generator to filter non-json files
+            candidate_files = (
+                entry.name for entry in it
+                if entry.is_file() and entry.name.endswith(".json")
+            )
+
+            # If since_tick is provided, we can pre-filter files that are definitely too old
+            # IF the filename tick parsing is reliable. It is.
+            if since_tick is not None:
+                candidate_files = (
+                    name for name in candidate_files
+                    if _tick_from_filename_str(name) >= since_tick
+                )
+
+            filenames = heapq.nlargest(
+                limit,
+                candidate_files,
+                key=lambda name: (_tick_from_filename_str(name), name)
+            )
+    except FileNotFoundError:
+        return []
 
     min_collected_tick = float('inf')
 
-    for entry_path in files:
+    for name in filenames:
+        entry_path = outbox_dir / name
         tick_val = _tick_from_filename(entry_path)
 
         # If we encounter a file with a tick older than since_tick, we can stop
@@ -208,19 +293,53 @@ def collect_readable_outboxes(
     limit: int = 50,
     since_tick: int | None = None,
 ) -> list[OutboxEntry]:
-    entries: list[OutboxEntry] = []
     if read_outboxes == ["*"]:
         agents_dir = get_agents_dir(base_path)
-        if agents_dir.exists():
-            read_outboxes = [
-                d.name
-                for d in agents_dir.iterdir()
-                if d.is_dir() and d.name not in {agent_name, "agent_template"}
-            ]
+        if not agents_dir.exists():
+            return []
+        read_outboxes = [
+            d.name
+            for d in agents_dir.iterdir()
+            if d.is_dir() and d.name not in {agent_name, "agent_template"}
+        ]
+
+    # Optimization: Scan metadata first to avoid loading content of old messages
+    candidates: list[tuple[int, str]] = []
     for other in read_outboxes:
         if other == agent_name:
             continue
-        entries.extend(read_outbox_entries(base_path, other, limit=limit, since_tick=since_tick))
+        # Pass the limit to scan_outbox_files to reduce memory usage and processing
+        # Each agent returns at most 'limit' newest messages.
+        candidates.extend(scan_outbox_files(base_path, other, since_tick=since_tick, limit=limit))
+
+    # Sort candidates by tick descending, then by filename descending (to match read_outbox_entries sort)
+    # Filename contains UUID so it's a stable tiebreaker
+    # x[1] is the full path, os.path.basename can extract filename but string sort on full path works
+    # if agents are different? No, we should probably sort by basename to exactly match read_outbox_entries
+    # but since agents are different, paths are different.
+    # read_outbox_entries sorts by name.
+
+    candidates.sort(key=lambda x: (x[0], os.path.basename(x[1])), reverse=True)
+
+    to_load = []
+    if len(candidates) <= limit:
+        to_load = candidates
+    else:
+        # We need at least 'limit' items.
+        # Find the tick of the (limit-1)-th item (0-indexed).
+        cutoff_tick = candidates[limit - 1][0]
+
+        # We must load all items with tick >= cutoff_tick to ensure we can sort by created_at correctly.
+        # Items with tick < cutoff_tick are strictly older and can be discarded.
+        to_load = [c for c in candidates if c[0] >= cutoff_tick]
+
+    entries: list[OutboxEntry] = []
+    for _, path_str in to_load:
+        entry = _load_entry(Path(path_str))
+        if entry is None:
+            continue
+        entries.append(entry)
+
     entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
 
@@ -237,23 +356,32 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
         outbox_dir = get_outbox_dir(base_path, agent_dir.name)
         if not outbox_dir.exists():
             continue
-        for entry_path in outbox_dir.glob("*.json"):
-            tick_val = _tick_from_filename(entry_path)
-            if tick_val is None:
-                continue
-            if current_tick - tick_val > max_age_ticks:
-                try:
-                    entry_path.unlink()
-                    removed += 1
-                except Exception as exc:  # pragma: no cover
-                    logger.error(
-                        "outbox_cleanup_failed",
-                        extra={
-                            "event": "outbox_cleanup_failed",
-                            "path": str(entry_path),
-                            "error": str(exc),
-                        },
-                    )
+        try:
+            with os.scandir(outbox_dir) as it:
+                for entry in it:
+                    if not entry.is_file() or not entry.name.endswith(".json"):
+                        continue
+
+                    tick_val = _tick_from_filename_str(entry.name)
+                    if tick_val == -1:
+                        continue
+
+                    if current_tick - tick_val > max_age_ticks:
+                        entry_path = outbox_dir / entry.name
+                        try:
+                            entry_path.unlink()
+                            removed += 1
+                        except Exception as exc:  # pragma: no cover
+                            logger.error(
+                                "outbox_cleanup_failed",
+                                extra={
+                                    "event": "outbox_cleanup_failed",
+                                    "path": str(entry_path),
+                                    "error": str(exc),
+                                },
+                            )
+        except OSError:
+            pass
     return removed
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -8,14 +9,17 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from .agents import discover_agents, load_agent
 from .engine import load_tick
 from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
+from .paths import get_logs_dir, validate_agent_name
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
+MAX_LIMIT = 1000
+
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.0")
 
 # Configure CORS
@@ -67,6 +71,10 @@ class OutboxEntryModel(BaseModel):
     meta: dict[str, Any] | None = None
 
 
+class LogEntry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+
 @app.get("/")
 async def root() -> dict[str, str]:
     return {"message": "LeMMing API", "version": "0.4.0"}
@@ -106,6 +114,31 @@ def _build_agent_info(agent: Any, credits: dict[str, Any]) -> AgentInfo:
     )
 
 
+def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
+    try:
+        validate_agent_name(agent_name)
+    except ValueError:
+        return []
+
+    log_path = get_logs_dir(base_path, agent_name) / "structured.jsonl"
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    except OSError:
+        return []
+
+    entries: list[dict[str, Any]] = []
+    for line in lines[-limit:]:
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            entries.append(parsed)
+    return entries
+
+
 @app.get("/api/agents", response_model=list[AgentInfo])
 async def list_agents() -> list[AgentInfo]:
     agents, credits = _load_agents_with_credits(BASE_PATH)
@@ -125,8 +158,19 @@ async def get_agent(agent_name: str) -> AgentInfo:
 
 @app.get("/api/agents/{agent_name}/outbox", response_model=list[OutboxEntryModel])
 async def get_agent_outbox(agent_name: str, limit: int = 20, since_tick: int | None = None) -> list[OutboxEntryModel]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
     entries = read_outbox_entries(BASE_PATH, agent_name, limit=limit, since_tick=since_tick)
     return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries]
+
+
+@app.get("/api/agents/{agent_name}/logs", response_model=list[LogEntry])
+async def get_agent_logs(agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
+    if limit <= 0:
+        raise HTTPException(status_code=400, detail="Limit must be positive")
+    return _read_agent_logs(BASE_PATH, agent_name, limit=limit)
 
 
 @app.get("/api/org-graph")
@@ -177,6 +221,8 @@ async def status() -> dict[str, Any]:
 async def list_messages(
     agent: str | None = None, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntryModel]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
     agent_names: list[str]
     if agent:
         try:

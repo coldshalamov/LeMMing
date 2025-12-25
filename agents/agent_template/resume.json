@@ -11,12 +11,7 @@
   },
   "permissions": {
     "read_outboxes": ["*"],
-    "tools": ["memory_read", "memory_write"],
-    "send_outboxes": [],
-    "file_access": {
-      "allow_read": [],
-      "allow_write": []
-    }
+    "tools": ["memory_read", "memory_write"]
   },
   "schedule": {
     "run_every_n_ticks": 1,

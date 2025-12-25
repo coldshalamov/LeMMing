@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any, cast
 
-from .agents import DEFAULT_CREDITS, Agent, discover_agents
+from .agents import DEFAULT_CREDITS, Agent, discover_agents, reset_agents_cache
 from .paths import get_config_dir
 
 logger = logging.getLogger(__name__)
@@ -159,3 +159,4 @@ def reset_caches() -> None:
     _org_config_cache = None
     _credits_cache = None
     _config_dir = DEFAULT_CONFIG_DIR
+    reset_agents_cache()

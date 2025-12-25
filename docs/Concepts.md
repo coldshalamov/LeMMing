@@ -7,7 +7,6 @@ An agent lives under `agents/<folder>/`. The canonical identity is the `name` in
 
 A typical agent directory contains:
 - `resume.json` — the contract and ID card.
-- `resume.txt` — optional long-form instructions; helpful for humans, often in sync with `instructions` inside `resume.json`.
 - `outbox/` — messages this agent has produced.
 - `memory/` — durable notes as JSON files.
 - `logs/` — activity logs from engine runs.
@@ -17,7 +16,7 @@ A typical agent directory contains:
 `resume.json` is the ABI between the human operator and the engine. It declares:
 - `name`, `title`, `short_description`, `workflow_description`
 - `model` (provider key, temperature, max_tokens)
-- `permissions` (read_outboxes, optional send_outboxes, tools, file_access)
+- `permissions` (read_outboxes, tools)
 - `schedule` (run_every_n_ticks, phase_offset)
 - optional `credits` caps
 
@@ -32,20 +31,14 @@ Example (annotated):
   "model": { "key": "gpt-4.1-mini", "temperature": 0.2 },
   "permissions": {
     "read_outboxes": ["researcher"], // Virtual inbox
-    "send_outboxes": ["researcher"], // Optional: restrict recipients; null/[] = unrestricted
-    "tools": ["memory_write", "file_write"],
-    "file_access": {
-      "allow_read": ["shared"],      // Paths are canonicalized; prefix-match is enforced
-      "allow_write": ["agents/planner/workspace"]
-    }
+    "tools": ["memory_write", "file_write"]
   },
   "schedule": { "run_every_n_ticks": 2, "phase_offset": 1 },
   "credits": { "max_credits": 400, "soft_cap": 200 }
 }
 ```
 
-## resume.txt = the worker’s “mind”
-A plain-text file that can mirror or expand the instructions. It is meant for humans (and potential future UIs) to edit without touching JSON. The engine currently feeds the `instructions` string from `resume.json` to the model prompt.
+Agents rely on the `instructions` string inside `resume.json` as their “mind.” Long-form notes belong in `memory/` rather than in legacy `resume.txt` files.
 
 ## Outbox-only messaging
 Agents never write into another agent’s folder. They return `outbox_entries` in the LLM JSON contract; the engine saves each entry into `agents/<name>/outbox/`. Other agents build a virtual inbox from the outboxes listed in their `permissions.read_outboxes` (or `*` for all).
@@ -78,7 +71,7 @@ Example memory update in the model output:
 ```
 
 ## Tools = capabilities guarded by allowlists
-Tools are registered capabilities such as `file_read`, `file_write`, `file_list`, `shell`, `memory_read`, `memory_write`, `create_agent`, and `list_agents`. Agents may only invoke tools listed in `permissions.tools`. File tools enforce `file_access` allowlists with canonicalized path prefix checks.
+Tools are registered capabilities such as `file_read`, `file_write`, `file_list`, `shell`, `memory_read`, `memory_write`, `create_agent`, and `list_agents`. Agents may only invoke tools listed in `permissions.tools`. File tools are sandboxed to `agents/<name>/workspace/` plus `shared/` by default; there is no per-agent file allowlist surface in the resume.
 
 Example tool call emitted by the model:
 ```json
