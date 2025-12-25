@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import heapq
 import json
 import logging
+import os
 import uuid
-import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-import os
 from typing import Any
 
 from .paths import get_agents_dir, get_outbox_dir
@@ -174,25 +174,27 @@ def read_outbox_entries(
             # nlargest returns the largest elements, so highest tick (newest).
             # This matches 'reverse=True' sort order.
 
-            # Helper generator to filter non-json files
-            candidate_files = (
+            # Materialize candidate files within the context manager to avoid
+            # accessing scandir entries after the context exits
+            candidate_files = [
                 entry.name for entry in it
                 if entry.is_file() and entry.name.endswith(".json")
-            )
+            ]
 
             # If since_tick is provided, we can pre-filter files that are definitely too old
             # IF the filename tick parsing is reliable. It is.
             if since_tick is not None:
-                candidate_files = (
+                candidate_files = [
                     name for name in candidate_files
                     if _tick_from_filename_str(name) >= since_tick
-                )
+                ]
 
-            filenames = heapq.nlargest(
-                limit,
-                candidate_files,
-                key=lambda name: (_tick_from_filename_str(name), name)
-            )
+        # Now consume the materialized list outside the context manager
+        filenames = heapq.nlargest(
+            limit,
+            candidate_files,
+            key=lambda name: (_tick_from_filename_str(name), name)
+        )
     except FileNotFoundError:
         return []
 
