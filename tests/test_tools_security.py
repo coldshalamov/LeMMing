@@ -1,6 +1,5 @@
 from pathlib import Path
 from lemming.tools import CreateAgentTool
-import pytest
 
 def test_create_agent_path_traversal(tmp_path):
     # Setup
