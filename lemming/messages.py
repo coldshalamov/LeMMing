@@ -175,7 +175,9 @@ def read_outbox_entries(
             # This matches 'reverse=True' sort order.
 
             # Materialize candidate files within the context manager to ensure
-            # entry objects are accessed while scandir iterator is valid
+            # entry objects are accessed while scandir iterator is valid.
+            # Accessing scandir entries after the context manager closes would
+            # raise an exception or produce undefined behavior.
             candidate_files = [
                 entry.name for entry in it
                 if entry.is_file() and entry.name.endswith(".json")
