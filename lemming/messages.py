@@ -127,11 +127,15 @@ def _tick_from_filename_str(filename: str) -> int:
         return -1
 
 
-def scan_outbox_files(base_path: Path, agent_name: str, since_tick: int | None = None) -> list[tuple[int, str]]:
+def scan_outbox_files(
+    base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
+) -> list[tuple[int, str]]:
     """Scans outbox files and returns list of (tick, full_path_str) without loading content.
 
     This is faster than read_outbox_entries when we only need to sort by tick/filename
     across multiple agents.
+
+    If limit > 0, returns only the most recent 'limit' entries using heapq.
     """
     outbox_dir = get_outbox_dir(base_path, agent_name)
     if not outbox_dir.exists():
@@ -140,13 +144,39 @@ def scan_outbox_files(base_path: Path, agent_name: str, since_tick: int | None =
     results = []
     try:
         with os.scandir(outbox_dir) as it:
-            for entry in it:
-                if entry.is_file() and entry.name.endswith(".json"):
+            if limit > 0:
+                # Use a generator to avoid creating the full list of files
+                candidate_files = (
+                    entry
+                    for entry in it
+                    if entry.is_file() and entry.name.endswith(".json")
+                )
+
+                # nlargest returns the largest elements, so highest tick (newest).
+                # We need to include the full path in the result
+                largest_entries = heapq.nlargest(
+                    limit,
+                    candidate_files,
+                    key=lambda e: (_tick_from_filename_str(e.name), e.name),
+                )
+
+                for entry in largest_entries:
                     tick = _tick_from_filename_str(entry.name)
+                    # No need to check tick != -1 strictly if we trust nlargest handles it,
+                    # but _tick_from_filename_str returns -1 on error.
                     if tick != -1:
                         if since_tick is not None and tick < since_tick:
                             continue
                         results.append((tick, entry.path))
+
+            else:
+                for entry in it:
+                    if entry.is_file() and entry.name.endswith(".json"):
+                        tick = _tick_from_filename_str(entry.name)
+                        if tick != -1:
+                            if since_tick is not None and tick < since_tick:
+                                continue
+                            results.append((tick, entry.path))
     except FileNotFoundError:
         pass
     return results
@@ -278,7 +308,9 @@ def collect_readable_outboxes(
     for other in read_outboxes:
         if other == agent_name:
             continue
-        candidates.extend(scan_outbox_files(base_path, other, since_tick))
+        # Pass the limit to scan_outbox_files to reduce memory usage and processing
+        # Each agent returns at most 'limit' newest messages.
+        candidates.extend(scan_outbox_files(base_path, other, since_tick=since_tick, limit=limit))
 
     # Sort candidates by tick descending, then by filename descending (to match read_outbox_entries sort)
     # Filename contains UUID so it's a stable tiebreaker
