@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
+from .paths import validate_agent_name
 
 
 @dataclass
