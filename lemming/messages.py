@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import heapq
 import json
 import logging
+import os
 import uuid
-import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-import os
 from typing import Any
 
 from .paths import get_agents_dir, get_outbox_dir
@@ -146,11 +146,7 @@ def scan_outbox_files(
         with os.scandir(outbox_dir) as it:
             if limit > 0:
                 # Use a generator to avoid creating the full list of files
-                candidate_files = (
-                    entry
-                    for entry in it
-                    if entry.is_file() and entry.name.endswith(".json")
-                )
+                candidate_files = (entry for entry in it if entry.is_file() and entry.name.endswith(".json"))
 
                 # nlargest returns the largest elements, so highest tick (newest).
                 # We need to include the full path in the result
@@ -205,28 +201,18 @@ def read_outbox_entries(
             # This matches 'reverse=True' sort order.
 
             # Helper generator to filter non-json files
-            candidate_files = (
-                entry.name for entry in it
-                if entry.is_file() and entry.name.endswith(".json")
-            )
+            candidate_files = (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json"))
 
             # If since_tick is provided, we can pre-filter files that are definitely too old
             # IF the filename tick parsing is reliable. It is.
             if since_tick is not None:
-                candidate_files = (
-                    name for name in candidate_files
-                    if _tick_from_filename_str(name) >= since_tick
-                )
+                candidate_files = (name for name in candidate_files if _tick_from_filename_str(name) >= since_tick)
 
-            filenames = heapq.nlargest(
-                limit,
-                candidate_files,
-                key=lambda name: (_tick_from_filename_str(name), name)
-            )
+            filenames = heapq.nlargest(limit, candidate_files, key=lambda name: (_tick_from_filename_str(name), name))
     except FileNotFoundError:
         return []
 
-    min_collected_tick = float('inf')
+    min_collected_tick = float("inf")
 
     for name in filenames:
         entry_path = outbox_dir / name
@@ -298,9 +284,7 @@ def collect_readable_outboxes(
         if not agents_dir.exists():
             return []
         read_outboxes = [
-            d.name
-            for d in agents_dir.iterdir()
-            if d.is_dir() and d.name not in {agent_name, "agent_template"}
+            d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
         ]
 
     # Optimization: Scan metadata first to avoid loading content of old messages
