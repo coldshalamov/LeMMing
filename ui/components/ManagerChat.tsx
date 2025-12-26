@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, User, Bot, AlertCircle } from "lucide-react";
+import { Send, User, Bot } from "lucide-react";
 import { OutboxEntry } from "../lib/types";
 import { sendMessage } from "../lib/api";
 import clsx from "clsx";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface ManagerChatProps {
     messages: OutboxEntry[];
@@ -62,7 +62,10 @@ export function ManagerChat({ messages }: ManagerChatProps) {
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-white">Manager</h3>
-                        <p className="text-[10px] text-gray-400 font-mono">ONLINE // READY TO DELEGATE</p>
+                        <div className="flex items-center gap-1.5 mt-0.5" role="status">
+                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                             <p className="text-[10px] text-gray-400 font-mono">ONLINE // READY TO DELEGATE</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -71,6 +74,9 @@ export function ManagerChat({ messages }: ManagerChatProps) {
             <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                role="log"
+                aria-live="polite"
+                aria-label="Chat history"
             >
                 {chatHistory.length === 0 && (
                     <div className="text-center text-gray-500 text-xs italic mt-10">
@@ -121,11 +127,13 @@ export function ManagerChat({ messages }: ManagerChatProps) {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     placeholder="Type your instructions..."
+                    aria-label="Message to Manager"
                     className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-purple/50 focus:bg-white/10 transition-all font-mono"
                 />
                 <button
                     type="submit"
                     disabled={!inputValue.trim() || isSending}
+                    aria-label="Send message"
                     className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     <Send size={18} />

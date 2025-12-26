@@ -105,7 +105,7 @@ export default function WizardPage() {
             // Success! Redirect to dashboard
             window.location.href = "/";
 
-        } catch (e: any) {
+        } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             setError(e.message);
             setIsDeploying(false);
         }
