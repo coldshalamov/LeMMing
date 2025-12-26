@@ -17,15 +17,20 @@ interface AgentCardProps {
 
 // Helper to map model/temp to stats
 function getAgentStats(model: string, temperature: number = 0.7) {
-    let intelligence = 65; // Base
-    if (model.includes("gpt-4")) intelligence = 92;
-    if (model.includes("gpt-4-turbo")) intelligence = 95;
-    if (model.includes("opus")) intelligence = 98;
-    if (model.includes("sonnet")) intelligence = 88;
-    if (model.includes("haiku")) intelligence = 75;
+    // INT = Reasoning Level (not maxed out by default)
+    let intelligence = 50; // Base reasoning
+    if (model.includes("gpt-4o")) intelligence = 85;
+    if (model.includes("gpt-4-turbo")) intelligence = 80;
+    if (model.includes("gpt-4") && !model.includes("turbo")) intelligence = 75;
+    if (model.includes("gpt-3.5")) intelligence = 60;
+    if (model.includes("opus")) intelligence = 90;
+    if (model.includes("sonnet")) intelligence = 75;
+    if (model.includes("haiku")) intelligence = 65;
 
-    // Fake temperature for now as it's not in the simple AgentInfo (would be in full config)
-    const creativity = 70;
+    // CRE = Creativity (Temperature scaled to 0-100)
+    // Temperature typically ranges 0-2, but 0-1 is most common
+    // Default 0.7 = 70% creativity
+    const creativity = Math.min(Math.round(temperature * 100), 100);
 
     return { intelligence, creativity };
 }

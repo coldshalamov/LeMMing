@@ -9,6 +9,31 @@ const STATUS_KEY = `${API_BASE}/api/status`;
 const AGENTS_KEY = `${API_BASE}/api/agents`;
 const GRAPH_KEY = `${API_BASE}/api/org-graph`;
 const MESSAGES_KEY = `${API_BASE}/api/messages`;
+const TICK_KEY = `${API_BASE}/api/engine/tick`;
+const CONFIG_KEY = `${API_BASE}/api/engine/config`;
+const TOOLS_KEY = `${API_BASE}/api/tools`;
+const MODELS_KEY = `${API_BASE}/api/models`;
+
+export interface ToolInfo {
+  id: string;
+  description: string;
+}
+
+export interface CreateAgentRequest {
+  name: string;
+  resume: Record<string, unknown>;
+  path_prefix?: string | null;
+}
+
+export async function sendMessage(target: string, text: string, importance: "normal" | "high" = "normal") {
+  const res = await fetch(MESSAGES_KEY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target, text, importance })
+  });
+  if (!res.ok) throw new Error("Failed to send message: " + res.statusText);
+  return res.json();
+}
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -77,6 +102,32 @@ export function useMessages(limit: number = 50) {
   };
 }
 
+export function useTools() {
+  const { data, error, isLoading, mutate } = useSWR<ToolInfo[]>(TOOLS_KEY, fetcher, {
+    refreshInterval: 60_000,
+  });
+
+  return {
+    tools: data,
+    error,
+    isLoading,
+    refresh: mutate,
+  };
+}
+
+export function useModels() {
+  const { data, error, isLoading, mutate } = useSWR<string[]>(MODELS_KEY, fetcher, {
+    refreshInterval: 60_000,
+  });
+
+  return {
+    models: data,
+    error,
+    isLoading,
+    refresh: mutate,
+  };
+}
+
 export function useWebSocketStream() {
   const { mutate } = useSWRConfig();
   const [isConnected, setIsConnected] = useState(false);
@@ -119,4 +170,41 @@ export function useWebSocketStream() {
   }, [mutate, wsUrl]);
 
   return { isConnected };
+}
+
+export async function triggerTick() {
+  const res = await fetch(TICK_KEY, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to trigger tick");
+  return res.json();
+}
+
+export async function getEngineConfig() {
+  const res = await fetch(CONFIG_KEY);
+  if (!res.ok) throw new Error("Failed to get config");
+  return res.json();
+}
+
+export async function updateEngineConfig(config: { openai_api_key?: string; anthropic_api_key?: string }) {
+  const res = await fetch(CONFIG_KEY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error("Failed to update config");
+  return res.json();
+}
+
+export async function createAgent(request: CreateAgentRequest) {
+  const res = await fetch(AGENTS_KEY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = (payload && (payload.detail ?? payload)) || res.statusText;
+    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+  }
+  return payload;
 }

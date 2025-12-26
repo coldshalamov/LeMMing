@@ -48,8 +48,12 @@ class ModelRegistry:
     def get(self, model_key: str) -> ModelConfig:
         self._load()
         if model_key not in self._models:
-            raise KeyError(f"Model key '{model_key}' not found in registry")
+            raise KeyError(f"Model key '{model_key}' not found in registry")    
         return self._models[model_key]
+
+    def list_keys(self) -> list[str]:
+        self._load()
+        return sorted(self._models.keys())
 
 
 def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, config_dir: Path | None = None) -> str:

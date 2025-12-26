@@ -283,7 +283,7 @@ def serve_cmd(host: str, port: int) -> None:
         print("uvicorn is not installed. Install with `pip install .[api]`.")
         sys.exit(1)
 
-    uvicorn.run("lemming.api:app", host=host, port=port, reload=False)
+    uvicorn.run("lemming.api:app", host=host, port=port, reload=True)
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,13 +1,16 @@
 
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AgentCard } from "@/components/AgentCard";
 import { AgentInfo } from "@/lib/types";
-import { ArrowRight, ArrowLeft, Check, Terminal, Cpu, Clock, Shield, Save } from "lucide-react";
+import { createAgent, useModels } from "@/lib/api";
+import { ArrowRight, ArrowLeft, Check, Terminal, Cpu, Clock, Shield, Save, X, Brain, Plus } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { ScheduleClock } from "@/components/ScheduleClock";
+import { ToolSelectorModal } from "@/components/ToolSelectorModal";
 
 const STEPS = [
     { id: "identity", label: "Identity", icon: Terminal },
@@ -17,48 +20,138 @@ const STEPS = [
     { id: "review", label: "Review", icon: Save },
 ];
 
-const MODELS = ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet"];
-const TOOLS = ["read_file", "write_file", "browser_test", "run_shell", "scraper", "api_call"];
+const FALLBACK_MODELS = [
+    "gpt-4o-mini",
+    "gpt-4o",
+    "gpt-4-turbo",
+    "gpt-4",
+    "gpt-3.5-turbo",
+    "claude-3-opus",
+    "claude-3-sonnet",
+    "claude-3-haiku",
+];
+
+const DEFAULT_INSTRUCTIONS =
+    "You are a LeMMing agent operating in a multi-agent organization.\n\n" +
+    "Read your virtual inbox (permitted outboxes), do your role, and write results to your outbox.\n\n" +
+    "Be concise. Cite file paths when relevant. Use tools only when needed.";
+
+type WizardState = {
+    name: string;
+    title: string;
+    short_description: string;
+    workflow_description: string;
+    model: { key: string; temperature: number; max_tokens: number };
+    schedule: { run_every_n_ticks: number; phase_offset: number };
+    permissions: { read_outboxes: string[]; tools: string[] };
+    credits: { max_credits: number; soft_cap: number };
+    instructions: string;
+};
 
 export default function WizardPage() {
     const [currentStep, setCurrentStep] = useState(0);
 
-    const [formData, setFormData] = useState<AgentInfo>({
+    const { models } = useModels();
+    const modelOptions = models?.length ? models : FALLBACK_MODELS;
+
+    const [formData, setFormData] = useState<WizardState>({
         name: "",
         title: "",
-        description: "",
-        model: "gpt-4-turbo",
+        short_description: "",
+        workflow_description: "",
+        model: { key: modelOptions[0] ?? "gpt-4o-mini", temperature: 0.2, max_tokens: 2048 },
         schedule: { run_every_n_ticks: 1, phase_offset: 0 },
-        read_outboxes: [],
-        tools: [],
-        credits: { max_credits: 1000, cost_per_action: 0.1, credits_left: 1000 }
+        permissions: { read_outboxes: [], tools: [] },
+        credits: { max_credits: 1000, soft_cap: 500 },
+        instructions: DEFAULT_INSTRUCTIONS,
     });
+
+    const [isDeploying, setIsDeploying] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [showToolModal, setShowToolModal] = useState(false);
 
     const stepIdx = currentStep;
     const StepIcon = STEPS[stepIdx].icon;
 
     const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
-    const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+
+    // Improved Back handler: Goes to dashboard if on Step 0
+    const handleBack = () => {
+        if (currentStep === 0) {
+            window.location.href = "/";
+        } else {
+            setCurrentStep(prev => Math.max(prev - 1, 0));
+        }
+    };
+
+    const handleDeploy = async () => {
+        setIsDeploying(true);
+        setError(null);
+        try {
+            const resume = {
+                name: formData.name,
+                title: formData.title,
+                short_description: formData.short_description,
+                workflow_description: formData.workflow_description,
+                model: formData.model,
+                permissions: formData.permissions,
+                schedule: formData.schedule,
+                instructions: formData.instructions,
+                credits: formData.credits,
+            };
+
+            await createAgent({ name: formData.name, resume });
+
+            // Success! Redirect to dashboard
+            window.location.href = "/";
+
+        } catch (e: any) {
+            setError(e.message);
+            setIsDeploying(false);
+        }
+    };
+
+    const previewAgent: AgentInfo = useMemo(() => ({
+        name: formData.name || "new_agent",
+        title: formData.title || "New Agent",
+        description: formData.short_description || "No description provided",
+        model: formData.model.key,
+        schedule: formData.schedule,
+        read_outboxes: formData.permissions.read_outboxes,
+        tools: formData.permissions.tools,
+        credits: {
+            credits_left: formData.credits.max_credits,
+            max_credits: formData.credits.max_credits,
+            soft_cap: formData.credits.soft_cap,
+        },
+    }), [formData]);
 
     return (
         <div className="min-h-screen bg-neo-bg text-foreground font-sans flex flex-col">
             {/* Header */}
-            <header className="h-16 border-b border-neo-border bg-neo-panel flex items-center justify-between px-8 shrink-0">
-                <div className="flex items-center gap-3">
+            <header className="h-16 border-b border-neo-border bg-neo-panel flex items-center justify-between px-4 shrink-0">
+                <div className="flex items-center gap-2">
                     <Link href="/" className="hover:text-brand-cyan transition-colors">
-                        <h1 className="font-bold text-xl tracking-tight">LeMMing <span className="text-white/30 font-light">WIZARD</span></h1>
+                        <h1 className="font-bold text-lg tracking-tight">LeMMing <span className="text-white/30 font-light text-sm">WIZARD</span></h1>
                     </Link>
                 </div>
-                <div className="flex gap-2">
-                    {STEPS.map((step, idx) => (
-                        <div key={step.id} className={clsx("flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono transition-colors",
-                            idx === stepIdx ? "bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/50" :
-                                idx < stepIdx ? "text-brand-lime" : "text-white/20"
-                        )}>
-                            <step.icon size={12} />
-                            {idx < stepIdx ? <Check size={12} /> : <span>{step.label}</span>}
-                        </div>
-                    ))}
+
+                <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                        {STEPS.map((step, idx) => (
+                            <div key={step.id} className={clsx("flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-mono transition-colors",
+                                idx === stepIdx ? "bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/50" :
+                                    idx < stepIdx ? "text-brand-lime" : "text-white/20"
+                            )}>
+                                <step.icon size={10} />
+                                {idx < stepIdx ? <Check size={10} /> : <span className="hidden sm:inline">{step.label}</span>}
+                            </div>
+                        ))}
+                    </div>
+
+                    <Link href="/" className="text-white/40 hover:text-white transition-colors p-1.5 hover:bg-white/5 rounded-full" title="Close Wizard">
+                        <X size={18} />
+                    </Link>
                 </div>
             </header>
 
@@ -114,15 +207,15 @@ export default function WizardPage() {
                                         <div>
                                             <div className="flex justify-between items-baseline mb-1">
                                                 <label htmlFor="agent-desc" className="block text-xs font-mono text-gray-400">DESCRIPTION</label>
-                                                <span className={clsx("text-[10px] font-mono", formData.description.length > 200 ? "text-orange-400" : "text-gray-600")}>
-                                                    {formData.description.length} chars
+                                                <span className={clsx("text-[10px] font-mono", formData.short_description.length > 200 ? "text-orange-400" : "text-gray-600")}>
+                                                    {formData.short_description.length} chars
                                                 </span>
                                             </div>
                                             <textarea
                                                 id="agent-desc"
                                                 required
-                                                value={formData.description}
-                                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                                value={formData.short_description}
+                                                onChange={e => setFormData({ ...formData, short_description: e.target.value })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none h-32"
                                                 placeholder="What is this agent&apos;s purpose?"
                                             />
@@ -137,11 +230,11 @@ export default function WizardPage() {
                                             <label htmlFor="agent-model" className="block text-xs font-mono text-gray-400 mb-1">MODEL</label>
                                             <select
                                                 id="agent-model"
-                                                value={formData.model}
-                                                onChange={e => setFormData({ ...formData, model: e.target.value })}
+                                                value={formData.model.key}
+                                                onChange={e => setFormData({ ...formData, model: { ...formData.model, key: e.target.value } })}
                                                 className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none"
                                             >
-                                                {MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                                                {modelOptions.map(m => <option key={m} value={m}>{m}</option>)}
                                             </select>
                                         </div>
                                         <div className="p-4 rounded border border-neo-border bg-neo-surface/50">
@@ -152,9 +245,10 @@ export default function WizardPage() {
                                             <textarea
                                                 aria-labelledby="instructions-label"
                                                 aria-describedby="instructions-desc"
-                                                className="w-full mt-2 bg-black/20 border border-white/10 p-2 text-xs font-mono text-gray-300 h-40"
+                                                className="w-full mt-2 bg-black/20 border border-white/10 p-2 text-xs font-mono text-gray-300 h-40 focus:outline-none focus:border-brand-cyan"
                                                 placeholder="Add custom instructions here (e.g. coding style, specific rules)..."
-                                            // In real app this would update instructions field
+                                                value={formData.instructions}
+                                                onChange={e => setFormData({ ...formData, instructions: e.target.value })}
                                             />
                                         </div>
                                     </div>
@@ -163,36 +257,44 @@ export default function WizardPage() {
                                 {/* STEP 3: SCHEDULE */}
                                 {stepIdx === 2 && (
                                     <div className="space-y-6">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label htmlFor="agent-schedule" className="block text-xs font-mono text-gray-400 mb-1">RUN EVERY N TICKS</label>
-                                                <input
-                                                    id="agent-schedule"
-                                                    type="number"
-                                                    min={1}
-                                                    value={formData.schedule.run_every_n_ticks}
-                                                    onChange={e => setFormData({ ...formData, schedule: { ...formData.schedule, run_every_n_ticks: parseInt(e.target.value) } })}
-                                                    className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label htmlFor="agent-offset" className="block text-xs font-mono text-gray-400 mb-1">PHASE OFFSET</label>
-                                                <input
-                                                    id="agent-offset"
-                                                    type="number"
-                                                    min={0}
-                                                    value={formData.schedule.phase_offset}
-                                                    onChange={e => setFormData({ ...formData, schedule: { ...formData.schedule, phase_offset: parseInt(e.target.value) } })}
-                                                    className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none"
-                                                />
-                                            </div>
+                                        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded text-blue-300 text-sm">
+                                            <p className="mb-2">Set when your agent runs during each tick cycle.</p>
+                                            <p className="text-xs text-gray-400">The organization runs on a regular timer (default: 10 seconds per tick, configurable).</p>
                                         </div>
-                                        <div className="p-4 bg-neo-surface/30 rounded border border-neo-border flex items-center gap-4">
-                                            <div className="flex-1 text-sm text-gray-300">
-                                                This agent will run when <code className="text-brand-cyan">tick % {formData.schedule.run_every_n_ticks} == {formData.schedule.phase_offset % formData.schedule.run_every_n_ticks}</code>.
-                                                <br />
-                                                It has a {((1 / formData.schedule.run_every_n_ticks) * 100).toFixed(0)}% duty cycle.
-                                            </div>
+
+                                        {/* Frequency Selector */}
+                                        <div>
+                                            <label htmlFor="agent-frequency" className="block text-sm font-medium text-gray-300 mb-2">
+                                                How often should this agent run?
+                                            </label>
+                                            <select
+                                                id="agent-frequency"
+                                                value={formData.schedule.run_every_n_ticks}
+                                                onChange={e => setFormData({ ...formData, schedule: { ...formData.schedule, run_every_n_ticks: parseInt(e.target.value) } })}
+                                                className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none"
+                                            >
+                                                <option value={1}>Every Tick (100% active)</option>
+                                                <option value={2}>Every 2 Ticks (50% active)</option>
+                                                <option value={3}>Every 3 Ticks (33% active)</option>
+                                                <option value={4}>Every 4 Ticks (25% active)</option>
+                                                <option value={6}>Every 6 Ticks (17% active)</option>
+                                                <option value={12}>Every 12 Ticks (8% active)</option>
+                                            </select>
+                                            <p className="mt-2 text-xs text-gray-500">
+                                                More frequent = more responsive, but uses more credits
+                                            </p>
+                                        </div>
+
+                                        {/* Interactive Clock for Offset */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                                                When should it start? (Click the clock)
+                                            </label>
+                                            <ScheduleClock
+                                                frequency={1 / formData.schedule.run_every_n_ticks}
+                                                offset={formData.schedule.phase_offset}
+                                                onChange={(newOffset) => setFormData({ ...formData, schedule: { ...formData.schedule, phase_offset: newOffset } })}
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -200,44 +302,55 @@ export default function WizardPage() {
                                 {/* STEP 4: PERMISSIONS */}
                                 {stepIdx === 3 && (
                                     <div className="space-y-6">
+                                        {/* Tool Selection */}
                                         <div>
-                                            <label className="block text-xs font-mono text-gray-400 mb-2">TOOLS</label>
-                                            <div role="group" aria-label="Tool selection" className="flex flex-wrap gap-2">
-                                                {TOOLS.map(tool => (
-                                                    <button
-                                                        type="button"
-                                                        key={tool}
-                                                        aria-pressed={formData.tools.includes(tool)}
-                                                        onClick={() => {
-                                                            const tools = formData.tools.includes(tool)
-                                                                ? formData.tools.filter(t => t !== tool)
-                                                                : [...formData.tools, tool];
-                                                            setFormData({ ...formData, tools });
-                                                        }}
-                                                        className={clsx("px-3 py-1.5 rounded border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan flex items-center gap-2",
-                                                            formData.tools.includes(tool)
-                                                                ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan"
-                                                                : "bg-neo-surface border-neo-border text-gray-500 hover:border-gray-400"
-                                                        )}
-                                                    >
-                                                        {formData.tools.includes(tool) && <Check size={12} />}
-                                                        {tool}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                                                What can this agent do?
+                                            </label>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowToolModal(true)}
+                                                className="w-full p-6 border-2 border-dashed border-white/20 rounded-xl hover:border-brand-cyan/50 hover:bg-white/5 transition-all group"
+                                            >
+                                                <div className="flex items-center justify-center gap-3 text-gray-400 group-hover:text-brand-cyan transition-colors">
+                                                    <Plus size={24} />
+                                                    <span className="text-lg font-medium">
+                                                        {formData.permissions.tools.length > 0
+                                                            ? `${formData.permissions.tools.length} Capabilities Selected - Click to Edit`
+                                                            : "Select Capabilities"}
+                                                    </span>
+                                                </div>
+                                            </button>
+
+                                            {/* Selected Tools Display */}
+                                            {formData.permissions.tools.length > 0 && (
+                                                <div className="mt-4 flex flex-wrap gap-2">
+                                                    {formData.permissions.tools.map(tool => (
+                                                        <div key={tool} className="px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan flex items-center gap-2">
+                                                            <Check size={12} />
+                                                            {tool}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
+
+                                        {/* Read Access */}
                                         <div>
-                                            <label htmlFor="agent-read-access" className="block text-xs font-mono text-gray-400 mb-2">READ ACCESS (Outboxes)</label>
-                                            <div className="p-4 border border-neo-border bg-neo-surface rounded flex items-center justify-center text-gray-500 text-sm italic">
-                                                [Graph Selector Would Go Here]
-                                            </div>
+                                            <label htmlFor="agent-read-access" className="block text-sm font-medium text-gray-300 mb-2">
+                                                Which agents can this one read from?
+                                            </label>
+                                            <p className="text-xs text-gray-500 mb-3">
+                                                Your agent can see messages from these other agents
+                                            </p>
                                             <input
                                                 id="agent-read-access"
                                                 type="text"
-                                                placeholder="Comma separated agent names (e.g. overmind, backend)"
-                                                className="w-full mt-2 bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none font-mono text-xs"
-                                                value={formData.read_outboxes.join(", ")}
-                                                onChange={e => setFormData({ ...formData, read_outboxes: e.target.value.split(",").map(s => s.trim()) })}
+                                                placeholder="Enter agent names separated by commas (e.g., manager, researcher)"
+                                                className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none text-sm"
+                                                value={formData.permissions.read_outboxes.join(", ")}
+                                                onChange={e => setFormData({ ...formData, permissions: { ...formData.permissions, read_outboxes: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
                                             />
                                         </div>
                                     </div>
@@ -246,12 +359,89 @@ export default function WizardPage() {
                                 {/* STEP 5: REVIEW */}
                                 {stepIdx === 4 && (
                                     <div className="space-y-6">
-                                        <div className="p-4 bg-green-500/10 border border-green-500/30 rounded text-green-400 text-sm">
-                                            Ready to deploy agent to filesystem.
+                                        <div className="p-4 bg-green-500/10 border border-green-500/30 rounded text-green-400 text-sm flex items-center gap-2">
+                                            <Check size={16} />
+                                            <span>Ready to deploy your agent!</span>
                                         </div>
-                                        <div className="bg-black/40 p-4 rounded border border-white/5 font-mono text-xs text-gray-400 whitespace-pre-wrap">
-                                            {JSON.stringify(formData, null, 2)}
+
+                                        {/* Visual Summary Card */}
+                                        <div className="bg-gradient-to-br from-neo-panel to-neo-surface border border-neo-border rounded-xl overflow-hidden">
+                                            {/* Header */}
+                                            <div className="p-6 border-b border-white/5 bg-black/20">
+                                                <h3 className="text-2xl font-bold text-white mb-1">{formData.name || "Unnamed Agent"}</h3>
+                                                <p className="text-brand-cyan text-sm font-mono uppercase">{formData.title || "No Title"}</p>
+                                            </div>
+
+                                            {/* Details Grid */}
+                                            <div className="p-6 space-y-4">
+                                                {/* Description */}
+                                                <div>
+                                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Purpose</div>
+                                                    <p className="text-gray-300 text-sm">{formData.short_description || "No description provided"}</p>
+                                                </div>
+
+                                                {/* Model */}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">AI Model</div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Brain size={16} className="text-brand-purple" />
+                                                            <span className="text-white font-mono text-sm">{formData.model.key}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Schedule</div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Clock size={16} className="text-brand-cyan" />
+                                                            <span className="text-white text-sm">Every {formData.schedule.run_every_n_ticks} tick{formData.schedule.run_every_n_ticks > 1 ? 's' : ''}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Tools */}
+                                                {formData.permissions.tools.length > 0 && (
+                                                    <div>
+                                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Capabilities</div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {formData.permissions.tools.map(tool => (
+                                                                <div key={tool} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300">
+                                                                    {tool}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Read Access */}
+                                                {formData.permissions.read_outboxes.length > 0 && (
+                                                    <div>
+                                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Can Read From</div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {formData.permissions.read_outboxes.map(agent => (
+                                                                <div key={agent} className="px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan">
+                                                                    {agent}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Credits */}
+                                                <div className="pt-4 border-t border-white/5">
+                                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Resource Budget</div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm text-gray-300">Maximum Credits</span>
+                                                        <span className="text-brand-lime font-mono font-bold">{formData.credits.max_credits}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
+
+                                        {error && (
+                                            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded text-red-400 text-sm">
+                                                <strong>Error:</strong> {error}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -260,10 +450,10 @@ export default function WizardPage() {
                                 <div className="flex justify-between pt-8 border-t border-white/5">
                                     <button
                                         onClick={handleBack}
-                                        disabled={stepIdx === 0}
-                                        className="px-6 py-2 rounded border border-neo-border text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        className="px-6 py-2 rounded border border-neo-border text-gray-400 hover:text-white flex items-center gap-2"
                                     >
-                                        <ArrowLeft size={16} /> Back
+                                        <ArrowLeft size={16} />
+                                        {stepIdx === 0 ? "Cancel" : "Back"}
                                     </button>
 
                                     {stepIdx < STEPS.length - 1 ? (
@@ -275,9 +465,14 @@ export default function WizardPage() {
                                         </button>
                                     ) : (
                                         <button
-                                            className="px-6 py-2 rounded bg-brand-lime text-black font-bold hover:bg-lime-400 flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)]"
+                                            onClick={handleDeploy}
+                                            disabled={isDeploying}
+                                            className={clsx("px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)]",
+                                                isDeploying ? "bg-gray-500 cursor-wait" : "bg-brand-lime text-black hover:bg-lime-400"
+                                            )}
                                         >
-                                            <Save size={16} /> DEPLOY AGENT
+                                            <Save size={16} />
+                                            {isDeploying ? "DEPLOYING..." : "DEPLOY AGENT"}
                                         </button>
                                     )}
                                 </div>
@@ -293,7 +488,7 @@ export default function WizardPage() {
                         <h3 className="text-white/40 font-mono text-xs tracking-widest uppercase mb-4">Live Preview</h3>
                         <div className="transform scale-125">
                             <AgentCard
-                                agent={formData}
+                                agent={previewAgent}
                                 currentTick={1}
                                 isSelected={true}
                                 variant="compact"
@@ -302,6 +497,15 @@ export default function WizardPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Tool Selector Modal */}
+            {showToolModal && (
+                <ToolSelectorModal
+                    selectedTools={formData.permissions.tools}
+                    onClose={() => setShowToolModal(false)}
+                    onSave={(tools) => setFormData({ ...formData, permissions: { ...formData.permissions, tools } })}
+                />
+            )}
         </div>
     );
 }
