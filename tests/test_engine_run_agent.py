@@ -33,9 +33,7 @@ def _make_agent(tmp_path: Path, name: str) -> Agent:
     resume_path = agent_dir / "resume.json"
     resume_path.write_text("{}")
 
-    permissions = AgentPermissions(
-        read_outboxes=[], tools=[]
-    )
+    permissions = AgentPermissions(read_outboxes=[], tools=[])
     return Agent(
         name=name,
         path=agent_dir,

@@ -232,9 +232,7 @@ def _parse_llm_output(raw: str, agent_name: str, tick: int) -> dict[str, Any]:
             elif to_field is not None:
                 _log_violation("outbox entry 'to' field must be string or list of strings; ignoring")
 
-            sanitized.append(
-                {"kind": kind, "payload": payload, "tags": tags, "meta": meta, "recipients": recipients}
-            )
+            sanitized.append({"kind": kind, "payload": payload, "tags": tags, "meta": meta, "recipients": recipients})
         return sanitized
 
     def _sanitize_memory(updates: list[Any]) -> list[dict[str, Any]]:
@@ -503,9 +501,7 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
 def run_once(base_path: Path, tick: int | None = None) -> dict[str, Any]:
     errors = validate_everything(base_path)
     if errors:
-        logger.critical(
-            "Startup validation failed:\n" + "\n".join(f"- {e}" for e in errors)
-        )
+        logger.critical("Startup validation failed:\n" + "\n".join(f"- {e}" for e in errors))
         raise RuntimeError("Configuration validation failed. Check logs.")
 
     tick_to_run = tick if tick is not None else load_tick(base_path)
@@ -517,9 +513,7 @@ def run_once(base_path: Path, tick: int | None = None) -> dict[str, Any]:
 def run_forever(base_path: Path) -> None:
     errors = validate_everything(base_path)
     if errors:
-        logger.critical(
-            "Startup validation failed:\n" + "\n".join(f"- {e}" for e in errors)
-        )
+        logger.critical("Startup validation failed:\n" + "\n".join(f"- {e}" for e in errors))
         raise RuntimeError("Configuration validation failed. Check logs.")
 
     config = get_org_config(base_path)

@@ -1,7 +1,7 @@
-import os
 import pytest
-from pathlib import Path
-from lemming.paths import validate_agent_name, get_agent_dir
+
+from lemming.paths import get_agent_dir, validate_agent_name
+
 
 class TestPathsSecurity:
     """Tests for path traversal security vulnerability fix."""
@@ -25,10 +25,10 @@ class TestPathsSecurity:
             "agent name",  # Space
             "agent.name",  # Dot
             "agent/name",  # Slash
-            "agent\\name", # Backslash
+            "agent\\name",  # Backslash
             "agent@name",  # Special char
-            "<script>",    # HTML/XML
-            "foo\0bar",    # Null byte
+            "<script>",  # HTML/XML
+            "foo\0bar",  # Null byte
         ]
         for name in invalid_names:
             with pytest.raises(ValueError, match="Only alphanumeric characters"):

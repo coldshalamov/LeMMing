@@ -55,10 +55,10 @@ def test_intra_tick_ordering_by_fire_point(tmp_path: Path) -> None:
     # should_run: (tick + offset) % N == 0
     # All have offset=0, so all fire at tick 0, 4, 8, etc.
     agents = [
-        _dummy_agent("alice", tmp_path, run_every=4, offset=0),   # fp=0.0
-        _dummy_agent("bob", tmp_path, run_every=4, offset=0),     # fp=0.0
-        _dummy_agent("charlie", tmp_path, run_every=2, offset=0), # fp=0.0
-        _dummy_agent("diana", tmp_path, run_every=1, offset=0),   # fp=0.0
+        _dummy_agent("alice", tmp_path, run_every=4, offset=0),  # fp=0.0
+        _dummy_agent("bob", tmp_path, run_every=4, offset=0),  # fp=0.0
+        _dummy_agent("charlie", tmp_path, run_every=2, offset=0),  # fp=0.0
+        _dummy_agent("diana", tmp_path, run_every=1, offset=0),  # fp=0.0
     ]
 
     # All should fire at tick 4 (since 4 % N == 0 % N for N=1,2,4)
@@ -86,9 +86,9 @@ def test_intra_tick_ordering_tiebreaker(tmp_path: Path) -> None:
 def test_mixed_schedules_ordering(tmp_path: Path) -> None:
     """Test ordering with agents having different run_every_n_ticks values."""
     agents = [
-        _dummy_agent("fast", tmp_path, run_every=1, offset=0),    # fp=0.0, fires every tick
+        _dummy_agent("fast", tmp_path, run_every=1, offset=0),  # fp=0.0, fires every tick
         _dummy_agent("medium", tmp_path, run_every=2, offset=0),  # fp=0.0, fires every 2 ticks
-        _dummy_agent("slow", tmp_path, run_every=4, offset=0),    # fp=0.0, fires every 4 ticks
+        _dummy_agent("slow", tmp_path, run_every=4, offset=0),  # fp=0.0, fires every 4 ticks
     ]
 
     # At tick 4, all should fire (4 % N == 0 % N for all)

@@ -170,7 +170,7 @@ class FileListTool(Tool):
 class ShellTool(Tool):
     name = "shell"
     description = "Execute shell commands in the agent workspace."
-    ALLOWED_EXECUTABLES = {"python", "grep", "ls", "cat", "echo", "head", "tail", "jq"}
+    ALLOWED_EXECUTABLES = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         cmd = kwargs.get("command")

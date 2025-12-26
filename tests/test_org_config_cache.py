@@ -7,12 +7,8 @@ from lemming import org
 def _write_config(base: Path, credits_value: float, label: str) -> None:
     config_dir = base / "lemming" / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir / "credits.json").write_text(
-        json.dumps({"agent": {"credits_left": credits_value}}), encoding="utf-8"
-    )
-    (config_dir / "org_config.json").write_text(
-        json.dumps({"label": label}), encoding="utf-8"
-    )
+    (config_dir / "credits.json").write_text(json.dumps({"agent": {"credits_left": credits_value}}), encoding="utf-8")
+    (config_dir / "org_config.json").write_text(json.dumps({"label": label}), encoding="utf-8")
 
 
 def test_config_cache_reset_between_base_paths(tmp_path: Path) -> None:
