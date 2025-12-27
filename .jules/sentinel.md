@@ -14,3 +14,9 @@
 **Vulnerability:** The `_read_agent_logs` function in `lemming/api.py` constructed file paths using an unvalidated `agent_name` argument (e.g., `base_path / "agents" / agent_name / "logs"`). This allowed directory traversal attacks via the `/api/agents/{agent_name}/logs` endpoint, potentially exposing files outside the agent's directory.
 **Learning:** Even internal helper functions called by API endpoints must validate their inputs, especially when dealing with filesystem paths. Manual path construction (`/`) bypasses centralized validation logic.
 **Prevention:** Always use centralized path helpers (like `get_logs_dir`) that include validation, or explicitly call validation functions (`validate_agent_name`) before using user input in path operations.
+## 2025-05-23 - Python Execution Sandbox Escape
+**Vulnerability:** The `ShellTool` allowed the execution of `python`, which provided a complete bypass of the filesystem sandbox. While `ShellTool` checks arguments for path traversal patterns (like `..`), these checks are ineffective against a programming language that can construct paths dynamically or execute code passed as a string. An attacker could use `python -c` to run arbitrary code, access the full filesystem, and read secrets.
+**Learning:** Argument pattern matching is insufficient for sandboxing general-purpose programming languages. If an agent can execute code (Python, Node, Bash scripts), they inherit the permissions of the host process, rendering argument-based restrictions moot.
+**Prevention:**
+1. Never allow execution of general-purpose interpreters (`python`, `node`, `bash`) directly on the host in a "sandboxed" tool unless that tool uses a robust isolation mechanism (like Docker or Firecracker).
+2. Use strict allowlists for executables that are known to be safe and have limited scope (like `grep`, `cat` with strict argument validation).
