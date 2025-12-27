@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { AgentInfo, OrgGraph } from "@/lib/types";
 import clsx from "clsx";
 

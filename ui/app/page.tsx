@@ -5,6 +5,7 @@ import { useAgents, useOrgGraph, useStatus, useMessages, useWebSocketStream, tri
 import { AgentCard } from "@/components/AgentCard";
 import { OrgGraphView } from "@/components/OrgGraph";
 import { ManagerChat } from "@/components/ManagerChat";
+import { GlobalSettingsModal } from "@/components/GlobalSettingsModal";
 import { Activity, Clock, Server, Terminal, Plus, Wifi, WifiOff, Play, Settings, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
