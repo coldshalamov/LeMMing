@@ -48,7 +48,7 @@ class ModelRegistry:
     def get(self, model_key: str) -> ModelConfig:
         self._load()
         if model_key not in self._models:
-            raise KeyError(f"Model key '{model_key}' not found in registry")    
+            raise KeyError(f"Model key '{model_key}' not found in registry")
         return self._models[model_key]
 
     def list_keys(self) -> list[str]:

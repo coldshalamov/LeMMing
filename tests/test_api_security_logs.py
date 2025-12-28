@@ -1,6 +1,5 @@
-
-import pytest
 from lemming.api import _read_agent_logs
+
 
 def test_read_agent_logs_traversal_blocked(tmp_path):
     """Test that _read_agent_logs BLOCKS traversal."""
@@ -34,6 +33,7 @@ def test_read_agent_logs_traversal_blocked(tmp_path):
     entries = _read_agent_logs(base_path, "valid_agent")
     assert len(entries) == 1
     assert entries[0]["msg"] == "ok"
+
 
 if __name__ == "__main__":
     pass

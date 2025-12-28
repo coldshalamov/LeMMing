@@ -1,8 +1,5 @@
-from pathlib import Path
 from lemming.tools import CreateAgentTool, ShellTool
-import pytest
-import shutil
-import shlex
+
 
 def test_create_agent_path_traversal(tmp_path):
     # Setup
@@ -23,11 +20,7 @@ def test_create_agent_path_traversal(tmp_path):
     malicious_name = "../evil"
 
     # Execute
-    result = tool.execute(
-        agent_name="hr", # Must be hr to use this tool
-        base_path=base_path,
-        name=malicious_name
-    )
+    result = tool.execute(agent_name="hr", base_path=base_path, name=malicious_name)  # Must be hr to use this tool
 
     # Check if directory was created outside agents dir
     evil_path = base_path / "evil"
@@ -45,6 +38,7 @@ def test_create_agent_path_traversal(tmp_path):
     assert not result.success
     assert "invalid" in result.error.lower() or "security" in result.error.lower()
 
+
 def test_shell_tool_prohibits_python(tmp_path):
     """Ensure python execution is blocked by ShellTool."""
     base_path = tmp_path / "lemming"
@@ -59,15 +53,12 @@ def test_shell_tool_prohibits_python(tmp_path):
     # Attempt to run python
     command = "python -c 'print(\"hello\")'"
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=base_path,
-        command=command
-    )
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     assert not result.success
     assert "security violation" in result.error.lower()
     assert "python" in result.error.lower()
+
 
 def test_shell_tool_sandbox_arguments(tmp_path):
     """Ensure ShellTool blocks traversal in arguments."""
@@ -83,15 +74,12 @@ def test_shell_tool_sandbox_arguments(tmp_path):
     # Attempt traversal in argument
     command = "cat ../../../secrets.json"
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=base_path,
-        command=command
-    )
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     assert not result.success
     assert "security violation" in result.error.lower()
     assert "directory traversal" in result.error.lower()
+
 
 def test_shell_tool_absolute_path_argument(tmp_path):
     """Ensure ShellTool blocks absolute paths in arguments."""
@@ -107,11 +95,7 @@ def test_shell_tool_absolute_path_argument(tmp_path):
     # Attempt absolute path
     command = "cat /etc/passwd"
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=base_path,
-        command=command
-    )
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     assert not result.success
     assert "security violation" in result.error.lower()
