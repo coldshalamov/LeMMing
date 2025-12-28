@@ -236,27 +236,47 @@ def discover_agents(base_path: Path) -> list[Agent]:
     if not agents_dir.exists():
         return agents
 
-    # Walk recursively to support sub-orgs (e.g., agents/sales/lead/resume.json)
-    for root, dirs, files in os.walk(agents_dir):
-        # Skip hidden directories
-        dirs[:] = [d for d in dirs if not d.startswith(".")]
+    # Optimization: Use recursive scan with os.scandir to avoid redundant stat calls.
+    # scandir yields DirEntry objects which have cached stat() info.
+    stack = [agents_dir]
 
-        # Skip the agent_template directory at top level
-        # Note: We check if the *current* root is the template dir, or if we are about to enter it
-        rel_path = Path(root).relative_to(agents_dir)
-        if str(rel_path).startswith("agent_template") or "agent_template" in dirs:
-            if "agent_template" in dirs:
-                dirs.remove("agent_template")
-            if str(rel_path).startswith("agent_template"):
-                continue
+    while stack:
+        current_dir = stack.pop()
+        try:
+            # We must use scandir in a context manager to ensure resources are released,
+            # but since we are iterating and may push to stack, we need to collect entries first
+            # or use list(os.scandir(...)).
+            with os.scandir(current_dir) as it:
+                entries = list(it)
+        except OSError:
+            continue
 
-        if "resume.json" in files:
-            resume_path = Path(root) / "resume.json"
+        # Check for resume.json in this directory
+        resume_entry = next((e for e in entries if e.name == "resume.json" and e.is_file()), None)
+
+        # Process subdirectories
+        for entry in entries:
+            if entry.is_dir():
+                # Skip hidden directories and agent_template
+                if entry.name.startswith("."):
+                    continue
+                if entry.name == "agent_template":
+                    continue
+                # Also skip agent_template if it's a subfolder?
+                # The original logic used rel_path.startswith("agent_template").
+                # This logic is simpler: we just don't traverse into agent_template at any level.
+                stack.append(Path(entry.path))
+
+        if resume_entry:
+            resume_path = Path(resume_entry.path)
             folder_name = resume_path.parent.name
 
-            # Optimization: check cache based on mtime
+            # Optimization: check cache using the DirEntry's cached stat
             try:
-                stat_result = resume_path.stat()
+                # On Unix, DirEntry.stat() uses the cached lstat result from the directory listing.
+                # It does NOT guarantee to avoid a syscall on all platforms or if the info is missing,
+                # but it is generally faster than Path.stat().
+                stat_result = resume_entry.stat()
                 mtime = stat_result.st_mtime
 
                 # If cached and mtime matches, use cached agent
@@ -277,10 +297,10 @@ def discover_agents(base_path: Path) -> list[Agent]:
                         seen_names.add(cached_agent.name)
                         agents.append(cached_agent)
                         continue
-            except FileNotFoundError:
+            except OSError:
                 logger.warning(
-                    "resume_missing",
-                    extra={"event": "resume_missing", "path": str(resume_path.parent)},
+                    "resume_stat_failed",
+                    extra={"event": "resume_stat_failed", "path": str(resume_path)},
                 )
                 continue
 
@@ -300,10 +320,6 @@ def discover_agents(base_path: Path) -> list[Agent]:
 
             resume_name = data.get("name")
             if resume_name and resume_name != folder_name:
-                # In nested structures, folder name strict match is less critical,
-                # but nice for sanity. We'll warn but allow it if it differs,
-                # unless you want strict enforcement.
-                # Project rules say: simplicity. Let's warn.
                 logger.warning(
                     "resume_name_mismatch",
                     extra={

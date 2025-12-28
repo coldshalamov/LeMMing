@@ -195,7 +195,7 @@ export function AgentCard({
             <span>CREDITS</span>
             <span
               className={clsx(
-                agent.credits.credits_left !== undefined &&
+                agent.credits.credits_left != null &&
                   agent.credits.credits_left < 100
                   ? "text-red-500"
                   : "text-brand-lime",
