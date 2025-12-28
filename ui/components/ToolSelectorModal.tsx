@@ -147,7 +147,9 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                     {/* Category Filter */}
                     <div className="p-4 border-b border-white/5 flex gap-2">
                         <button
+                            type="button"
                             onClick={() => setActiveCategory(null)}
+                            aria-pressed={activeCategory === null}
                             className={clsx(
                                 "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                                 activeCategory === null
@@ -160,7 +162,9 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                         {categories.map(cat => (
                             <button
                                 key={cat.id}
+                                type="button"
                                 onClick={() => setActiveCategory(cat.id)}
+                                aria-pressed={activeCategory === cat.id}
                                 className={clsx(
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
                                     activeCategory === cat.id
@@ -184,7 +188,9 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                                 return (
                                     <button
                                         key={tool.id}
+                                        type="button"
                                         onClick={() => toggleTool(tool.id)}
+                                        aria-pressed={isSelected}
                                         className={clsx(
                                             "p-4 rounded-xl border-2 transition-all text-left",
                                             isSelected
@@ -223,12 +229,14 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                         </div>
                         <div className="flex gap-3">
                             <button
+                                type="button"
                                 onClick={onClose}
                                 className="px-4 py-2 rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
+                                type="button"
                                 onClick={handleSave}
                                 className="px-6 py-2 rounded-lg bg-brand-cyan text-white hover:bg-brand-cyan/90 transition-colors font-medium"
                             >
