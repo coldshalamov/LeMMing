@@ -1,371 +1,211 @@
-
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import { AgentInfo, OrgGraph } from "@/lib/types";
+import { AgentInfo } from "@/lib/types";
+import { OrgTimer } from "./OrgTimer";
+import {
+  Users,
+  Zap,
+  Brain,
+  Sparkles,
+  Terminal,
+  FileText,
+  Database,
+  Globe,
+} from "lucide-react";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 
-interface Point {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
+interface AgentCardProps {
+  agent: AgentInfo;
+  currentTick: number;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  variant?: "compact" | "full";
 }
 
-interface OrgGraphProps {
-    agents: AgentInfo[];
-    graph: OrgGraph;
-    selectedAgent: string | null;
-    onSelectAgent: (name: string) => void;
-    className?: string;
+// Helper to map model/temp to stats
+function getAgentStats(model: string, temperature: number = 0.7) {
+  // INT = Reasoning Level (not maxed out by default)
+  let intelligence = 50; // Base reasoning
+  if (model.includes("gpt-4o")) intelligence = 85;
+  if (model.includes("gpt-4-turbo")) intelligence = 80;
+  if (model.includes("gpt-4") && !model.includes("turbo")) intelligence = 75;
+  if (model.includes("gpt-3.5")) intelligence = 60;
+  if (model.includes("opus")) intelligence = 90;
+  if (model.includes("sonnet")) intelligence = 75;
+  if (model.includes("haiku")) intelligence = 65;
+
+  // CRE = Creativity (Temperature scaled to 0-100)
+  // Temperature typically ranges 0-2, but 0-1 is most common
+  // Default 0.7 = 70% creativity
+  const creativity = Math.min(Math.round(temperature * 100), 100);
+
+  return { intelligence, creativity };
 }
 
-export function OrgGraphView({ agents, graph, selectedAgent, onSelectAgent, className }: OrgGraphProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [positions, setPositions] = useState<Record<string, Point>>({});
-    const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-    const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
-    const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
-    const [pinnedNodes, setPinnedNodes] = useState<Set<string>>(new Set());
-    const wasDragged = useRef(false);
-    const lastMousePos = useRef({ x: 0, y: 0 });
+function ToolIcon({ tool }: { tool: string }) {
+  if (tool.includes("read")) return <FileText size={12} />;
+  if (tool.includes("write"))
+    return <FileText size={12} className="text-yellow-400" />;
+  if (tool.includes("web") || tool.includes("browser"))
+    return <Globe size={12} />;
+  if (tool.includes("sql") || tool.includes("data"))
+    return <Database size={12} />;
+  return <Terminal size={12} />;
+}
 
-    // Initialize positions if needed
-    useEffect(() => {
-        if (agents.length === 0) return;
-        const width = containerRef.current?.clientWidth || 800;
-        const height = containerRef.current?.clientHeight || 600;
+export function AgentCard({
+  agent,
+  currentTick,
+  isSelected,
+  onSelect,
+  variant = "compact",
+}: AgentCardProps) {
+  const { intelligence, creativity } = getAgentStats(agent.model);
+  const isFiring =
+    currentTick % agent.schedule.run_every_n_ticks ===
+    agent.schedule.phase_offset % agent.schedule.run_every_n_ticks;
 
-        if (Object.keys(positions).length === agents.length) return;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onSelect && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      onSelect();
+    }
+  };
 
-        const initial: Record<string, Point> = {};
-        agents.forEach(a => {
-            initial[a.name] = {
-                x: Math.random() * width * 0.6 + width * 0.2,
-                y: Math.random() * height * 0.6 + height * 0.2,
-                vx: 0,
-                vy: 0
-            };
-        });
+  return (
+    <motion.div
+      layoutId={`agent-card-${agent.name}`}
+      onClick={onSelect}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`Select agent ${agent.name}`}
+      className={clsx(
+        "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+        isSelected
+          ? "border-brand-cyan shadow-[0_0_25px_rgba(6,182,212,0.15)] bg-neo-panel z-10 scale-105"
+          : "border-neo-border bg-neo-surface hover:border-white/20 hover:bg-neo-surface-highlight",
+      )}
+      style={{
+        backdropFilter: "blur(20px)",
+      }}
+    >
+      {/* Active Status Stripe */}
+      {isFiring && (
+        <div className="absolute top-0 left-0 w-full h-1 bg-brand-lime shadow-[0_0_15px_#84cc16]" />
+      )}
 
-        // Use functional update or move outside effect if possible, but here we just
-        // wrap in setTimeout to avoid synchronous update warning if that is the linter's concern,
-        // although setting state in useEffect is standard for initialization.
-        // The linter error specifically mentions "Calling setState synchronously within an effect".
-        // However, this IS what useEffect is for. The issue might be strict mode double invocation or
-        // the linter being overly aggressive.
-        // We will suppress the warning as this is initialization logic.
-        // Or better, check if mounted.
-
-        setPositions(initial);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [agents.length]);
-
-    // Filter out human from valid nodes
-    const validAgents = useMemo(() => agents.filter(a => a.name !== "human"), [agents]);
-    const items = useMemo(() => validAgents.map(a => a.name), [validAgents]);
-
-    // Simulation Loop
-    useEffect(() => {
-        if (Object.keys(positions).length === 0) return;
-
-        let animationFrameId: number;
-
-        const edges: [string, string][] = [];
-        Object.entries(graph).forEach(([target, node]) => {
-            // Only include edges if both source and target are in our validAgents list
-            if (!items.includes(target)) return;
-
-            node.can_read.forEach(source => {
-                if (items.includes(source)) {
-                    edges.push([source, target]);
-                }
-            });
-        });
-
-        const runSimulation = () => {
-            setPositions(prev => {
-                const next = { ...prev };
-                const width = containerRef.current?.clientWidth || 800;
-                const height = containerRef.current?.clientHeight || 600;
-                const center = { x: width / 2, y: height / 2 };
-
-                const k = 0.02; // Lower spring constant
-                const repulsion = 3000; // Lower repulsion
-                const damping = 0.8; // More aggressive damping
-                const maxForce = 10; // Cap force
-                const maxVelocity = 5; // Cap velocity
-                const minDistance = 20; // Minimum distance for repulsion logic
-
-                items.forEach(nodeId => {
-                    // Skip simulation for the node currently being dragged by user or pinned
-                    if (nodeId === draggedNodeId || pinnedNodes.has(nodeId)) {
-                        // Keep velocity at zero while pinned/dragged
-                        if (next[nodeId]) {
-                            next[nodeId].vx = 0;
-                            next[nodeId].vy = 0;
-                        }
-                        return;
-                    }
-
-                    const p = next[nodeId];
-                    if (!p) return;
-
-                    let fx = 0;
-                    let fy = 0;
-
-                    // Repulsion
-                    items.forEach(otherId => {
-                        if (nodeId === otherId) return;
-                        const p2 = prev[otherId];
-                        if (!p2) return;
-                        const dx = p.x - p2.x;
-                        const dy = p.y - p2.y;
-                        const distSq = Math.max(minDistance * minDistance, dx * dx + dy * dy);
-                        const dist = Math.sqrt(distSq);
-
-                        const f = repulsion / distSq;
-                        fx += (dx / dist) * f;
-                        fy += (dy / dist) * f;
-                    });
-
-                    // Attraction
-                    edges.forEach(([source, target]) => {
-                        if (source === nodeId) {
-                            const p2 = prev[target];
-                            if (p2) { fx += k * (p2.x - p.x); fy += k * (p2.y - p.y); }
-                        } else if (target === nodeId) {
-                            const p2 = prev[source];
-                            if (p2) { fx += k * (p2.x - p.x); fy += k * (p2.y - p.y); }
-                        }
-                    });
-
-                    // Center Gravity
-                    fx += (center.x - p.x) * 0.01;
-                    fy += (center.y - p.y) * 0.01;
-
-                    // Cap total force to keep things calm
-                    const totalForce = Math.sqrt(fx * fx + fy * fy);
-                    if (totalForce > maxForce) {
-                        fx = (fx / totalForce) * maxForce;
-                        fy = (fy / totalForce) * maxForce;
-                    }
-
-                    // Update Velocity
-                    p.vx = (p.vx + fx) * damping;
-                    p.vy = (p.vy + fy) * damping;
-
-                    // Cap Velocity
-                    const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-                    if (speed > maxVelocity) {
-                        p.vx = (p.vx / speed) * maxVelocity;
-                        p.vy = (p.vy / speed) * maxVelocity;
-                    }
-
-                    // Update Position
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    next[nodeId] = p;
-                });
-
-                return next;
-            });
-
-            animationFrameId = requestAnimationFrame(runSimulation);
-        };
-
-        runSimulation();
-        return () => cancelAnimationFrame(animationFrameId);
-    }, [agents, graph, positions.length, draggedNodeId]);
-
-    const handleWheel = (e: React.WheelEvent) => {
-        setTransform(prev => {
-            const zoomSensitivity = 0.001;
-            const newScale = Math.min(Math.max(0.1, prev.scale - e.deltaY * zoomSensitivity), 5);
-            return { ...prev, scale: newScale };
-        });
-    };
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        // If clicking on the background (not a node or button), start canvas panning
-        const target = e.target as HTMLElement;
-        const isNode = target.closest('[data-node-id]');
-        const isButton = target.closest('button');
-
-        if (!isNode && !isButton) {
-            setIsDraggingCanvas(true);
-            lastMousePos.current = { x: e.clientX, y: e.clientY };
-        }
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (isDraggingCanvas) {
-            const dx = e.clientX - lastMousePos.current.x;
-            const dy = e.clientY - lastMousePos.current.y;
-            lastMousePos.current = { x: e.clientX, y: e.clientY };
-            setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-        } else if (draggedNodeId) {
-            // Reposition node relative to transform
-            const dx = (e.clientX - lastMousePos.current.x) / transform.scale;
-            const dy = (e.clientY - lastMousePos.current.y) / transform.scale;
-
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                wasDragged.current = true;
-                if (!pinnedNodes.has(draggedNodeId)) {
-                    setPinnedNodes(prev => new Set(prev).add(draggedNodeId));
-                }
-            }
-
-            lastMousePos.current = { x: e.clientX, y: e.clientY };
-
-            setPositions(prev => {
-                const p = prev[draggedNodeId];
-                if (!p) return prev;
-                return {
-                    ...prev,
-                    [draggedNodeId]: { ...p, x: p.x + dx, y: p.y + dy, vx: 0, vy: 0 }
-                };
-            });
-        }
-    };
-
-    const handleMouseUp = () => {
-        setIsDraggingCanvas(false);
-        setDraggedNodeId(null);
-        // Reset wasDragged after a timeout so onClick can read it if it fires immediately
-        setTimeout(() => { wasDragged.current = false; }, 50);
-    };
-
-    return (
-        <div
-            ref={containerRef}
-            className={clsx("relative w-full h-full overflow-hidden bg-neo-bg cursor-grab active:cursor-grabbing", className)}
-            onWheel={handleWheel}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-        >
-
-            <div
-                className="absolute inset-0 origin-center transition-transform duration-75 will-change-transform"
-                style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }}
+      <div className="p-4 flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h3
+              className={clsx(
+                "font-bold font-mono tracking-tight",
+                isSelected ? "text-white text-lg" : "text-gray-200",
+              )}
             >
-                {/* SVG for Edges */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <defs>
-                        <marker id="arrow" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563" />
-                        </marker>
-                        <marker id="arrow-active" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#06b6d4" />
-                        </marker>
-                    </defs>
-                    {Object.entries(graph).map(([target, node]) =>
-                        node.can_read.map(source => {
-                            const s = positions[source];
-                            const t = positions[target];
-                            if (!s || !t) return null;
-
-                            const isRelated = selectedAgent && (source === selectedAgent || target === selectedAgent);
-
-                            return (
-                                <line
-                                    key={`${source}-${target}`}
-                                    x1={s.x} y1={s.y}
-                                    x2={t.x} y2={t.y}
-                                    stroke={isRelated ? "#06b6d4" : "#27272a"}
-                                    strokeWidth={isRelated ? 2 / transform.scale : 1 / transform.scale}
-                                    strokeOpacity={isRelated ? 0.8 : 0.4}
-                                    markerEnd={isRelated ? "url(#arrow-active)" : "url(#arrow)"}
-                                />
-                            );
-                        })
-                    )}
-                </svg>
-
-                {/* Nodes */}
-                {agents.map(agent => {
-                    const pos = positions[agent.name] || { x: 0, y: 0 };
-                    const isSel = selectedAgent === agent.name;
-
-                    return (
-                        <div
-                            key={agent.name}
-                            data-node-id={agent.name}
-                            onMouseDown={(e) => {
-                                e.stopPropagation();
-                                setDraggedNodeId(agent.name);
-                                wasDragged.current = false;
-                                lastMousePos.current = { x: e.clientX, y: e.clientY };
-                            }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (!wasDragged.current) {
-                                    onSelectAgent(agent.name);
-                                }
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    onSelectAgent(agent.name);
-                                }
-                            }}
-                            role="button"
-                            tabIndex={0}
-                            aria-pressed={isSel}
-                            aria-label={`Select agent ${agent.name}`}
-                            title={agent.name}
-                            className={clsx(
-                                "absolute transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-colors border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan shadow-lg",
-                                isSel
-                                    ? "bg-brand-cyan/20 border-brand-cyan text-brand-cyan shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-                                    : pinnedNodes.has(agent.name)
-                                        ? "bg-neo-surface border-brand-cyan/40 text-gray-300 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
-                                        : "bg-neo-surface border-neo-border text-gray-400 hover:border-gray-500 hover:bg-neo-panel"
-                            )}
-                            style={{
-                                left: pos.x,
-                                top: pos.y,
-                                zIndex: isSel ? 10 : 1,
-                            }}
-                        >
-                            <div className="text-[10px] text-center font-mono leading-tight px-1 overflow-hidden pointer-events-none select-none">
-                                {agent.name.length > 10 ? agent.name.substring(0, 10) + ".." : agent.name}
-                            </div>
-                            {pinnedNodes.has(agent.name) && !isSel && (
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-brand-cyan rounded-full border border-black" title="Pinned" />
-                            )}
-                        </div>
-                    );
-                })}
+              {agent.name}
+            </h3>
+            <div className="text-xs text-brand-cyan font-mono uppercase tracking-widest opacity-80 mt-1">
+              {agent.title}
             </div>
+          </div>
 
-            {/* Zoom Controls Overlay */}
-            <div className="absolute bottom-4 left-4 flex gap-2">
-                <button
-                    onClick={() => setTransform(p => ({ ...p, scale: p.scale / 1.2 }))}
-                    className="p-2 bg-black/50 border border-white/10 rounded text-white/50 hover:text-white"
-                    title="Zoom Out"
-                >
-                    -
-                </button>
-                <button
-                    onClick={() => setTransform(p => ({ ...p, scale: p.scale * 1.2 }))}
-                    className="p-2 bg-black/50 border border-white/10 rounded text-white/50 hover:text-white"
-                    title="Zoom In"
-                >
-                    +
-                </button>
-                <button
-                    onClick={() => setTransform({ x: 0, y: 0, scale: 1 })}
-                    className="p-2 bg-black/50 border border-white/10 rounded text-white/50 hover:text-white text-xs font-mono"
-                    title="Reset View"
-                >
-                    RESET
-                </button>
-            </div>
+          <OrgTimer
+            n={agent.schedule.run_every_n_ticks}
+            offset={agent.schedule.phase_offset}
+            currentTick={currentTick}
+            size={isSelected ? 48 : 32}
+            className={clsx(
+              "transition-transform",
+              isFiring ? "scale-110" : "scale-100",
+            )}
+          />
         </div>
-    );
+
+        {/* Stats Bars */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+            <Brain size={12} />
+            <span className="w-16">INT</span>
+            <div
+              className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-label="Intelligence"
+              aria-valuenow={intelligence}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${intelligence}%` }}
+                className="h-full bg-brand-purple"
+              />
+            </div>
+            <span className="w-6 text-right text-gray-400">{intelligence}</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+            <Sparkles size={12} />
+            <span className="w-16">CRE</span>
+            <div
+              className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-label="Creativity"
+              aria-valuenow={creativity}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${creativity}%` }}
+                className="h-full bg-brand-cyan"
+              />
+            </div>
+            <span className="w-6 text-right text-gray-400">{creativity}</span>
+          </div>
+        </div>
+
+        {/* Description (Only if full or selected) */}
+        {(isSelected || variant === "full") && (
+          <div className="text-xs text-gray-400 leading-relaxed border-t border-white/5 pt-3">
+            {agent.description}
+          </div>
+        )}
+
+        {/* Toolbelt Chip Row */}
+        <div className="flex flex-wrap gap-1 pt-1">
+          {agent.tools.map((tool) => (
+            <div
+              key={tool}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-[10px] text-gray-400"
+            >
+              <ToolIcon tool={tool} />
+              {tool}
+            </div>
+          ))}
+        </div>
+
+        {/* Credits */}
+        {agent.credits && (
+          <div className="mt-2 text-[10px] font-mono text-gray-500 flex justify-between">
+            <span>CREDITS</span>
+            <span
+              className={clsx(
+                agent.credits.credits_left !== undefined &&
+                  agent.credits.credits_left < 100
+                  ? "text-red-500"
+                  : "text-brand-lime",
+              )}
+            >
+              {agent.credits.credits_left?.toFixed(1)} / {agent.credits.max_credits}
+            </span>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
 }
