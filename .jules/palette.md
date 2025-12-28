@@ -5,3 +5,7 @@
 ## 2025-12-16 - Semantic Buttons for Interactive Cards
 **Learning:** Interactive cards implemented as `div`s with `onClick` handlers lack native accessibility features like keyboard support (Enter/Space) and proper focus management.
 **Action:** Refactor interactive cards to use `<button>` (or `<motion.button>`) elements with `type="button"` and `text-left`, removing the need for manual `onKeyDown` handlers and `role="button"` attributes.
+
+## 2025-12-16 - Log Readability
+**Learning:** Raw JSON logs are difficult to scan during active monitoring, obscuring important agent actions like tool usage or thoughts.
+**Action:** Use a dedicated LogMessage component that highlights semantic fields (text, thought, tool) with icons/colors and collapses the raw payload by default.

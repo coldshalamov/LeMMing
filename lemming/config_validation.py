@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from importlib import resources
 from pathlib import Path
-from typing import Any, cast, Iterable
+from typing import Any, cast
 
 from jsonschema import Draft7Validator
 
@@ -39,9 +40,7 @@ def validate_resume_file(resume_path: Path) -> dict[str, Any]:
 
 
 def _validate_against_schema(instance: Any, schema_name: str, context: str) -> None:
-    errors = list(
-        _format_jsonschema_error(error) for error in _iter_schema_errors(schema_name, instance)
-    )
+    errors = list(_format_jsonschema_error(error) for error in _iter_schema_errors(schema_name, instance))
     if errors:
         raise ValidationError(f"{context}: " + "; ".join(errors))
 
