@@ -108,8 +108,9 @@ def _load_entry(entry_path: Path) -> OutboxEntry | None:
 
 def _tick_from_filename(entry_path: Path) -> int | None:
     try:
-        stem = entry_path.stem
-        tick_part = stem.split("_", 1)[0]
+        # Optimization: Use .name instead of .stem to avoid property overhead,
+        # and partition which is faster than split.
+        tick_part = entry_path.name.partition("_")[0]
         return int(tick_part)
     except Exception:
         return None
@@ -121,7 +122,8 @@ def _tick_from_filename_str(filename: str) -> int:
     Returns -1 if parsing fails so it sorts to the end.
     """
     try:
-        tick_part = filename.split("_", 1)[0]
+        # Optimization: partition is faster than split
+        tick_part = filename.partition("_")[0]
         return int(tick_part)
     except (ValueError, IndexError):
         return -1
