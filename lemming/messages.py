@@ -188,9 +188,11 @@ def read_outbox_entries(
                     if _tick_from_filename_str(name) >= since_tick
                 )
 
+            # Materialize candidate_files into a list within the context manager
+            # to ensure entry.name is accessed while the scandir iterator is valid
             filenames = heapq.nlargest(
                 limit,
-                candidate_files,
+                list(candidate_files),
                 key=lambda name: (_tick_from_filename_str(name), name)
             )
     except FileNotFoundError:
