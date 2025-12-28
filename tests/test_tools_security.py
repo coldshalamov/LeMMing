@@ -1,7 +1,5 @@
-from pathlib import Path
-from lemming.tools import CreateAgentTool
-import pytest
-import shutil
+from lemming.tools import CreateAgentTool, ShellTool
+
 
 def test_create_agent_path_traversal(tmp_path):
     # Setup
@@ -23,9 +21,9 @@ def test_create_agent_path_traversal(tmp_path):
 
     # Execute
     result = tool.execute(
-        agent_name="hr", # Must be hr to use this tool
+        agent_name="hr",  # Must be hr to use this tool
         base_path=base_path,
-        name=malicious_name
+        name=malicious_name,
     )
 
     # Check if directory was created outside agents dir
@@ -43,3 +41,23 @@ def test_create_agent_path_traversal(tmp_path):
     # The tool should ideally fail gracefully
     assert not result.success
     assert "invalid" in result.error.lower() or "security" in result.error.lower()
+
+
+def test_shell_tool_blocks_python(tmp_path):
+    """Verify that python execution is blocked."""
+    base_path = tmp_path
+    agents_dir = base_path / "agents" / "tester"
+    agents_dir.mkdir(parents=True)
+    workspace = agents_dir / "workspace"
+    workspace.mkdir(parents=True)
+
+    tool = ShellTool()
+
+    # Python one-liner
+    cmd = "python -c \"print('hello')\""
+
+    result = tool.execute(agent_name="tester", base_path=base_path, command=cmd)
+
+    assert not result.success
+    assert "Security violation" in result.error
+    assert "'python' is not in the allowed executables list" in result.error
