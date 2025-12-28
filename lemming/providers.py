@@ -250,10 +250,7 @@ class CircuitBreaker:
         """Execute a function with circuit breaker protection."""
         if self.state == "OPEN":
             # Check if we should attempt recovery
-            if (
-                self.last_failure_time
-                and time.time() - self.last_failure_time >= self.recovery_timeout
-            ):
+            if self.last_failure_time and time.time() - self.last_failure_time >= self.recovery_timeout:
                 logger.info(
                     "circuit_half_open",
                     extra={"event": "circuit_half_open", "state": self.state},
@@ -322,18 +319,14 @@ class RetryingLLMProvider(LLMProvider):
         self.max_retries = max_retries
         self.circuit_breaker = circuit_breaker or CircuitBreaker()
 
-    def call(
-        self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any
-    ) -> str:
+    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call the inner provider with retry logic and circuit breaker."""
         last_exception: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
             try:
                 # Call through circuit breaker
-                return self.circuit_breaker.call(
-                    self.inner_provider.call, model_name, messages, temperature, **kwargs
-                )
+                return self.circuit_breaker.call(self.inner_provider.call, model_name, messages, temperature, **kwargs)
 
             except Exception as exc:
                 last_exception = exc

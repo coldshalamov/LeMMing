@@ -110,7 +110,7 @@ python -m lemming.cli run-once
 | `permissions.read_outboxes` | array | [] | Agent names whose outboxes this agent can read. Use `"*"` for all. |
 | `permissions.tools` | array | [] | List of tool names this agent can execute. |
 | File sandbox | derived | `workspace/`, `shared/` | File tools are restricted to the agent workspace plus shared directory. |
-| `schedule.run_every_n_ticks` | int | 1 | Agent fires every N ticks. Use 0 to disable auto-run. |
+| `schedule.run_every_n_ticks` | int | 1 | Agent fires every N ticks (must be > 0). |
 | `schedule.phase_offset` | int | 0 | Offset for intra-tick ordering (0 to N-1). |
 | `instructions` | string | "" | **REQUIRED.** System prompt defining agent behavior. |
 | `credits.max_credits` | float | 1000 | Maximum credit allocation for this agent. |
