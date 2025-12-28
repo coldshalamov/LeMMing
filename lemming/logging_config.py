@@ -96,9 +96,7 @@ def setup_logging(
 
     if module_levels:
         for module_name, module_level in module_levels.items():
-            logging.getLogger(f"lemming.{module_name}").setLevel(
-                getattr(logging, module_level.upper())
-            )
+            logging.getLogger(f"lemming.{module_name}").setLevel(getattr(logging, module_level.upper()))
 
     if console_output:
         console_handler = logging.StreamHandler()

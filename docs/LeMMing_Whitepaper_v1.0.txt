@@ -164,7 +164,7 @@ Example:
   },
   "permissions": {
     "read_outboxes": ["planner", "coder_01"],
-    "tools": ["file_read", "file_write", "list_files"],
+    "tools": ["file_read", "file_write", "file_list"],
     "file_access": {
         "allow_read": ["./projects"],
         "allow_write": ["./projects"]

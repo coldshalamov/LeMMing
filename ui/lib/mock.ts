@@ -4,12 +4,11 @@ export const MOCK_AGENTS: AgentInfo[] = [
   {
     name: "overmind",
     title: "System Architect",
-    description:
-      "Maintains high-level system coherence and strategic planning.",
+    description: "Maintains high-level system coherence and strategic planning.",
     model: "gpt-4-turbo",
     schedule: { run_every_n_ticks: 10, phase_offset: 0 },
     read_outboxes: ["frontend_dev", "backend_dev", "qa_bot"],
-    tools: ["read_file", "write_file", "search_web"],
+    tools: ["file_read", "file_write", "shell"],
     credits: { credits_left: 950.5, cost_per_action: 0.1, max_credits: 1000 },
   },
   {
@@ -19,7 +18,7 @@ export const MOCK_AGENTS: AgentInfo[] = [
     model: "claude-3-opus",
     schedule: { run_every_n_ticks: 2, phase_offset: 1 },
     read_outboxes: ["overmind", "backend_dev"],
-    tools: ["read_file", "write_file", "browser_test"],
+    tools: ["file_read", "file_write", "file_list"],
     credits: { credits_left: 120.0, cost_per_action: 0.05, max_credits: 500 },
   },
   {
@@ -29,7 +28,7 @@ export const MOCK_AGENTS: AgentInfo[] = [
     model: "gpt-4",
     schedule: { run_every_n_ticks: 2, phase_offset: 0 },
     read_outboxes: ["overmind"],
-    tools: ["read_file", "write_file", "run_shell"],
+    tools: ["file_read", "file_write", "shell"],
     credits: { credits_left: 45.2, cost_per_action: 0.05, max_credits: 500 },
   },
   {
@@ -39,7 +38,7 @@ export const MOCK_AGENTS: AgentInfo[] = [
     model: "gpt-3.5-turbo",
     schedule: { run_every_n_ticks: 5, phase_offset: 3 },
     read_outboxes: ["frontend_dev", "backend_dev"],
-    tools: ["run_test", "github_issue"],
+    tools: ["shell", "memory_write"],
     credits: { credits_left: 800.0, cost_per_action: 0.01, max_credits: 1000 },
   },
   {
@@ -49,20 +48,17 @@ export const MOCK_AGENTS: AgentInfo[] = [
     model: "gpt-3.5-turbo",
     schedule: { run_every_n_ticks: 20, phase_offset: 10 },
     read_outboxes: ["overmind"],
-    tools: ["scraper", "save_json"],
+    tools: ["shell", "file_write"],
     credits: { credits_left: 20.0, cost_per_action: 0.02, max_credits: 100 },
   },
 ];
 
 export const MOCK_GRAPH: OrgGraph = {
-  overmind: {
-    can_read: ["frontend_dev", "backend_dev", "qa_bot"],
-    tools: ["read_file"],
-  },
-  frontend_dev: { can_read: ["overmind", "backend_dev"], tools: ["read_file"] },
-  backend_dev: { can_read: ["overmind"], tools: ["read_file"] },
-  qa_bot: { can_read: ["frontend_dev", "backend_dev"], tools: ["run_test"] },
-  data_scraper: { can_read: ["overmind"], tools: ["scraper"] },
+  overmind: { can_read: ["frontend_dev", "backend_dev", "qa_bot"], tools: ["file_read"] },
+  frontend_dev: { can_read: ["overmind", "backend_dev"], tools: ["file_read"] },
+  backend_dev: { can_read: ["overmind"], tools: ["file_read"] },
+  qa_bot: { can_read: ["frontend_dev", "backend_dev"], tools: ["shell"] },
+  data_scraper: { can_read: ["overmind"], tools: ["shell"] },
 };
 
 export const MOCK_MESSAGES: OutboxEntry[] = [

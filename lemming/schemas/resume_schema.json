@@ -57,7 +57,7 @@
       "required": ["run_every_n_ticks", "phase_offset"],
       "properties": {
         "run_every_n_ticks": {"type": "integer", "minimum": 1},
-        "phase_offset": {"type": "integer", "minimum": 0}
+        "phase_offset": {"type": "integer"}
       }
     },
     "instructions": {

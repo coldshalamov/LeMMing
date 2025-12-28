@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
+from .paths import validate_agent_name
 
 
 @dataclass
@@ -47,6 +48,13 @@ class ToolRegistry:
     @classmethod
     def list_tools(cls) -> list[str]:
         return list(cls._tools.keys())
+
+    @classmethod
+    def list_tool_info(cls) -> list[dict[str, str]]:
+        return [
+            {"id": tool.name, "description": tool.description}
+            for tool in sorted(cls._tools.values(), key=lambda t: t.name)
+        ]
 
     @classmethod
     def clear(cls) -> None:
@@ -162,7 +170,7 @@ class FileListTool(Tool):
 class ShellTool(Tool):
     name = "shell"
     description = "Execute shell commands in the agent workspace."
-    ALLOWED_EXECUTABLES = {"python", "grep", "ls", "cat", "echo", "head", "tail", "jq"}
+    ALLOWED_EXECUTABLES = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         cmd = kwargs.get("command")
@@ -258,8 +266,6 @@ class CreateAgentTool(Tool):
     description = "Create a new agent from the agent template."
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
-        if agent_name != "hr":
-            return ToolResult(False, "", "Tool restricted to hr agent")
         new_agent_name = kwargs.get("name")
         if not new_agent_name:
             return ToolResult(False, "", "Missing new agent name")
@@ -277,6 +283,12 @@ class CreateAgentTool(Tool):
             return ToolResult(False, "", "Agent template missing")
         try:
             shutil.copytree(template_path, new_agent_path)
+            resume_path = new_agent_path / "resume.json"
+            if resume_path.exists():
+                data = json.loads(resume_path.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    data["name"] = str(new_agent_name)
+                    resume_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
             return ToolResult(True, f"Created agent {new_agent_name}")
         except Exception as exc:  # pragma: no cover - defensive
             return ToolResult(False, "", f"Failed to create agent: {exc}")

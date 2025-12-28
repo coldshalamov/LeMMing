@@ -1,0 +1,144 @@
+import { useState, useRef, useEffect } from "react";
+import { Send, User, Bot } from "lucide-react";
+import { OutboxEntry } from "../lib/types";
+import { sendMessage } from "../lib/api";
+import clsx from "clsx";
+import { motion } from "framer-motion";
+
+interface ManagerChatProps {
+    messages: OutboxEntry[];
+    compact?: boolean; // If we want to collapse it
+}
+
+export function ManagerChat({ messages }: ManagerChatProps) {
+    const [inputValue, setInputValue] = useState("");
+    const [isSending, setIsSending] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Filter messages relevant to the Manager interaction
+    // We want: 
+    // 1. Messages FROM 'human' (User)
+    // 2. Messages FROM 'manager' (Replies)
+    const chatHistory = messages
+        .filter(m => m.agent === "human" || m.agent === "manager")
+        .sort((a, b) => {
+            // Sort by tick, then creation time
+            if (a.tick !== b.tick) return a.tick - b.tick;
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+
+    // Auto-scroll to bottom
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [chatHistory.length]);
+
+    const handleSend = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!inputValue.trim() || isSending) return;
+
+        const text = inputValue.trim();
+        setInputValue("");
+        setIsSending(true);
+
+        try {
+            await sendMessage("manager", text);
+        } catch (err) {
+            console.error("Failed to send message", err);
+            // Ideally show toast
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-black/40 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden shadow-2xl relative z-40 w-[400px]">
+            {/* Header */}
+            <div className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-brand-purple/20 border border-brand-purple flex items-center justify-center text-brand-purple">
+                        <Bot size={20} />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold text-white">Manager</h3>
+                        <div className="flex items-center gap-1.5 mt-0.5" role="status">
+                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                             <p className="text-[10px] text-gray-400 font-mono">ONLINE // READY TO DELEGATE</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Messages Area */}
+            <div
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                role="log"
+                aria-live="polite"
+                aria-label="Chat history"
+            >
+                {chatHistory.length === 0 && (
+                    <div className="text-center text-gray-500 text-xs italic mt-10">
+                        Start a conversation with the Manager to begin orchestrating your organization.
+                    </div>
+                )}
+
+                {chatHistory.map((msg) => {
+                    const isUser = msg.agent === "human";
+                    return (
+                        <motion.div
+                            key={msg.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={clsx(
+                                "flex gap-3 max-w-[90%]",
+                                isUser ? "ml-auto flex-row-reverse" : "mr-auto"
+                            )}
+                        >
+                            {/* Avatar */}
+                            <div className={clsx(
+                                "w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-1",
+                                isUser ? "bg-brand-cyan/20 text-brand-cyan" : "bg-brand-purple/20 text-brand-purple"
+                            )}>
+                                {isUser ? <User size={12} /> : <Bot size={12} />}
+                            </div>
+
+                            {/* Bubble */}
+                            <div className={clsx(
+                                "p-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap font-mono",
+                                isUser
+                                    ? "bg-brand-cyan/10 border border-brand-cyan/20 text-cyan-50 rounded-tr-none"
+                                    : "bg-white/5 border border-white/10 text-gray-200 rounded-tl-none"
+                            )}>
+                                {msg.kind !== "message" && (
+                                    <div className="text-[9px] uppercase tracking-wider opacity-50 mb-1">{msg.kind}</div>
+                                )}
+                                {msg.payload.text || JSON.stringify(msg.payload)}
+                            </div>
+                        </motion.div>
+                    );
+                })}
+            </div>
+
+            {/* Input Area */}
+            <form onSubmit={handleSend} className="p-3 bg-black/40 border-t border-white/5 flex gap-2">
+                <input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="Type your instructions..."
+                    aria-label="Message to Manager"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-purple/50 focus:bg-white/10 transition-all font-mono"
+                />
+                <button
+                    type="submit"
+                    disabled={!inputValue.trim() || isSending}
+                    aria-label="Send message"
+                    className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                    <Send size={18} />
+                </button>
+            </form>
+        </div>
+    );
+}

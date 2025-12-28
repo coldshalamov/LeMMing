@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
 import os
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -19,13 +19,14 @@ def reset_agents_cache() -> None:
     global _agent_cache
     _agent_cache.clear()
 
-DEFAULT_MODEL_KEY = "gpt-4.1-mini"
+
+DEFAULT_MODEL_KEY = "gpt-4o-mini"
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_MAX_TOKENS = 2048
 DEFAULT_CREDITS = {"max_credits": 1000.0, "soft_cap": 500.0}
 
 
-def _default_credits() -> "AgentCredits":
+def _default_credits() -> AgentCredits:
     return AgentCredits(max_credits=DEFAULT_CREDITS["max_credits"], soft_cap=DEFAULT_CREDITS["soft_cap"])
 
 
@@ -235,13 +236,23 @@ def discover_agents(base_path: Path) -> list[Agent]:
     if not agents_dir.exists():
         return agents
 
-    # Use scandir for better performance (avoids creating Path objects for every entry)
-    with os.scandir(agents_dir) as it:
-        for entry in it:
-            if not entry.is_dir() or entry.name == "agent_template":
+    # Walk recursively to support sub-orgs (e.g., agents/sales/lead/resume.json)
+    for root, dirs, files in os.walk(agents_dir):
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+        # Skip the agent_template directory at top level
+        # Note: We check if the *current* root is the template dir, or if we are about to enter it
+        rel_path = Path(root).relative_to(agents_dir)
+        if str(rel_path).startswith("agent_template") or "agent_template" in dirs:
+            if "agent_template" in dirs:
+                dirs.remove("agent_template")
+            if str(rel_path).startswith("agent_template"):
                 continue
 
-            resume_path = get_resume_json_path(base_path, entry.name)
+        if "resume.json" in files:
+            resume_path = Path(root) / "resume.json"
+            folder_name = resume_path.parent.name
 
             # Optimization: check cache based on mtime
             try:
@@ -257,7 +268,7 @@ def discover_agents(base_path: Path) -> list[Agent]:
                                 "duplicate_agent_name",
                                 extra={
                                     "event": "duplicate_agent_name",
-                                    "folder": entry.name,
+                                    "path": str(resume_path.parent),
                                     "agent": cached_agent.name,
                                 },
                             )
@@ -288,13 +299,18 @@ def discover_agents(base_path: Path) -> list[Agent]:
                 continue
 
             resume_name = data.get("name")
-            if resume_name and resume_name != entry.name:
+            if resume_name and resume_name != folder_name:
+                # In nested structures, folder name strict match is less critical,
+                # but nice for sanity. We'll warn but allow it if it differs,
+                # unless you want strict enforcement.
+                # Project rules say: simplicity. Let's warn.
                 logger.warning(
                     "resume_name_mismatch",
                     extra={
                         "event": "resume_name_mismatch",
-                        "folder": entry.name,
+                        "folder": folder_name,
                         "resume": resume_name,
+                        "path": str(resume_path),
                     },
                 )
 
@@ -318,7 +334,7 @@ def discover_agents(base_path: Path) -> list[Agent]:
                     "duplicate_agent_name",
                     extra={
                         "event": "duplicate_agent_name",
-                        "folder": entry.name,
+                        "path": str(resume_path.parent),
                         "agent": agent.name,
                     },
                 )
@@ -342,3 +358,10 @@ def validate_resume(resume_path: Path) -> list[str]:
         return [str(exc)]
 
     return _validate_resume_dict(resume_path, data)
+
+
+def validate_resume_data(data: dict[str, Any], resume_path: Path | None = None) -> list[str]:
+    """Validate in-memory resume data using the same rules as resume.json files."""
+    path = resume_path or Path("<resume.json>")
+    normalized = dict(data)
+    return _validate_resume_dict(path, normalized)
