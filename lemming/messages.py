@@ -148,6 +148,7 @@ def scan_outbox_files(
         with os.scandir(outbox_dir) as it:
             if limit > 0:
                 # Use a generator to avoid creating the full list of files
+                candidate_files = (entry for entry in it if entry.is_file() and entry.name.endswith(".json"))
                 candidate_files = (
                     entry for entry in it if entry.is_file() and entry.name.endswith(".json")
                 )
@@ -200,13 +201,14 @@ def read_outbox_entries(
     try:
         with os.scandir(outbox_dir) as it:
             # Helper generator to filter non-json files
-            candidate_files = (
-                entry.name for entry in it if entry.is_file() and entry.name.endswith(".json")
-            )
+            candidate_files = (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json"))
 
             # If since_tick is provided, we can pre-filter files that are definitely too old
             # IF the filename tick parsing is reliable. It is.
             if since_tick is not None:
+                candidate_files = (name for name in candidate_files if _tick_from_filename_str(name) >= since_tick)
+
+            filenames = heapq.nlargest(limit, candidate_files, key=lambda name: (_tick_from_filename_str(name), name))
                 candidate_files = (
                     name for name in candidate_files if _tick_from_filename_str(name) >= since_tick
                 )
@@ -283,6 +285,9 @@ def collect_readable_outboxes(
         agents_dir = get_agents_dir(base_path)
         if not agents_dir.exists():
             return []
+        read_outboxes = [
+            d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
+        ]
         # Optimization: Use os.scandir to avoid creating Path objects
         with os.scandir(agents_dir) as it:
             read_outboxes = [

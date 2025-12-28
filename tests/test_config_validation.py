@@ -72,7 +72,8 @@ def test_validate_everything_reports_schema_path(tmp_path: Path) -> None:
 
     # break the credits config
     credits_path = tmp_path / "lemming" / "config" / "credits.json"
-    credits_path.write_text(json.dumps({"alpha": {"model": "gpt-4.1-mini", "credits_left": 5}}), encoding="utf-8")
+    credits_data = {"alpha": {"model": "gpt-4.1-mini", "credits_left": 5}}
+    credits_path.write_text(json.dumps(credits_data), encoding="utf-8")
 
     errors = validate_everything(tmp_path)
 
