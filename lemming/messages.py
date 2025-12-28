@@ -334,38 +334,43 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
     if not agents_dir.exists():
         return 0
 
-    for agent_dir in agents_dir.iterdir():
-        if not agent_dir.is_dir():
-            continue
-        outbox_dir = get_outbox_dir(base_path, agent_dir.name)
-        if not outbox_dir.exists():
-            continue
-        try:
-            with os.scandir(outbox_dir) as it:
-                for entry in it:
-                    if not entry.is_file() or not entry.name.endswith(".json"):
-                        continue
+    try:
+        with os.scandir(agents_dir) as it:
+            for agent_entry in it:
+                if not agent_entry.is_dir():
+                    continue
 
-                    tick_val = _tick_from_filename_str(entry.name)
-                    if tick_val == -1:
-                        continue
+                outbox_dir = get_outbox_dir(base_path, agent_entry.name)
+                if not outbox_dir.exists():
+                    continue
+                try:
+                    with os.scandir(outbox_dir) as outbox_it:
+                        for entry in outbox_it:
+                            if not entry.is_file() or not entry.name.endswith(".json"):
+                                continue
 
-                    if current_tick - tick_val > max_age_ticks:
-                        entry_path = outbox_dir / entry.name
-                        try:
-                            entry_path.unlink()
-                            removed += 1
-                        except Exception as exc:  # pragma: no cover
-                            logger.error(
-                                "outbox_cleanup_failed",
-                                extra={
-                                    "event": "outbox_cleanup_failed",
-                                    "path": str(entry_path),
-                                    "error": str(exc),
-                                },
-                            )
-        except OSError:
-            pass
+                            tick_val = _tick_from_filename_str(entry.name)
+                            if tick_val == -1:
+                                continue
+
+                            if current_tick - tick_val > max_age_ticks:
+                                entry_path = outbox_dir / entry.name
+                                try:
+                                    entry_path.unlink()
+                                    removed += 1
+                                except Exception as exc:  # pragma: no cover
+                                    logger.error(
+                                        "outbox_cleanup_failed",
+                                        extra={
+                                            "event": "outbox_cleanup_failed",
+                                            "path": str(entry_path),
+                                            "error": str(exc),
+                                        },
+                                    )
+                except OSError:
+                    pass
+    except OSError:
+        pass
     return removed
 
 
