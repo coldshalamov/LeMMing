@@ -108,8 +108,9 @@ def _load_entry(entry_path: Path) -> OutboxEntry | None:
 
 def _tick_from_filename(entry_path: Path) -> int | None:
     try:
-        stem = entry_path.stem
-        tick_part = stem.split("_", 1)[0]
+        # Optimization: Use .name instead of .stem to avoid property overhead,
+        # and partition which is faster than split.
+        tick_part = entry_path.name.partition("_")[0]
         return int(tick_part)
     except Exception:
         return None
@@ -121,7 +122,8 @@ def _tick_from_filename_str(filename: str) -> int:
     Returns -1 if parsing fails so it sorts to the end.
     """
     try:
-        tick_part = filename.split("_", 1)[0]
+        # Optimization: partition is faster than split
+        tick_part = filename.partition("_")[0]
         return int(tick_part)
     except (ValueError, IndexError):
         return -1
@@ -147,6 +149,9 @@ def scan_outbox_files(
             if limit > 0:
                 # Use a generator to avoid creating the full list of files
                 candidate_files = (entry for entry in it if entry.is_file() and entry.name.endswith(".json"))
+                candidate_files = (
+                    entry for entry in it if entry.is_file() and entry.name.endswith(".json")
+                )
 
                 # nlargest returns the largest elements, so highest tick (newest).
                 # We need to include the full path in the result
@@ -195,11 +200,6 @@ def read_outbox_entries(
     # Use heapq.nlargest to avoid sorting all files when we only need the top K.
     try:
         with os.scandir(outbox_dir) as it:
-            # We filter based on since_tick roughly here to avoid heapsizing old files if possible?
-            # But the primary sort key is tick.
-            # nlargest returns the largest elements, so highest tick (newest).
-            # This matches 'reverse=True' sort order.
-
             # Helper generator to filter non-json files
             candidate_files = (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json"))
 
@@ -209,6 +209,13 @@ def read_outbox_entries(
                 candidate_files = (name for name in candidate_files if _tick_from_filename_str(name) >= since_tick)
 
             filenames = heapq.nlargest(limit, candidate_files, key=lambda name: (_tick_from_filename_str(name), name))
+                candidate_files = (
+                    name for name in candidate_files if _tick_from_filename_str(name) >= since_tick
+                )
+
+            filenames = heapq.nlargest(
+                limit, candidate_files, key=lambda name: (_tick_from_filename_str(name), name)
+            )
     except FileNotFoundError:
         return []
 
@@ -227,11 +234,6 @@ def read_outbox_entries(
 
         # Optimization: If we have collected enough entries, check if we can stop.
         if len(entries) >= limit:
-            # We have at least 'limit' entries.
-            # We maintain min_collected_tick as we go.
-            # If the current file's tick is strictly less than the minimum tick
-            # we have already accepted, then this file (and all subsequent ones)
-            # are definitely older than what we have, so we can stop.
             if tick_val is not None and min_collected_tick > tick_val:
                 break
 
@@ -286,6 +288,13 @@ def collect_readable_outboxes(
         read_outboxes = [
             d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
         ]
+        # Optimization: Use os.scandir to avoid creating Path objects
+        with os.scandir(agents_dir) as it:
+            read_outboxes = [
+                entry.name
+                for entry in it
+                if entry.is_dir() and entry.name not in {agent_name, "agent_template"}
+            ]
 
     # Optimization: Scan metadata first to avoid loading content of old messages
     candidates: list[tuple[int, str]] = []
@@ -297,24 +306,12 @@ def collect_readable_outboxes(
         candidates.extend(scan_outbox_files(base_path, other, since_tick=since_tick, limit=limit))
 
     # Sort candidates by tick descending, then by filename descending (to match read_outbox_entries sort)
-    # Filename contains UUID so it's a stable tiebreaker
-    # x[1] is the full path, os.path.basename can extract filename but string sort on full path works
-    # if agents are different? No, we should probably sort by basename to exactly match read_outbox_entries
-    # but since agents are different, paths are different.
-    # read_outbox_entries sorts by name.
-
     candidates.sort(key=lambda x: (x[0], os.path.basename(x[1])), reverse=True)
 
-    to_load = []
     if len(candidates) <= limit:
         to_load = candidates
     else:
-        # We need at least 'limit' items.
-        # Find the tick of the (limit-1)-th item (0-indexed).
         cutoff_tick = candidates[limit - 1][0]
-
-        # We must load all items with tick >= cutoff_tick to ensure we can sort by created_at correctly.
-        # Items with tick < cutoff_tick are strictly older and can be discarded.
         to_load = [c for c in candidates if c[0] >= cutoff_tick]
 
     entries: list[OutboxEntry] = []
@@ -334,38 +331,46 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
     if not agents_dir.exists():
         return 0
 
-    for agent_dir in agents_dir.iterdir():
-        if not agent_dir.is_dir():
-            continue
-        outbox_dir = get_outbox_dir(base_path, agent_dir.name)
-        if not outbox_dir.exists():
-            continue
-        try:
-            with os.scandir(outbox_dir) as it:
-                for entry in it:
-                    if not entry.is_file() or not entry.name.endswith(".json"):
-                        continue
+    # Optimization: Use os.scandir to iterate agents efficiently
+    try:
+        with os.scandir(agents_dir) as it:
+            for agent_entry in it:
+                if not agent_entry.is_dir():
+                    continue
 
-                    tick_val = _tick_from_filename_str(entry.name)
-                    if tick_val == -1:
-                        continue
+                outbox_dir = get_outbox_dir(base_path, agent_entry.name)
+                if not outbox_dir.exists():
+                    continue
 
-                    if current_tick - tick_val > max_age_ticks:
-                        entry_path = outbox_dir / entry.name
-                        try:
-                            entry_path.unlink()
-                            removed += 1
-                        except Exception as exc:  # pragma: no cover
-                            logger.error(
-                                "outbox_cleanup_failed",
-                                extra={
-                                    "event": "outbox_cleanup_failed",
-                                    "path": str(entry_path),
-                                    "error": str(exc),
-                                },
-                            )
-        except OSError:
-            pass
+                try:
+                    with os.scandir(outbox_dir) as outbox_it:
+                        for entry in outbox_it:
+                            if not entry.is_file() or not entry.name.endswith(".json"):
+                                continue
+
+                            tick_val = _tick_from_filename_str(entry.name)
+                            if tick_val == -1:
+                                continue
+
+                            if current_tick - tick_val > max_age_ticks:
+                                entry_path = outbox_dir / entry.name
+                                try:
+                                    entry_path.unlink()
+                                    removed += 1
+                                except Exception as exc:  # pragma: no cover
+                                    logger.error(
+                                        "outbox_cleanup_failed",
+                                        extra={
+                                            "event": "outbox_cleanup_failed",
+                                            "path": str(entry_path),
+                                            "error": str(exc),
+                                        },
+                                    )
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
     return removed
 
 

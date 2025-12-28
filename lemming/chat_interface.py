@@ -23,13 +23,21 @@ def send_message(content: str):
     )
 
     filename = f"msg_{int(time.time()*1000)}.json"
+    entry = OutboxEntry(
+        agent="human",
+        kind="task",  # Or 'chat'
+        payload={"content": content, "to": ["manager"]},
+        tags=["chat"],
+    )
+
+    filename = f"msg_{int(time.time() * 1000)}.json"
     with open(outbox_dir / filename, "w", encoding="utf-8") as f:
         json.dump(entry.to_dict(), f, indent=2)
 
     print("\n[Human] -> Sent to Manager")
 
 
-def get_latest_manager_reply(since_ts: float) -> Any:
+def get_latest_manager_reply(since_ts: float) -> dict | None:
     """Check manager outbox for new messages."""
     manager_outbox = get_outbox_dir(BASE_PATH, "manager")
     if not manager_outbox.exists():

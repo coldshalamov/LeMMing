@@ -42,7 +42,7 @@ def show_agent_cmd(base_path: Path, name: str) -> None:
         print(f"Agent '{name}' not found")
         return
 
-    print(f"\n{'='*60}\nAgent: {agent.name}\n{'='*60}")
+    print(f"\n{'=' * 60}\nAgent: {agent.name}\n{'=' * 60}")
     print(f"Title: {agent.title}")
     print(f"Description: {agent.short_description}")
     if agent.workflow_description:

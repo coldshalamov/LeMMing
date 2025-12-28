@@ -13,6 +13,7 @@ def validate_agent_name(name: str) -> None:
     if not re.match(r"^[a-zA-Z0-9_-]+$", name):
         raise ValueError(
             f"Agent name '{name}' is invalid. Only alphanumeric characters, " "underscores, and hyphens are allowed."
+            f"Agent name '{name}' is invalid. Only alphanumeric characters, underscores, and hyphens are allowed."
         )
 
 

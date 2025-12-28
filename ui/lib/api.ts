@@ -44,15 +44,20 @@ async function fetcher<T>(url: string): Promise<T> {
 }
 
 function toWebSocketUrl(baseHttpUrl: string): string {
-  if (baseHttpUrl.startsWith("https://")) return `wss://${baseHttpUrl.slice(8)}`;
+  if (baseHttpUrl.startsWith("https://"))
+    return `wss://${baseHttpUrl.slice(8)}`;
   if (baseHttpUrl.startsWith("http://")) return `ws://${baseHttpUrl.slice(7)}`;
   return baseHttpUrl;
 }
 
 export function useAgents() {
-  const { data, error, isLoading, mutate } = useSWR<AgentInfo[]>(AGENTS_KEY, fetcher, {
-    refreshInterval: 30_000,
-  });
+  const { data, error, isLoading, mutate } = useSWR<AgentInfo[]>(
+    AGENTS_KEY,
+    fetcher,
+    {
+      refreshInterval: 30_000,
+    },
+  );
 
   return {
     agents: data,
@@ -63,9 +68,13 @@ export function useAgents() {
 }
 
 export function useOrgGraph() {
-  const { data, error, isLoading, mutate } = useSWR<OrgGraph>(GRAPH_KEY, fetcher, {
-    refreshInterval: 60_000,
-  });
+  const { data, error, isLoading, mutate } = useSWR<OrgGraph>(
+    GRAPH_KEY,
+    fetcher,
+    {
+      refreshInterval: 60_000,
+    },
+  );
 
   return {
     graph: data,
@@ -76,9 +85,13 @@ export function useOrgGraph() {
 }
 
 export function useStatus() {
-  const { data, error, isLoading, mutate } = useSWR<OrgStatus>(STATUS_KEY, fetcher, {
-    refreshInterval: 10_000,
-  });
+  const { data, error, isLoading, mutate } = useSWR<OrgStatus>(
+    STATUS_KEY,
+    fetcher,
+    {
+      refreshInterval: 10_000,
+    },
+  );
 
   return {
     status: data,
@@ -90,9 +103,13 @@ export function useStatus() {
 
 export function useMessages(limit: number = 50) {
   const key = useMemo(() => `${MESSAGES_KEY}?limit=${limit}`, [limit]);
-  const { data, error, isLoading, mutate } = useSWR<OutboxEntry[]>(key, fetcher, {
-    refreshInterval: 15_000,
-  });
+  const { data, error, isLoading, mutate } = useSWR<OutboxEntry[]>(
+    key,
+    fetcher,
+    {
+      refreshInterval: 15_000,
+    },
+  );
 
   return {
     messages: data,
