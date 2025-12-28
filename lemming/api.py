@@ -7,24 +7,23 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
-from .agents import discover_agents, load_agent, validate_resume, validate_resume_data
-from .engine import load_tick
+from .agents import discover_agents, load_agent, validate_resume_data
+from .engine import load_tick, run_once
 from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries, write_outbox_entry
-from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
-from .paths import get_config_dir, get_logs_dir, validate_agent_name, get_agents_dir, get_resume_json_path
-from .engine import load_tick, run_once, persist_tick
 from .models import ModelRegistry
+from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
+from .paths import get_agents_dir, get_config_dir, get_logs_dir, validate_agent_name
 from .tools import ToolRegistry
 
 # Load secrets from local file if they exist
 SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent)) / "secrets.json"
 if SECRETS_PATH.exists():
     try:
-        with open(SECRETS_PATH, "r") as f:
+        with open(SECRETS_PATH) as f:
             secrets = json.load(f)
             for k, v in secrets.items():
                 if v and not os.environ.get(k):
@@ -49,6 +48,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 class ScheduleInfo(BaseModel):
@@ -117,7 +127,7 @@ class ToolInfo(BaseModel):
 async def send_message(request: SendMessageRequest) -> dict[str, str]:
     """Send a message from 'human' to a target agent."""
     tick = load_tick(BASE_PATH)
-    
+
     # Ensure human agent dir exists
     human_dir = get_agents_dir(BASE_PATH) / "human"
     if not human_dir.exists():
@@ -139,7 +149,7 @@ async def send_message(request: SendMessageRequest) -> dict[str, str]:
     # The 'target' logic in engine relies on the message content or routing.
     # But usually explicit visual routing requires 'recipient' metadata if we want strict routing.
     # For now, we follow the cli.py 'send_cmd' pattern.
-    
+
     write_outbox_entry(BASE_PATH, "human", entry)
     return {"status": "sent", "id": entry.id}
 
@@ -229,6 +239,7 @@ async def get_agent(agent_name: str) -> AgentInfo:
     _, credits = _load_agents_with_credits(BASE_PATH)
     return _build_agent_info(agent, credits)
 
+
 @app.post("/api/agents", status_code=201)
 async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     try:
@@ -242,14 +253,14 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
         # Validate that path prefix doesn't try to escape
         safe_prefix = os.path.normpath(request.path_prefix)
         if safe_prefix.startswith("..") or os.path.isabs(safe_prefix):
-             raise HTTPException(status_code=400, detail="Invalid path_prefix")
+            raise HTTPException(status_code=400, detail="Invalid path_prefix")
         target_dir = agents_dir / safe_prefix / request.name
     else:
         target_dir = agents_dir / request.name
 
     if target_dir.exists():
         raise HTTPException(status_code=409, detail=f"Agent directory '{request.name}' already exists")
-    
+
     # Create directory structure
     try:
         target_dir.mkdir(parents=True, exist_ok=False)
@@ -268,6 +279,7 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     errors = validate_resume_data(final_resume, resume_path=resume_path)
     if errors:
         import shutil
+
         shutil.rmtree(target_dir, ignore_errors=True)
         raise HTTPException(status_code=400, detail={"errors": errors})
     try:
@@ -276,10 +288,12 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     except OSError as e:
         # Cleanup on failure
         import shutil
+
         shutil.rmtree(target_dir, ignore_errors=True)
         raise HTTPException(status_code=500, detail=f"Failed to write resume.json: {e}")
 
     return {"status": "created", "path": str(target_dir.relative_to(BASE_PATH))}
+
 
 @app.post("/api/agents/clone", status_code=201)
 async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
@@ -298,7 +312,7 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
     if request.target_path_prefix:
         safe_prefix = os.path.normpath(request.target_path_prefix)
         if safe_prefix.startswith("..") or os.path.isabs(safe_prefix):
-             raise HTTPException(status_code=400, detail="Invalid target_path_prefix")
+            raise HTTPException(status_code=400, detail="Invalid target_path_prefix")
         target_dir = agents_dir / safe_prefix / request.target_name
     else:
         target_dir = agents_dir / request.target_name
@@ -308,6 +322,7 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
 
     # Copy logic
     import shutil
+
     try:
         # We only copy the directory structure and resume.json, NOT memory/logs/outbox
         target_dir.mkdir(parents=True)
@@ -315,16 +330,16 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
         (target_dir / "memory").mkdir()
         (target_dir / "logs").mkdir()
         (target_dir / "workspace").mkdir()
-        
+
         # Read source resume, update name, write to target
-        with open(source_agent.resume_path, "r", encoding="utf_8") as f:
+        with open(source_agent.resume_path, encoding="utf_8") as f:
             source_data = json.load(f)
-            
+
         source_data["name"] = request.target_name
-        
+
         with open(target_dir / "resume.json", "w", encoding="utf-8") as f:
             json.dump(source_data, f, indent=2)
-            
+
     except OSError as e:
         # Cleanup
         if target_dir.exists():
@@ -435,20 +450,17 @@ async def trigger_tick() -> dict[str, Any]:
         # 2. run_tick for that tick
         # 3. increment and persist_tick
         results = run_once(BASE_PATH)
-        
+
         # After run_once, load_tick gives us the NEXT tick.
         # So the tick we just ran is next_tick_in_file - 1.
         current_tick = load_tick(BASE_PATH)
-        
-        return {
-            "status": "success", 
-            "tick": current_tick - 1,
-            "agents_run": len(results)
-        }
+
+        return {"status": "success", "tick": current_tick - 1, "agents_run": len(results)}
     except Exception as e:
         import traceback
+
         error_detail = f"{e}\n{traceback.format_exc()}"
-        print(f"ERROR: Tick failed: {error_detail}") # Log to server console
+        print(f"ERROR: Tick failed: {error_detail}")  # Log to server console
         raise HTTPException(status_code=500, detail=f"Engine failed: {e}")
 
 
@@ -467,22 +479,22 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     current_secrets = {}
     if SECRETS_PATH.exists():
         try:
-            with open(SECRETS_PATH, "r") as f:
+            with open(SECRETS_PATH) as f:
                 current_secrets = json.load(f)
         except Exception:
             pass
-            
+
     if config.openai_api_key:
         current_secrets["OPENAI_API_KEY"] = config.openai_api_key
         os.environ["OPENAI_API_KEY"] = config.openai_api_key
-        
+
     if config.anthropic_api_key:
         current_secrets["ANTHROPIC_API_KEY"] = config.anthropic_api_key
         os.environ["ANTHROPIC_API_KEY"] = config.anthropic_api_key
-        
+
     with open(SECRETS_PATH, "w") as f:
         json.dump(current_secrets, f, indent=2)
-        
+
     return {"status": "updated"}
 
 
@@ -493,9 +505,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         while True:
             status_payload = await status()
             messages = await list_messages(limit=20)
-            await websocket.send_json(
-                {"status": status_payload, "messages": [m.model_dump() for m in messages]}
-            )
+            await websocket.send_json({"status": status_payload, "messages": [m.model_dump() for m in messages]})
             await asyncio.sleep(2.0)
     except WebSocketDisconnect:
         return

@@ -24,9 +24,9 @@ def test_create_agent_path_traversal(tmp_path):
 
     # Execute
     result = tool.execute(
-        agent_name="hr", # Must be hr to use this tool
+        agent_name="hr",  # Must be hr to use this tool
         base_path=base_path,
-        name=malicious_name
+        name=malicious_name,
     )
 
     # Check if directory was created outside agents dir
