@@ -51,3 +51,30 @@ def test_discover_skips_invalid_agents(tmp_path: Path) -> None:
 
     agents = discover_agents(tmp_path)
     assert agents == []
+
+
+def test_discover_loads_valid_and_ignores_invalid(tmp_path: Path) -> None:
+    agents_dir = tmp_path / "agents"
+
+    valid_dir = agents_dir / "valid_agent"
+    valid_dir.mkdir(parents=True)
+    resume = {
+        "name": "valid_agent",
+        "title": "Valid Agent",
+        "short_description": "A valid agent description",
+        "workflow_description": "",
+        "model": {"key": "demo"},
+        "permissions": {"read_outboxes": ["*"], "tools": []},
+        "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+        "instructions": "run",
+        "credits": {"max_credits": 10.0, "soft_cap": 5.0},
+    }
+    (valid_dir / "resume.json").write_text(json.dumps(resume), encoding="utf-8")
+
+    invalid_dir = agents_dir / "invalid"
+    invalid_dir.mkdir(parents=True)
+    (invalid_dir / "resume.json").write_text("{}", encoding="utf-8")
+
+    agents = discover_agents(tmp_path)
+
+    assert [agent.name for agent in agents] == ["valid_agent"]

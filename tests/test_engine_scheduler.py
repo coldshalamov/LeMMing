@@ -32,3 +32,18 @@ def test_should_run_handles_zero_offset(tmp_path: Path) -> None:
     agent = _dummy_agent(tmp_path, run_every=2, offset=0)
     assert should_run(agent, 2)
     assert not should_run(agent, 3)
+
+
+def test_should_run_wraps_large_offsets(tmp_path: Path) -> None:
+    agent = _dummy_agent(tmp_path, run_every=4, offset=6)
+
+    assert not should_run(agent, 1)
+    assert should_run(agent, 2)
+    assert not should_run(agent, 3)
+
+
+def test_should_run_defaults_to_always_when_missing_values(tmp_path: Path) -> None:
+    agent = _dummy_agent(tmp_path, run_every=0, offset=0)
+
+    assert should_run(agent, 1)
+    assert should_run(agent, 5)

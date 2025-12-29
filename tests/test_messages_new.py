@@ -42,3 +42,21 @@ def test_collect_with_wildcard(tmp_path: Path) -> None:
 
     entries = collect_readable_outboxes(tmp_path, "reader", ["*"])
     assert len(entries) == 2
+
+
+def test_outbox_entry_roundtrip_and_timestamp_alias() -> None:
+    entry = OutboxEntry.create(agent="alice", tick=7, kind="report", payload={"value": 1}, tags=["note"])
+
+    as_dict = entry.to_dict()
+    restored = OutboxEntry.from_dict(as_dict)
+
+    assert restored == entry
+
+    legacy_dict = dict(as_dict)
+    legacy_dict.pop("created_at")
+    legacy_dict["timestamp"] = entry.created_at
+
+    restored_from_legacy = OutboxEntry.from_dict(legacy_dict)
+
+    assert restored_from_legacy.created_at == entry.created_at
+    assert restored_from_legacy.agent == entry.agent
