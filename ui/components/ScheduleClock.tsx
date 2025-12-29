@@ -69,16 +69,28 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
                     const isHovered = hoveredPosition === pos.index;
 
                     return (
-                        <g key={pos.index}>
+                        <g
+                            key={pos.index}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Set start offset to position ${pos.index === 0 ? 12 : pos.index}`}
+                            aria-pressed={isFirst}
+                            onClick={() => onChange(pos.index)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    onChange(pos.index);
+                                }
+                            }}
+                            onMouseEnter={() => setHoveredPosition(pos.index)}
+                            className="cursor-pointer focus:outline-none group"
+                        >
                             {/* Clickable area */}
                             <circle
                                 cx={pos.x}
                                 cy={pos.y}
                                 r="15"
                                 fill="transparent"
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredPosition(pos.index)}
-                                onClick={() => onChange(pos.index)}
                             />
 
                             {/* Visual marker */}
@@ -100,6 +112,17 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
                                 style={{
                                     filter: isFirst ? "drop-shadow(0 0 8px #ef4444)" : "none",
                                 }}
+                            />
+
+                            {/* Focus Ring Indicator (Visible only on keyboard focus) */}
+                            <circle
+                                cx={pos.x}
+                                cy={pos.y}
+                                r="18"
+                                fill="none"
+                                stroke="#22d3ee"
+                                strokeWidth="2"
+                                className="opacity-0 transition-opacity group-focus:opacity-100"
                             />
 
                             {/* Position label */}
