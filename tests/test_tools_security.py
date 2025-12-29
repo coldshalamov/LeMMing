@@ -43,21 +43,64 @@ def test_create_agent_path_traversal(tmp_path):
     assert "invalid" in result.error.lower() or "security" in result.error.lower()
 
 
-def test_shell_tool_blocks_python(tmp_path):
-    """Verify that python execution is blocked."""
-    base_path = tmp_path
-    agents_dir = base_path / "agents" / "tester"
-    agents_dir.mkdir(parents=True)
-    workspace = agents_dir / "workspace"
+def test_shell_tool_prohibits_python(tmp_path):
+    """Ensure python execution is blocked by ShellTool."""
+    base_path = tmp_path / "lemming"
+    agents_dir = base_path / "agents"
+    agent_name = "tester"
+    agent_dir = agents_dir / agent_name
+    workspace = agent_dir / "workspace"
     workspace.mkdir(parents=True)
 
     tool = ShellTool()
 
-    # Python one-liner
-    cmd = "python -c \"print('hello')\""
+    # Attempt to run python
+    command = "python -c 'print(\"hello\")'"
 
-    result = tool.execute(agent_name="tester", base_path=base_path, command=cmd)
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     assert not result.success
-    assert "Security violation" in result.error
-    assert "'python' is not in the allowed executables list" in result.error
+    assert "security violation" in result.error.lower()
+    assert "python" in result.error.lower()
+
+
+def test_shell_tool_sandbox_arguments(tmp_path):
+    """Ensure ShellTool blocks traversal in arguments."""
+    base_path = tmp_path / "lemming"
+    agents_dir = base_path / "agents"
+    agent_name = "tester"
+    agent_dir = agents_dir / agent_name
+    workspace = agent_dir / "workspace"
+    workspace.mkdir(parents=True)
+
+    tool = ShellTool()
+
+    # Attempt traversal in argument
+    command = "cat ../../../secrets.json"
+
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
+
+    assert not result.success
+    assert "security violation" in result.error.lower()
+    assert "directory traversal" in result.error.lower()
+
+
+def test_shell_tool_absolute_path_argument(tmp_path):
+    """Ensure ShellTool blocks absolute paths in arguments."""
+    base_path = tmp_path / "lemming"
+    agents_dir = base_path / "agents"
+    agent_name = "tester"
+    agent_dir = agents_dir / agent_name
+    workspace = agent_dir / "workspace"
+    workspace.mkdir(parents=True)
+
+    tool = ShellTool()
+
+    # Attempt absolute path
+    command = "cat /etc/passwd"
+
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
+
+    assert not result.success
+    assert "security violation" in result.error.lower()
+    assert "absolute path" in result.error.lower()

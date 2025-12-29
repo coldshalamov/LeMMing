@@ -3,6 +3,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -17,6 +18,11 @@ def send_message(content: str):
     """Send a message from human to manager."""
     outbox_dir = get_outbox_dir(BASE_PATH, "human")
 
+    entry = OutboxEntry.create(
+        agent="human", tick=0, kind="task", payload={"content": content, "to": ["manager"]}, tags=["chat"]
+    )
+
+    filename = f"msg_{int(time.time()*1000)}.json"
     entry = OutboxEntry(
         agent="human",
         kind="task",  # Or 'chat'

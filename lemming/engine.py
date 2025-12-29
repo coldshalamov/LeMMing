@@ -327,7 +327,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         raw_output = call_llm(
             agent.model.key,
             prompt,
-            temperature=agent.model.temperature,
+            temperature=agent.model.temperature if agent.model.temperature is not None else 0.2,
             config_dir=get_config_dir(base_path),
         )
     except Exception as exc:
