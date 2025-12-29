@@ -1,6 +1,7 @@
 "use client";
 
-import { AgentInfo } from "@/lib/types";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { AgentInfo, OrgGraph } from "@/lib/types";
 import { OrgTimer } from "./OrgTimer";
 import {
   Users,

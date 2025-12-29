@@ -66,24 +66,15 @@ export function AgentCard({
     currentTick % agent.schedule.run_every_n_ticks ===
     agent.schedule.phase_offset % agent.schedule.run_every_n_ticks;
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (onSelect && (e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      onSelect();
-    }
-  };
-
   return (
-    <motion.div
+    <motion.button
       layoutId={`agent-card-${agent.name}`}
       onClick={onSelect}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={0}
+      type="button"
       aria-pressed={isSelected}
       aria-label={`Select agent ${agent.name}`}
       className={clsx(
-        "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+        "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan text-left w-full",
         isSelected
           ? "border-brand-cyan shadow-[0_0_25px_rgba(6,182,212,0.15)] bg-neo-panel z-10 scale-105"
           : "border-neo-border bg-neo-surface hover:border-white/20 hover:bg-neo-surface-highlight",
@@ -99,7 +90,7 @@ export function AgentCard({
 
       <div className="p-4 flex flex-col gap-4">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start w-full">
           <div>
             <h3
               className={clsx(
@@ -127,7 +118,7 @@ export function AgentCard({
         </div>
 
         {/* Stats Bars */}
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
           <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
             <Brain size={12} />
             <span className="w-16">INT</span>
@@ -171,13 +162,13 @@ export function AgentCard({
 
         {/* Description (Only if full or selected) */}
         {(isSelected || variant === "full") && (
-          <div className="text-xs text-gray-400 leading-relaxed border-t border-white/5 pt-3">
+          <div className="text-xs text-gray-400 leading-relaxed border-t border-white/5 pt-3 w-full">
             {agent.description}
           </div>
         )}
 
         {/* Toolbelt Chip Row */}
-        <div className="flex flex-wrap gap-1 pt-1">
+        <div className="flex flex-wrap gap-1 pt-1 w-full">
           {agent.tools.map((tool) => (
             <div
               key={tool}
@@ -191,7 +182,7 @@ export function AgentCard({
 
         {/* Credits */}
         {agent.credits && (
-          <div className="mt-2 text-[10px] font-mono text-gray-500 flex justify-between">
+          <div className="mt-2 text-[10px] font-mono text-gray-500 flex justify-between w-full">
             <span>CREDITS</span>
             <span
               className={clsx(
@@ -206,6 +197,6 @@ export function AgentCard({
           </div>
         )}
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
