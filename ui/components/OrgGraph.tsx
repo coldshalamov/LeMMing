@@ -1,9 +1,19 @@
 "use client";
 
+import { useEffect, useRef, useState, useMemo } from "react";
 import { AgentInfo, OrgGraph } from "@/lib/types";
-import { useMemo, useState, useEffect } from "react";
+import { OrgTimer } from "./OrgTimer";
 import { AgentCard } from "./AgentCard";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  Users,
+  Zap,
+  Brain,
+  Sparkles,
+  Terminal,
+  FileText,
+  Database,
+  Globe,
+} from "lucide-react";
 import clsx from "clsx";
 
 interface OrgGraphViewProps {
