@@ -20,4 +20,4 @@ services:
         fromService:
           name: lemming-backend
           type: web
-          property: url
+          property: host

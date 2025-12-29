@@ -4,7 +4,16 @@ import useSWR, { useSWRConfig } from "swr";
 import { useEffect, useMemo, useState } from "react";
 import { AgentInfo, OrgGraph, OutboxEntry, OrgStatus } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+function normalizeApiBase(base: string): string {
+  if (base.startsWith("http://") || base.startsWith("https://")) {
+    return base;
+  }
+
+  return `https://${base}`;
+}
+
+const apiBaseEnv = process.env.NEXT_PUBLIC_API_BASE;
+const API_BASE = normalizeApiBase(apiBaseEnv ?? "http://localhost:8000");
 const STATUS_KEY = `${API_BASE}/api/status`;
 const AGENTS_KEY = `${API_BASE}/api/agents`;
 const GRAPH_KEY = `${API_BASE}/api/org-graph`;
