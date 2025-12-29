@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { AgentInfo, OrgGraph } from "@/lib/types";
 import { OrgTimer } from "./OrgTimer";
+import { AgentCard } from "./AgentCard";
 import {
   Users,
   Zap,
@@ -14,199 +15,40 @@ import {
   Globe,
 } from "lucide-react";
 import clsx from "clsx";
-import { motion } from "framer-motion";
 
-interface AgentCardProps {
-  agent: AgentInfo;
+interface OrgGraphViewProps {
+  agents: AgentInfo[];
+  graph: OrgGraph;
+  selectedAgent: string | null;
+  onSelectAgent: (name: string | null) => void;
   currentTick: number;
-  isSelected?: boolean;
-  onSelect?: () => void;
-  variant?: "compact" | "full";
+  className?: string;
 }
 
-// Helper to map model/temp to stats
-function getAgentStats(model: string, temperature: number = 0.7) {
-  // INT = Reasoning Level (not maxed out by default)
-  let intelligence = 50; // Base reasoning
-  if (model.includes("gpt-4o")) intelligence = 85;
-  if (model.includes("gpt-4-turbo")) intelligence = 80;
-  if (model.includes("gpt-4") && !model.includes("turbo")) intelligence = 75;
-  if (model.includes("gpt-3.5")) intelligence = 60;
-  if (model.includes("opus")) intelligence = 90;
-  if (model.includes("sonnet")) intelligence = 75;
-  if (model.includes("haiku")) intelligence = 65;
-
-  // CRE = Creativity (Temperature scaled to 0-100)
-  // Temperature typically ranges 0-2, but 0-1 is most common
-  // Default 0.7 = 70% creativity
-  const creativity = Math.min(Math.round(temperature * 100), 100);
-
-  return { intelligence, creativity };
-}
-
-function ToolIcon({ tool }: { tool: string }) {
-  if (tool.includes("read")) return <FileText size={12} />;
-  if (tool.includes("write"))
-    return <FileText size={12} className="text-yellow-400" />;
-  if (tool.includes("web") || tool.includes("browser"))
-    return <Globe size={12} />;
-  if (tool.includes("sql") || tool.includes("data"))
-    return <Database size={12} />;
-  return <Terminal size={12} />;
-}
-
-export function AgentCard({
-  agent,
+export function OrgGraphView({
+  agents,
+  graph,
+  selectedAgent,
+  onSelectAgent,
   currentTick,
-  isSelected,
-  onSelect,
-  variant = "compact",
-}: AgentCardProps) {
-  const { intelligence, creativity } = getAgentStats(agent.model);
-  const isFiring =
-    currentTick % agent.schedule.run_every_n_ticks ===
-    agent.schedule.phase_offset % agent.schedule.run_every_n_ticks;
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (onSelect && (e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      onSelect();
-    }
-  };
-
+  className,
+}: OrgGraphViewProps) {
+  // Simple grid layout for now as placeholder
   return (
-    <motion.div
-      layoutId={`agent-card-${agent.name}`}
-      onClick={onSelect}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={0}
-      aria-pressed={isSelected}
-      aria-label={`Select agent ${agent.name}`}
-      className={clsx(
-        "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
-        isSelected
-          ? "border-brand-cyan shadow-[0_0_25px_rgba(6,182,212,0.15)] bg-neo-panel z-10 scale-105"
-          : "border-neo-border bg-neo-surface hover:border-white/20 hover:bg-neo-surface-highlight",
-      )}
-      style={{
-        backdropFilter: "blur(20px)",
-      }}
-    >
-      {/* Active Status Stripe */}
-      {isFiring && (
-        <div className="absolute top-0 left-0 w-full h-1 bg-brand-lime shadow-[0_0_15px_#84cc16]" />
-      )}
-
-      <div className="p-4 flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h3
-              className={clsx(
-                "font-bold font-mono tracking-tight",
-                isSelected ? "text-white text-lg" : "text-gray-200",
-              )}
-            >
-              {agent.name}
-            </h3>
-            <div className="text-xs text-brand-cyan font-mono uppercase tracking-widest opacity-80 mt-1">
-              {agent.title}
-            </div>
+    <div className={clsx("p-8 overflow-auto", className)}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto pt-24">
+        {agents.map((agent) => (
+          <div key={agent.name} className="relative">
+            <AgentCard
+              agent={agent}
+              currentTick={currentTick}
+              isSelected={selectedAgent === agent.name}
+              onSelect={() => onSelectAgent(agent.name === selectedAgent ? null : agent.name)}
+              variant="compact"
+            />
           </div>
-
-          <OrgTimer
-            n={agent.schedule.run_every_n_ticks}
-            offset={agent.schedule.phase_offset}
-            currentTick={currentTick}
-            size={isSelected ? 48 : 32}
-            className={clsx(
-              "transition-transform",
-              isFiring ? "scale-110" : "scale-100",
-            )}
-          />
-        </div>
-
-        {/* Stats Bars */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
-            <Brain size={12} />
-            <span className="w-16">INT</span>
-            <div
-              className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-label="Intelligence"
-              aria-valuenow={intelligence}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${intelligence}%` }}
-                className="h-full bg-brand-purple"
-              />
-            </div>
-            <span className="w-6 text-right text-gray-400">{intelligence}</span>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
-            <Sparkles size={12} />
-            <span className="w-16">CRE</span>
-            <div
-              className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-label="Creativity"
-              aria-valuenow={creativity}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${creativity}%` }}
-                className="h-full bg-brand-cyan"
-              />
-            </div>
-            <span className="w-6 text-right text-gray-400">{creativity}</span>
-          </div>
-        </div>
-
-        {/* Description (Only if full or selected) */}
-        {(isSelected || variant === "full") && (
-          <div className="text-xs text-gray-400 leading-relaxed border-t border-white/5 pt-3">
-            {agent.description}
-          </div>
-        )}
-
-        {/* Toolbelt Chip Row */}
-        <div className="flex flex-wrap gap-1 pt-1">
-          {agent.tools.map((tool) => (
-            <div
-              key={tool}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-[10px] text-gray-400"
-            >
-              <ToolIcon tool={tool} />
-              {tool}
-            </div>
-          ))}
-        </div>
-
-        {/* Credits */}
-        {agent.credits && (
-          <div className="mt-2 text-[10px] font-mono text-gray-500 flex justify-between">
-            <span>CREDITS</span>
-            <span
-              className={clsx(
-                agent.credits.credits_left !== undefined &&
-                  agent.credits.credits_left < 100
-                  ? "text-red-500"
-                  : "text-brand-lime",
-              )}
-            >
-              {agent.credits.credits_left?.toFixed(1)} / {agent.credits.max_credits}
-            </span>
-          </div>
-        )}
+        ))}
       </div>
-    </motion.div>
+    </div>
   );
 }

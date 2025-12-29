@@ -81,6 +81,7 @@ export default function Dashboard() {
             graph={graph}
             selectedAgent={selectedAgentName}
             onSelectAgent={setSelectedAgentName}
+            currentTick={visualTick}
             className="w-full h-full border-none rounded-none bg-neo-bg"
           />
         )}
