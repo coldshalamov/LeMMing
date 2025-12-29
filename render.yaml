@@ -3,7 +3,7 @@ services:
     name: lemming-backend
     env: docker
     dockerfilePath: ./Dockerfile
-    startCommand: bash start_render.sh
+    dockerCommand: bash start_render.sh
     envVars:
       - key: OPENAI_API_KEY
         sync: false
