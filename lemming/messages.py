@@ -201,14 +201,13 @@ def read_outbox_entries(
     try:
         with os.scandir(outbox_dir) as it:
             # Helper generator to filter non-json files
-            candidate_files = (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json"))
+            candidate_files = (
+                entry.name for entry in it if entry.is_file() and entry.name.endswith(".json")
+            )
 
             # If since_tick is provided, we can pre-filter files that are definitely too old
             # IF the filename tick parsing is reliable. It is.
             if since_tick is not None:
-                candidate_files = (name for name in candidate_files if _tick_from_filename_str(name) >= since_tick)
-
-            filenames = heapq.nlargest(limit, candidate_files, key=lambda name: (_tick_from_filename_str(name), name))
                 candidate_files = (
                     name for name in candidate_files if _tick_from_filename_str(name) >= since_tick
                 )
