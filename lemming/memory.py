@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -89,7 +90,17 @@ def list_memories(base_path: Path, agent_name: str) -> list[str]:
     if not memory_dir.exists():
         return []
 
-    return [f.stem for f in memory_dir.glob("*.json")]
+    results = []
+    try:
+        with os.scandir(memory_dir) as it:
+            for entry in it:
+                if entry.is_file() and entry.name.endswith(".json"):
+                    # Optimization: slicing is faster than splitting or Path.stem
+                    results.append(entry.name[:-5])
+    except FileNotFoundError:
+        return []
+
+    return results
 
 
 def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
@@ -321,43 +332,47 @@ def archive_old_memories(
     cutoff_time = datetime.now(UTC) - timedelta(days=days_old)
     archived_count = 0
 
-    for memory_file in memory_dir.glob("*.json"):
-        if memory_file.parent == archive_dir:
-            continue
+    try:
+        with os.scandir(memory_dir) as it:
+            for entry in it:
+                if not entry.is_file() or not entry.name.endswith(".json"):
+                    continue
 
-        try:
-            with memory_file.open("r", encoding="utf-8") as f:
-                entry = json.load(f)
+                try:
+                    with open(entry.path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
 
-            timestamp_str = entry.get("timestamp")
-            if not timestamp_str:
-                continue
+                    timestamp_str = data.get("timestamp")
+                    if not timestamp_str:
+                        continue
 
-            timestamp = datetime.fromisoformat(timestamp_str)
-            if timestamp < cutoff_time:
-                # Move to archive
-                archive_path = archive_dir / memory_file.name
-                shutil.move(str(memory_file), str(archive_path))
-                archived_count += 1
-                logger.info(
-                    "memory_archived",
-                    extra={
-                        "event": "memory_archived",
-                        "agent": agent_name,
-                        "key": memory_file.stem,
-                    },
-                )
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                    if timestamp < cutoff_time:
+                        # Move to archive
+                        archive_path = archive_dir / entry.name
+                        shutil.move(entry.path, str(archive_path))
+                        archived_count += 1
+                        logger.info(
+                            "memory_archived",
+                            extra={
+                                "event": "memory_archived",
+                                "agent": agent_name,
+                                "key": entry.name[:-5],
+                            },
+                        )
 
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning(
-                "memory_archive_failed",
-                extra={
-                    "event": "memory_archive_failed",
-                    "agent": agent_name,
-                    "key": memory_file.stem,
-                    "error": str(exc),
-                },
-            )
+                except Exception as exc:  # pragma: no cover - defensive
+                    logger.warning(
+                        "memory_archive_failed",
+                        extra={
+                            "event": "memory_archive_failed",
+                            "agent": agent_name,
+                            "key": entry.name[:-5],
+                            "error": str(exc),
+                        },
+                    )
+    except FileNotFoundError:
+        pass
 
     return archived_count
 
