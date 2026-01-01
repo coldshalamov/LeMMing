@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -89,7 +90,16 @@ def list_memories(base_path: Path, agent_name: str) -> list[str]:
     if not memory_dir.exists():
         return []
 
-    return [f.stem for f in memory_dir.glob("*.json")]
+    # Optimization: Use os.scandir to avoid creating Path objects
+    try:
+        with os.scandir(memory_dir) as it:
+            return [
+                entry.name[:-5]  # Faster than partition or split for known suffix
+                for entry in it
+                if entry.is_file() and entry.name.endswith(".json")
+            ]
+    except FileNotFoundError:
+        return []
 
 
 def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
