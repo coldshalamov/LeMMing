@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,6 +34,10 @@ if SECRETS_PATH.exists():
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
 MAX_LIMIT = 1000
+
+logger = logging.getLogger("lemming.api")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.1")
 
@@ -269,7 +274,8 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
         (target_dir / "logs").mkdir()
         (target_dir / "workspace").mkdir()
     except OSError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create directories: {e}")
+        logger.error(f"Failed to create directories for agent '{request.name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create agent directories")
 
     # Construct resume.json
     final_resume = request.resume.copy()
@@ -290,7 +296,8 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
         import shutil
 
         shutil.rmtree(target_dir, ignore_errors=True)
-        raise HTTPException(status_code=500, detail=f"Failed to write resume.json: {e}")
+        logger.error(f"Failed to write resume.json for agent '{request.name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to write resume.json")
 
     return {"status": "created", "path": str(target_dir.relative_to(BASE_PATH))}
 
@@ -344,7 +351,8 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
         # Cleanup
         if target_dir.exists():
             shutil.rmtree(target_dir, ignore_errors=True)
-        raise HTTPException(status_code=500, detail=f"Failed to clone agent: {e}")
+        logger.error(f"Failed to clone agent '{request.target_name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to clone agent")
 
     return {"status": "cloned", "path": str(target_dir.relative_to(BASE_PATH))}
 
@@ -459,9 +467,8 @@ async def trigger_tick() -> dict[str, Any]:
     except Exception as e:
         import traceback
 
-        error_detail = f"{e}\n{traceback.format_exc()}"
-        print(f"ERROR: Tick failed: {error_detail}")  # Log to server console
-        raise HTTPException(status_code=500, detail=f"Engine failed: {e}")
+        logger.error(f"Tick failed: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Engine tick failed")
 
 
 @app.get("/api/engine/config", response_model=EngineConfig)
