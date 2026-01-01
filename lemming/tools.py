@@ -199,15 +199,20 @@ class ShellTool(Tool):
         for i, arg in enumerate(args):
             # Check for directory traversal in any argument
             if ".." in arg:
-                # Naive check for traversal: ".." segment or start/end with ".."
-                # We want to allow "loading..." but block "../secret"
-                # Standard traversal patterns:
-                if arg == ".." or arg.startswith("../") or arg.endswith("/..") or "/../" in arg:
+                # Parse as potential option=value
+                parts = arg.split("=", 1)
+                value = parts[-1]  # Check value part (or whole arg if no =)
+
+                # Check for traversal in the value
+                if value == ".." or value.startswith("../") or value.endswith("/..") or "/../" in value:
                     return ToolResult(False, "", f"Security violation: directory traversal '{arg}' not allowed")
 
             # Block absolute paths in arguments (allow only for the command itself at index 0)
-            if i > 0 and Path(arg).is_absolute():
-                return ToolResult(False, "", f"Security violation: absolute path argument '{arg}' not allowed")
+            if i > 0:
+                parts = arg.split("=", 1)
+                value = parts[-1]
+                if Path(value).is_absolute():
+                    return ToolResult(False, "", f"Security violation: absolute path argument '{arg}' not allowed")
 
         workspace = (base_path / "agents" / agent_name / "workspace").resolve()
         workspace.mkdir(parents=True, exist_ok=True)
