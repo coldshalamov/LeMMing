@@ -148,17 +148,26 @@ def scan_outbox_files(
         with os.scandir(outbox_dir) as it:
             if limit > 0:
                 # Use a generator to avoid creating the full list of files
-                candidate_files = (entry for entry in it if entry.is_file() and entry.name.endswith(".json"))
+                # Optimization: Filter by .json and ensure start with digit (valid tick)
+                # This avoids processing garbage files like 'temp.json' which would sort
+                # incorrectly in string comparison.
                 candidate_files = (
-                    entry for entry in it if entry.is_file() and entry.name.endswith(".json")
+                    entry
+                    for entry in it
+                    if entry.is_file()
+                    and entry.name.endswith(".json")
+                    and entry.name[0].isdigit()
                 )
 
                 # nlargest returns the largest elements, so highest tick (newest).
                 # We need to include the full path in the result
+                # Optimization: Use string comparison (via entry.name) instead of int parsing.
+                # Since ticks are zero-padded (08d) and filenames start with tick,
+                # string sort is equivalent to tick sort for valid files.
                 largest_entries = heapq.nlargest(
                     limit,
                     candidate_files,
-                    key=lambda e: (_tick_from_filename_str(e.name), e.name),
+                    key=lambda e: e.name,
                 )
 
                 for entry in largest_entries:
@@ -212,9 +221,7 @@ def read_outbox_entries(
                     name for name in candidate_files if _tick_from_filename_str(name) >= since_tick
                 )
 
-            filenames = heapq.nlargest(
-                limit, candidate_files, key=lambda name: (_tick_from_filename_str(name), name)
-            )
+            filenames = heapq.nlargest(limit, candidate_files, key=None)
     except FileNotFoundError:
         return []
 

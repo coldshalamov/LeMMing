@@ -121,9 +121,9 @@ export default function WizardPage() {
 
       // Success! Redirect to dashboard
       window.location.href = "/";
-    } catch (e: any) {
-      // eslint-disable-line @typescript-eslint/no-explicit-any
-      setError(e?.message ?? "Failed to deploy agent.");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to deploy agent.";
+      setError(message);
       setIsDeploying(false);
     }
   };
@@ -141,7 +141,7 @@ export default function WizardPage() {
         credits_left: formData.credits.max_credits,
         max_credits: formData.credits.max_credits,
         soft_cap: formData.credits.soft_cap,
-      } as any,
+      },
     }),
     [formData],
   );
@@ -270,6 +270,7 @@ export default function WizardPage() {
                           DESCRIPTION
                         </label>
                         <span
+                          id="agent-desc-count"
                           className={clsx(
                             "text-[10px] font-mono",
                             formData.short_description.length > 200
@@ -283,6 +284,7 @@ export default function WizardPage() {
                       <textarea
                         id="agent-desc"
                         required
+                        aria-describedby="agent-desc-count"
                         value={formData.short_description}
                         onChange={(e) =>
                           setFormData({

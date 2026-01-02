@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,14 +10,20 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import discover_agents, load_agent, validate_resume_data
 from .engine import load_tick, run_once
 from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries, write_outbox_entry
 from .models import ModelRegistry
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
-from .paths import get_agents_dir, get_config_dir, get_logs_dir, validate_agent_name
+from .paths import (
+    get_agents_dir,
+    get_config_dir,
+    get_logs_dir,
+    validate_agent_name,
+    validate_path_prefix,
+)
 from .tools import ToolRegistry
 
 # Load secrets from local file if they exist
@@ -33,6 +40,10 @@ if SECRETS_PATH.exists():
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
 MAX_LIMIT = 1000
+
+logger = logging.getLogger("lemming.api")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.1")
 
@@ -86,15 +97,32 @@ class AgentInfo(BaseModel):
 
 
 class CreateAgentRequest(BaseModel):
-    name: str  # The slug/folder name
+    name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")  # The slug/folder name
     resume: dict[str, Any]  # The full resume JSON content
-    path_prefix: str | None = None  # Optional subfolder (e.g. "engineering/backend")
+    path_prefix: str | None = Field(
+        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
+    )  # Optional subfolder (e.g. "engineering/backend")
+
+    @field_validator("resume")
+    @classmethod
+    def check_resume_size(cls, v: dict[str, Any]) -> dict[str, Any]:
+        """Limit the complexity of the resume JSON."""
+        # Simple check: serialize and check string length
+        try:
+            content = json.dumps(v)
+            if len(content) > 50_000:  # 50KB limit
+                raise ValueError("Resume JSON is too large (max 50KB)")
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid resume JSON: {e}")
+        return v
 
 
 class CloneAgentRequest(BaseModel):
     source_agent: str
-    target_name: str
-    target_path_prefix: str | None = None
+    target_name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
+    target_path_prefix: str | None = Field(
+        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
+    )
 
 
 class OutboxEntryModel(BaseModel):
@@ -113,9 +141,9 @@ class LogEntry(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    target: str
-    text: str
-    importance: str = "normal"
+    target: str = Field(..., max_length=50)
+    text: str = Field(..., max_length=20000)  # ~20KB limit for messages
+    importance: str = Field("normal", pattern="^(normal|high|critical)$")
 
 
 class ToolInfo(BaseModel):
@@ -250,11 +278,11 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     # Determine target directory
     agents_dir = get_agents_dir(BASE_PATH)
     if request.path_prefix:
-        # Validate that path prefix doesn't try to escape
-        safe_prefix = os.path.normpath(request.path_prefix)
-        if safe_prefix.startswith("..") or os.path.isabs(safe_prefix):
-            raise HTTPException(status_code=400, detail="Invalid path_prefix")
-        target_dir = agents_dir / safe_prefix / request.name
+        try:
+            validate_path_prefix(request.path_prefix)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        target_dir = agents_dir / request.path_prefix / request.name
     else:
         target_dir = agents_dir / request.name
 
@@ -269,7 +297,8 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
         (target_dir / "logs").mkdir()
         (target_dir / "workspace").mkdir()
     except OSError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create directories: {e}")
+        logger.error(f"Failed to create directories for agent '{request.name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create agent directories")
 
     # Construct resume.json
     final_resume = request.resume.copy()
@@ -290,7 +319,8 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
         import shutil
 
         shutil.rmtree(target_dir, ignore_errors=True)
-        raise HTTPException(status_code=500, detail=f"Failed to write resume.json: {e}")
+        logger.error(f"Failed to write resume.json for agent '{request.name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to write resume.json")
 
     return {"status": "created", "path": str(target_dir.relative_to(BASE_PATH))}
 
@@ -310,10 +340,11 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
 
     agents_dir = get_agents_dir(BASE_PATH)
     if request.target_path_prefix:
-        safe_prefix = os.path.normpath(request.target_path_prefix)
-        if safe_prefix.startswith("..") or os.path.isabs(safe_prefix):
-            raise HTTPException(status_code=400, detail="Invalid target_path_prefix")
-        target_dir = agents_dir / safe_prefix / request.target_name
+        try:
+            validate_path_prefix(request.target_path_prefix)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        target_dir = agents_dir / request.target_path_prefix / request.target_name
     else:
         target_dir = agents_dir / request.target_name
 
@@ -344,7 +375,8 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
         # Cleanup
         if target_dir.exists():
             shutil.rmtree(target_dir, ignore_errors=True)
-        raise HTTPException(status_code=500, detail=f"Failed to clone agent: {e}")
+        logger.error(f"Failed to clone agent '{request.target_name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to clone agent")
 
     return {"status": "cloned", "path": str(target_dir.relative_to(BASE_PATH))}
 
@@ -459,9 +491,8 @@ async def trigger_tick() -> dict[str, Any]:
     except Exception as e:
         import traceback
 
-        error_detail = f"{e}\n{traceback.format_exc()}"
-        print(f"ERROR: Tick failed: {error_detail}")  # Log to server console
-        raise HTTPException(status_code=500, detail=f"Engine failed: {e}")
+        logger.error(f"Tick failed: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Engine tick failed")
 
 
 @app.get("/api/engine/config", response_model=EngineConfig)

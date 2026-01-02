@@ -143,6 +143,7 @@ export default function Dashboard() {
                 onClick={() => setShowSettings(true)}
                 className="p-2 bg-black/40 hover:bg-white/5 text-gray-400 hover:text-white rounded-lg border border-white/5 transition-all"
                 title="Global Settings"
+                aria-label="Global Settings"
               >
                 <Settings size={20} />
               </button>
@@ -189,6 +190,7 @@ export default function Dashboard() {
                   onClick={() => setSelectedAgentName(null)}
                   className="text-white/20 hover:text-white transition-colors"
                   title="Close"
+                  aria-label="Close agent details"
                 >
                   <Plus size={20} className="rotate-45" />
                 </button>
@@ -279,6 +281,7 @@ export default function Dashboard() {
                 : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)]",
             )}
             title="Run one tick"
+            aria-label="Run one tick"
           >
             {isTicking ? (
               <Loader2 size={24} className="animate-spin" />
