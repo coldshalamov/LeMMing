@@ -210,8 +210,13 @@ def read_outbox_entries(
     try:
         with os.scandir(outbox_dir) as it:
             # Helper generator to filter non-json files
+            # Optimization: Filter by .json AND ensure start with digit (valid tick).
+            # This is critical because string sorting places "resume.json" > "0000123_...json",
+            # so without this check, nlargest returns garbage files instead of latest messages.
             candidate_files = (
-                entry.name for entry in it if entry.is_file() and entry.name.endswith(".json")
+                entry.name
+                for entry in it
+                if entry.is_file() and entry.name.endswith(".json") and entry.name[0].isdigit()
             )
 
             # If since_tick is provided, we can pre-filter files that are definitely too old
@@ -228,21 +233,24 @@ def read_outbox_entries(
     min_collected_tick = float("inf")
 
     for name in filenames:
-        entry_path = outbox_dir / name
-        tick_val = _tick_from_filename(entry_path)
+        # Optimization: Parse tick from string name before creating Path object
+        tick_val = _tick_from_filename_str(name)
+        if tick_val == -1:
+            # Should be caught by isdigit() filter, but defensive
+            continue
 
         # If we encounter a file with a tick older than since_tick, we can stop
         # because subsequent files (sorted by tick desc) will have even smaller ticks.
-        # We only break if tick_val is valid (not None).
         if since_tick is not None:
-            if tick_val is not None and tick_val < since_tick:
+            if tick_val < since_tick:
                 break
 
         # Optimization: If we have collected enough entries, check if we can stop.
         if len(entries) >= limit:
-            if tick_val is not None and min_collected_tick > tick_val:
+            if min_collected_tick > tick_val:
                 break
 
+        entry_path = outbox_dir / name
         entry = _load_entry(entry_path)
         if entry is None:
             continue
