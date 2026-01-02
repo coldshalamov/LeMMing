@@ -90,17 +90,16 @@ def list_memories(base_path: Path, agent_name: str) -> list[str]:
     if not memory_dir.exists():
         return []
 
-    results = []
+    # Optimization: Use os.scandir to avoid creating Path objects
     try:
         with os.scandir(memory_dir) as it:
-            for entry in it:
-                if entry.is_file() and entry.name.endswith(".json"):
-                    # Optimization: slicing is faster than splitting or Path.stem
-                    results.append(entry.name[:-5])
+            return [
+                entry.name[:-5]  # Faster than partition or split for known suffix
+                for entry in it
+                if entry.is_file() and entry.name.endswith(".json")
+            ]
     except FileNotFoundError:
         return []
-
-    return results
 
 
 def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
