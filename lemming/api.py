@@ -17,7 +17,13 @@ from .engine import load_tick, run_once
 from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries, write_outbox_entry
 from .models import ModelRegistry
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
-from .paths import get_agents_dir, get_config_dir, get_logs_dir, validate_agent_name
+from .paths import (
+    get_agents_dir,
+    get_config_dir,
+    get_logs_dir,
+    validate_agent_name,
+    validate_path_prefix,
+)
 from .tools import ToolRegistry
 
 # Load secrets from local file if they exist
@@ -255,11 +261,11 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     # Determine target directory
     agents_dir = get_agents_dir(BASE_PATH)
     if request.path_prefix:
-        # Validate that path prefix doesn't try to escape
-        safe_prefix = os.path.normpath(request.path_prefix)
-        if safe_prefix.startswith("..") or os.path.isabs(safe_prefix):
-            raise HTTPException(status_code=400, detail="Invalid path_prefix")
-        target_dir = agents_dir / safe_prefix / request.name
+        try:
+            validate_path_prefix(request.path_prefix)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        target_dir = agents_dir / request.path_prefix / request.name
     else:
         target_dir = agents_dir / request.name
 
@@ -317,10 +323,11 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
 
     agents_dir = get_agents_dir(BASE_PATH)
     if request.target_path_prefix:
-        safe_prefix = os.path.normpath(request.target_path_prefix)
-        if safe_prefix.startswith("..") or os.path.isabs(safe_prefix):
-            raise HTTPException(status_code=400, detail="Invalid target_path_prefix")
-        target_dir = agents_dir / safe_prefix / request.target_name
+        try:
+            validate_path_prefix(request.target_path_prefix)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        target_dir = agents_dir / request.target_path_prefix / request.target_name
     else:
         target_dir = agents_dir / request.target_name
 
