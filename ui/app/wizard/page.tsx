@@ -121,8 +121,7 @@ export default function WizardPage() {
 
       // Success! Redirect to dashboard
       window.location.href = "/";
-    } catch (e: any) {
-      // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       setError(e?.message ?? "Failed to deploy agent.");
       setIsDeploying(false);
     }
@@ -141,7 +140,7 @@ export default function WizardPage() {
         credits_left: formData.credits.max_credits,
         max_credits: formData.credits.max_credits,
         soft_cap: formData.credits.soft_cap,
-      } as any,
+      } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     }),
     [formData],
   );
