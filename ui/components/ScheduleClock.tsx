@@ -46,78 +46,107 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
 
     return (
         <div className="flex flex-col items-center gap-4">
-            <svg
-                width="200"
-                height="200"
-                className="cursor-pointer"
-                onMouseLeave={() => setHoveredPosition(null)}
+            <div
+                role="radiogroup"
+                aria-label="Select start phase offset"
+                className="relative"
             >
-                {/* Clock circle */}
-                <circle
-                    cx="100"
-                    cy="100"
-                    r="90"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.1)"
-                    strokeWidth="2"
-                />
+                <svg
+                    width="200"
+                    height="200"
+                    className="cursor-pointer"
+                    onMouseLeave={() => setHoveredPosition(null)}
+                >
+                    {/* Clock circle */}
+                    <circle
+                        cx="100"
+                        cy="100"
+                        r="90"
+                        fill="none"
+                        stroke="rgba(255,255,255,0.1)"
+                        strokeWidth="2"
+                    />
 
-                {/* Hour markers */}
-                {positions.map((pos) => {
-                    const isActivation = activationPoints.includes(pos.index);
-                    const isFirst = pos.index === offset;
-                    const isHovered = hoveredPosition === pos.index;
+                    {/* Hour markers */}
+                    {positions.map((pos) => {
+                        const isActivation = activationPoints.includes(pos.index);
+                        const isFirst = pos.index === offset;
+                        const isHovered = hoveredPosition === pos.index;
 
-                    return (
-                        <g key={pos.index}>
-                            {/* Clickable area */}
-                            <circle
-                                cx={pos.x}
-                                cy={pos.y}
-                                r="15"
-                                fill="transparent"
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredPosition(pos.index)}
+                        return (
+                            <g
+                                key={pos.index}
+                                role="radio"
+                                aria-checked={isFirst}
+                                aria-label={`Start at tick ${pos.index}`}
+                                tabIndex={0}
                                 onClick={() => onChange(pos.index)}
-                            />
-
-                            {/* Visual marker */}
-                            <circle
-                                cx={pos.x}
-                                cy={pos.y}
-                                r={isFirst ? 8 : isActivation ? 6 : 3}
-                                fill={
-                                    isFirst
-                                        ? "#ef4444" // Red for first activation
-                                        : isActivation
-                                            ? "#9ca3af" // Grey for subsequent
-                                            : "rgba(255,255,255,0.2)" // Dim for inactive
-                                }
-                                className={clsx(
-                                    "transition-all",
-                                    isHovered && "opacity-80 scale-110"
-                                )}
-                                style={{
-                                    filter: isFirst ? "drop-shadow(0 0 8px #ef4444)" : "none",
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        onChange(pos.index);
+                                    }
                                 }}
-                            />
-
-                            {/* Position label */}
-                            <text
-                                x={pos.x}
-                                y={pos.y + 25}
-                                textAnchor="middle"
-                                className="text-[10px] font-mono fill-white/30"
+                                onMouseEnter={() => setHoveredPosition(pos.index)}
+                                className="group focus:outline-none cursor-pointer"
                             >
-                                {pos.index === 0 ? "12" : pos.index}
-                            </text>
-                        </g>
-                    );
-                })}
+                                {/* Clickable area (invisible but larger target) */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r="15"
+                                    fill="transparent"
+                                />
 
-                {/* Center dot */}
-                <circle cx="100" cy="100" r="3" fill="rgba(255,255,255,0.3)" />
-            </svg>
+                                {/* Focus indicator ring */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r="18"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className="text-brand-cyan opacity-0 group-focus:opacity-100 transition-opacity"
+                                />
+
+                                {/* Visual marker */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r={isFirst ? 8 : isActivation ? 6 : 3}
+                                    fill={
+                                        isFirst
+                                            ? "#ef4444" // Red for first activation
+                                            : isActivation
+                                                ? "#9ca3af" // Grey for subsequent
+                                                : "rgba(255,255,255,0.2)" // Dim for inactive
+                                    }
+                                    className={clsx(
+                                        "transition-all",
+                                        isHovered && "opacity-80 scale-110"
+                                    )}
+                                    style={{
+                                        filter: isFirst ? "drop-shadow(0 0 8px #ef4444)" : "none",
+                                    }}
+                                />
+
+                                {/* Position label */}
+                                <text
+                                    x={pos.x}
+                                    y={pos.y + 25}
+                                    textAnchor="middle"
+                                    className="text-[10px] font-mono fill-white/30 pointer-events-none"
+                                >
+                                    {pos.index === 0 ? "12" : pos.index}
+                                </text>
+                            </g>
+                        );
+                    })}
+
+                    {/* Center dot */}
+                    <circle cx="100" cy="100" r="3" fill="rgba(255,255,255,0.3)" />
+                </svg>
+            </div>
 
             <div className="text-xs font-mono text-gray-400 text-center">
                 <div>
