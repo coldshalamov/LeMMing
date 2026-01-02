@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import discover_agents, load_agent, validate_resume_data
 from .engine import load_tick, run_once
@@ -97,15 +97,32 @@ class AgentInfo(BaseModel):
 
 
 class CreateAgentRequest(BaseModel):
-    name: str  # The slug/folder name
+    name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")  # The slug/folder name
     resume: dict[str, Any]  # The full resume JSON content
-    path_prefix: str | None = None  # Optional subfolder (e.g. "engineering/backend")
+    path_prefix: str | None = Field(
+        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
+    )  # Optional subfolder (e.g. "engineering/backend")
+
+    @field_validator("resume")
+    @classmethod
+    def check_resume_size(cls, v: dict[str, Any]) -> dict[str, Any]:
+        """Limit the complexity of the resume JSON."""
+        # Simple check: serialize and check string length
+        try:
+            content = json.dumps(v)
+            if len(content) > 50_000:  # 50KB limit
+                raise ValueError("Resume JSON is too large (max 50KB)")
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid resume JSON: {e}")
+        return v
 
 
 class CloneAgentRequest(BaseModel):
     source_agent: str
-    target_name: str
-    target_path_prefix: str | None = None
+    target_name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
+    target_path_prefix: str | None = Field(
+        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
+    )
 
 
 class OutboxEntryModel(BaseModel):
@@ -124,9 +141,9 @@ class LogEntry(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    target: str
-    text: str
-    importance: str = "normal"
+    target: str = Field(..., max_length=50)
+    text: str = Field(..., max_length=20000)  # ~20KB limit for messages
+    importance: str = Field("normal", pattern="^(normal|high|critical)$")
 
 
 class ToolInfo(BaseModel):
