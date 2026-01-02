@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 import clsx from "clsx";
 
 interface OrgTimerProps {
@@ -40,13 +39,23 @@ export function OrgTimer({
   const radius = size / 2 - 4; // padding
   const circumference = 2 * Math.PI * radius;
 
+  // Accessibility label
+  const a11yLabel = `Schedule timer: Runs every ${cycle} ticks, offset ${normalizedOffset}. Current cycle position: ${tickInCycle} of ${cycle}.`;
+
   return (
     <div
       className={clsx("relative flex items-center justify-center", className)}
       style={{ width: size, height: size }}
+      role="img"
+      aria-label={a11yLabel}
     >
       {/* Background Track */}
-      <svg width={size} height={size} className="transform -rotate-90">
+      <svg
+        width={size}
+        height={size}
+        className="transform -rotate-90"
+        aria-hidden="true"
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -58,9 +67,6 @@ export function OrgTimer({
         />
 
         {/* The Current Time Arc (Red/Accented) */}
-        {/* We want an arc that fills up to the current angle? Or a sweeper? */}
-        {/* Let's do a sweeper line or a filled sector. A filled sector is cooler. */}
-        {/* Or just a progress ring showing how far we are into the cycle? */}
         <motion.circle
           cx={size / 2}
           cy={size / 2}
@@ -90,15 +96,10 @@ export function OrgTimer({
           top: size / 2 - 4, // center - half height
           left: size / 2 - 4, // center - half width
           transform: `rotate(${targetAngle - 90}deg) translate(${radius}px) rotate(${90 - targetAngle}deg)`, // Move to rim (start at top)
-          // Note: Rotate frame to angle (starting from -90deg/Top), translate out, then un-rotate dot to keep it upright.
         }}
+        aria-hidden="true"
       />
 
-      {/* Dot positioning logic:
-          angle 0 is TOP.
-          x = cx + r * sin(a)
-          y = cy - r * cos(a)
-      */}
       <div
         className={clsx(
           "absolute w-2.5 h-2.5 rounded-full border border-black z-20 transition-all duration-300",
@@ -110,10 +111,14 @@ export function OrgTimer({
           left: size / 2 + radius * Math.sin((targetAngle * Math.PI) / 180) - 5,
           top: size / 2 - radius * Math.cos((targetAngle * Math.PI) / 180) - 5,
         }}
+        aria-hidden="true"
       />
 
       {/* Tick Number Center Text */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+        aria-hidden="true"
+      >
         <span className="text-[10px] text-white/40 font-mono tracking-tighter">
           T-{cycle}
         </span>
