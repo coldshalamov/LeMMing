@@ -115,6 +115,7 @@ def _is_path_allowed(base_path: Path, agent_name: str, path: Path, mode: str) ->
 class FileReadTool(Tool):
     name = "file_read"
     description = "Read files from the agent workspace or shared directory."
+    MAX_READ_SIZE = 50 * 1024  # 50KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_arg = kwargs.get("path")
@@ -125,7 +126,15 @@ class FileReadTool(Tool):
             return ToolResult(False, "", f"Access denied: read permission denied for {path_arg}")
         if not target.exists() or not target.is_file():
             return ToolResult(False, "", "File not found")
+
         try:
+            # Check file size before reading
+            size = target.stat().st_size
+            if size > self.MAX_READ_SIZE:
+                return ToolResult(
+                    False, "", f"File too large ({size} bytes). Max size is {self.MAX_READ_SIZE} bytes."
+                )
+
             content = target.read_text(encoding="utf-8")
             return ToolResult(True, content)
         except Exception as exc:  # pragma: no cover - defensive
@@ -155,6 +164,7 @@ class FileWriteTool(Tool):
 class FileListTool(Tool):
     name = "file_list"
     description = "List directory contents within the workspace or shared directory."
+    MAX_ITEMS = 1000
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_arg = kwargs.get("path", ".")
@@ -163,7 +173,26 @@ class FileListTool(Tool):
             return ToolResult(False, "", f"Access denied: read permission denied for {path_arg}")
         if not target_dir.exists() or not target_dir.is_dir():
             return ToolResult(False, "", "Directory not found")
-        items = sorted(p.name for p in target_dir.iterdir())
+
+        # Use os.scandir for efficiency and to stop early
+        items = []
+        count = 0
+        import os
+
+        try:
+            with os.scandir(target_dir) as it:
+                for entry in it:
+                    items.append(entry.name)
+                    count += 1
+                    if count >= self.MAX_ITEMS:
+                        break
+        except OSError as e:
+            return ToolResult(False, "", f"Failed to list directory: {e}")
+
+        items.sort()
+        if count >= self.MAX_ITEMS:
+            items.append(f"\n... (truncated, limit {self.MAX_ITEMS})")
+
         return ToolResult(True, "\n".join(items))
 
 
@@ -171,6 +200,7 @@ class ShellTool(Tool):
     name = "shell"
     description = "Execute shell commands in the agent workspace."
     ALLOWED_EXECUTABLES = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
+    MAX_OUTPUT_SIZE = 50 * 1024  # 50KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         cmd = kwargs.get("command")
@@ -218,23 +248,36 @@ class ShellTool(Tool):
         workspace.mkdir(parents=True, exist_ok=True)
         try:
             # shell=False to prevent command injection chaining
-            # We use the parsed 'parts' list directly
-            result = subprocess.run(
+            # Use PIPE to control output size manually
+            process = subprocess.Popen(
                 args,
                 cwd=workspace,
                 shell=False,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=30,
             )
-            success = result.returncode == 0
-            error_text = result.stderr if not success else None
-            output = result.stdout.strip()
-            return ToolResult(success, output, error_text)
+
+            try:
+                # Read stdout/stderr with limits
+                stdout_data, stderr_data = process.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                return ToolResult(False, "", "Command timed out")
+
+            success = process.returncode == 0
+
+            # Truncate output if needed
+            if len(stdout_data) > self.MAX_OUTPUT_SIZE:
+                stdout_data = stdout_data[: self.MAX_OUTPUT_SIZE] + f"\n... (truncated, limit {self.MAX_OUTPUT_SIZE})"
+
+            if len(stderr_data) > self.MAX_OUTPUT_SIZE:
+                stderr_data = stderr_data[: self.MAX_OUTPUT_SIZE] + f"\n... (truncated, limit {self.MAX_OUTPUT_SIZE})"
+
+            return ToolResult(success, stdout_data.strip(), stderr_data if not success else None)
+
         except FileNotFoundError:
             return ToolResult(False, "", f"Command not found: {args[0]}")
-        except subprocess.TimeoutExpired:
-            return ToolResult(False, "", "Command timed out")
         except Exception as exc:  # pragma: no cover - defensive
             return ToolResult(False, "", f"Shell execution failed: {exc}")
 
