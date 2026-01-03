@@ -1,11 +1,3 @@
-## 2025-12-16 - Actionable Empty States
-**Learning:** Static empty states (e.g. "Select an item") are confusing when the list is actually empty (0 items).
-**Action:** Detect the "0 items" state explicitly and provide a primary Call-to-Action (e.g. "Create New") instead of a passive placeholder.
-
-## 2025-12-16 - Semantic Buttons for Interactive Cards
-**Learning:** Interactive cards implemented as `div`s with `onClick` handlers lack native accessibility features like keyboard support (Enter/Space) and proper focus management.
-**Action:** Refactor interactive cards to use `<button>` (or `<motion.button>`) elements with `type="button"` and `text-left`, removing the need for manual `onKeyDown` handlers and `role="button"` attributes.
-
-## 2025-12-16 - Log Readability
-**Learning:** Raw JSON logs are difficult to scan during active monitoring, obscuring important agent actions like tool usage or thoughts.
-**Action:** Use a dedicated LogMessage component that highlights semantic fields (text, thought, tool) with icons/colors and collapses the raw payload by default.
+## 2025-05-23 - SVG Accessibility Interactions
+**Learning:** When making complex SVG visualizations (like a clock) interactive, standard `role="button"` or `role="radio"` on SVG groups (`<g>`) works well, but visual focus states require manual handling. CSS `focus-visible` on the group needs to trigger a child element (like a focus ring circle) using `group-focus`.
+**Action:** For future custom SVG widgets, wrap interactive parts in `<g>` with `tabIndex={0}`, add keyboard handlers for Enter/Space, and use `group` + `group-focus` classes to show a custom focus indicator (ring or color change) that fits the SVG's coordinate system.
