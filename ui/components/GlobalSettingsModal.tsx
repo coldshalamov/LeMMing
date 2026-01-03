@@ -29,7 +29,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
             await updateEngineConfig(config);
             setStatus("success");
             setTimeout(onClose, 1500);
-        } catch (err) {
+        } catch {
             setStatus("error");
         }
     };
@@ -42,6 +42,9 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                 onClick={onClose}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
             >
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
@@ -57,11 +60,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <Shield className="text-brand-cyan" size={20} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">System Config</h2>
+                                <h2 id="modal-title" className="text-xl font-bold text-white">System Config</h2>
                                 <p className="text-xs text-gray-400">Manage LLM providers and secrets</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                            aria-label="Close modal"
+                        >
                             <X size={20} className="text-gray-400" />
                         </button>
                     </div>
@@ -74,7 +81,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
                         {/* OpenAI Key */}
                         <div className="space-y-2">
-                            <label className="flex items-center justify-between">
+                            <label htmlFor="openai_api_key" className="flex items-center justify-between">
                                 <span className="flex items-center gap-2 text-sm font-medium text-gray-300">
                                     <Key size={14} className="text-brand-cyan" />
                                     OpenAI API Key
@@ -84,6 +91,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 )}
                             </label>
                             <input
+                                id="openai_api_key"
                                 type="password"
                                 placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                 value={config.openai_api_key}
@@ -94,7 +102,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
                         {/* Claude Key */}
                         <div className="space-y-2">
-                            <label className="flex items-center justify-between">
+                            <label htmlFor="anthropic_api_key" className="flex items-center justify-between">
                                 <span className="flex items-center gap-2 text-sm font-medium text-gray-300">
                                     <Key size={14} className="text-brand-purple" />
                                     Anthropic API Key
@@ -104,6 +112,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 )}
                             </label>
                             <input
+                                id="anthropic_api_key"
                                 type="password"
                                 placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                 value={config.anthropic_api_key}
