@@ -228,8 +228,10 @@ def read_outbox_entries(
     min_collected_tick = float("inf")
 
     for name in filenames:
-        entry_path = outbox_dir / name
-        tick_val = _tick_from_filename(entry_path)
+        # Optimization: Parse tick from filename string directly to avoid Path creation.
+        # _tick_from_filename_str returns -1 on error.
+        tick_val_int = _tick_from_filename_str(name)
+        tick_val = tick_val_int if tick_val_int != -1 else None
 
         # If we encounter a file with a tick older than since_tick, we can stop
         # because subsequent files (sorted by tick desc) will have even smaller ticks.
@@ -243,6 +245,7 @@ def read_outbox_entries(
             if tick_val is not None and min_collected_tick > tick_val:
                 break
 
+        entry_path = outbox_dir / name
         entry = _load_entry(entry_path)
         if entry is None:
             continue
