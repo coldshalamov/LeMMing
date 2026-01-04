@@ -139,6 +139,16 @@ def scan_outbox_files(
 
     If limit > 0, returns only the most recent 'limit' entries using heapq.
     """
+    return [
+        (tick, path)
+        for tick, path, _ in _scan_outbox_files_optimized(base_path, agent_name, since_tick, limit)
+    ]
+
+
+def _scan_outbox_files_optimized(
+    base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
+) -> list[tuple[int, str, str]]:
+    """Internal optimized version returning (tick, full_path_str, filename)."""
     outbox_dir = get_outbox_dir(base_path, agent_name)
     if not outbox_dir.exists():
         return []
@@ -177,7 +187,7 @@ def scan_outbox_files(
                     if tick != -1:
                         if since_tick is not None and tick < since_tick:
                             continue
-                        results.append((tick, entry.path))
+                        results.append((tick, entry.path, entry.name))
 
             else:
                 for entry in it:
@@ -186,7 +196,7 @@ def scan_outbox_files(
                         if tick != -1:
                             if since_tick is not None and tick < since_tick:
                                 continue
-                            results.append((tick, entry.path))
+                            results.append((tick, entry.path, entry.name))
     except FileNotFoundError:
         pass
     return results
@@ -303,25 +313,56 @@ def collect_readable_outboxes(
             ]
 
     # Optimization: Scan metadata first to avoid loading content of old messages
-    candidates: list[tuple[int, str]] = []
+    # Optimization: Use heapq.merge to combine sorted results from multiple agents efficiently
+    # instead of extend + sort. scan_outbox_files returns results sorted by (tick, filename) desc
+    # when limit > 0 (via nlargest). If limit=0, it's unsorted, so we must sort if limit=0,
+    # but collect_readable_outboxes typically uses a limit.
+    # To be safe and consistent, we'll collect all iterables and merge them.
+    # scan_outbox_files returns (tick, path, filename).
+
+    iterables = []
     for other in read_outboxes:
         if other == agent_name:
             continue
         # Pass the limit to scan_outbox_files to reduce memory usage and processing
         # Each agent returns at most 'limit' newest messages.
-        candidates.extend(scan_outbox_files(base_path, other, since_tick=since_tick, limit=limit))
+        res = _scan_outbox_files_optimized(base_path, other, since_tick=since_tick, limit=limit)
+        # Ensure the result is sorted because scan_outbox_files(limit > 0) returns sorted by name desc.
+        # Name sort is equivalent to (tick, filename) desc.
+        # If limit=0, scan_outbox_files is NOT sorted.
+        if limit == 0:
+            res.sort(key=lambda x: x[2], reverse=True)  # Sort by filename (includes tick)
+        iterables.append(res)
 
-    # Sort candidates by tick descending, then by filename descending (to match read_outbox_entries sort)
-    candidates.sort(key=lambda x: (x[0], os.path.basename(x[1])), reverse=True)
-
-    if len(candidates) <= limit:
-        to_load = candidates
-    else:
-        cutoff_tick = candidates[limit - 1][0]
-        to_load = [c for c in candidates if c[0] >= cutoff_tick]
+    # Use heapq.merge to merge the sorted lists
+    merged_iter = heapq.merge(*iterables, key=lambda x: x[2], reverse=True)
 
     entries: list[OutboxEntry] = []
-    for _, path_str in to_load:
+    candidates: list[tuple[int, str]] = []
+
+    # Optimization: consume the merged iterator directly
+    # We must collect enough candidates to cover 'limit' PLUS any ties at the boundary.
+    # The merged_iter is sorted by filename descending (newest first).
+    # We can stop once we have > limit items AND the current item's tick is strictly less than the limit-th item's tick.
+    # Actually, we can just collect 'limit' items, check the tick of the last one, and then continue collecting
+    # items with the SAME tick.
+
+    count = 0
+    cutoff_tick = -1
+
+    for tick, path_str, _ in merged_iter:
+        if count >= limit:
+            if cutoff_tick == -1:
+                cutoff_tick = candidates[limit - 1][0]
+
+            # If we've reached the limit, only continue if the current item has the same tick as the cutoff
+            if tick < cutoff_tick:
+                break
+
+        candidates.append((tick, path_str))
+        count += 1
+
+    for _, path_str in candidates:
         entry = _load_entry(Path(path_str))
         if entry is None:
             continue
