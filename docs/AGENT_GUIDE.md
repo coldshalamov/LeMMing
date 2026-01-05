@@ -38,11 +38,7 @@ cat > agents/my_agent/resume.json <<'EOF'
   },
   "permissions": {
     "read_outboxes": ["*"],
-    "tools": ["file_read", "memory_write"],
-    "file_access": {
-      "allow_read": ["./workspace", "./shared"],
-      "allow_write": ["./workspace"]
-    }
+    "tools": ["file_read", "memory_write"]
   },
   "schedule": {
     "run_every_n_ticks": 1,
@@ -83,11 +79,7 @@ python -m lemming.cli run-once
 
   "permissions": {                           // REQUIRED
     "read_outboxes": ["agent1", "agent2", "*"],  // Which agents' messages to read
-    "tools": ["file_read", "memory_write"],      // Which tools this agent can use
-    "file_access": {                             // Optional: fine-grained file access
-      "allow_read": ["./workspace", "./shared"], // Readable paths
-      "allow_write": ["./workspace"]             // Writable paths
-    }
+    "tools": ["file_read", "memory_write"]      // Which tools this agent can use
   },
 
   "schedule": {                              // REQUIRED
@@ -117,9 +109,8 @@ python -m lemming.cli run-once
 | `model.max_tokens` | int | 2048 | Maximum response tokens. |
 | `permissions.read_outboxes` | array | [] | Agent names whose outboxes this agent can read. Use `"*"` for all. |
 | `permissions.tools` | array | [] | List of tool names this agent can execute. |
-| `permissions.file_access.allow_read` | array | `["./workspace", "./shared"]` | Paths this agent can read from. |
-| `permissions.file_access.allow_write` | array | `["./workspace"]` | Paths this agent can write to. |
-| `schedule.run_every_n_ticks` | int | 1 | Agent fires every N ticks. Use 0 to disable auto-run. |
+| File sandbox | derived | `workspace/`, `shared/` | File tools are restricted to the agent workspace plus shared directory. |
+| `schedule.run_every_n_ticks` | int | 1 | Agent fires every N ticks (must be > 0). |
 | `schedule.phase_offset` | int | 0 | Offset for intra-tick ordering (0 to N-1). |
 | `instructions` | string | "" | **REQUIRED.** System prompt defining agent behavior. |
 | `credits.max_credits` | float | 1000 | Maximum credit allocation for this agent. |
@@ -234,9 +225,9 @@ Agents must explicitly request tool access:
 
 | Tool | Description | Permission Requirements |
 |------|-------------|-------------------------|
-| `file_read` | Read files | `file_access.allow_read` |
-| `file_write` | Write files | `file_access.allow_write` |
-| `file_list` | List directory contents | `file_access.allow_read` |
+| `file_read` | Read files | Workspace/shared sandbox |
+| `file_write` | Write files | Workspace/shared sandbox |
+| `file_list` | List directory contents | Workspace/shared sandbox |
 | `shell` | Execute shell commands | Workspace only |
 | `memory_read` | Load memory entries | Always allowed |
 | `memory_write` | Save memory entries | Always allowed |
@@ -245,28 +236,7 @@ Agents must explicitly request tool access:
 
 ### File Access Permissions
 
-Fine-grained file system access control:
-
-```json
-{
-  "permissions": {
-    "file_access": {
-      "allow_read": [
-        "./workspace",        // Agent's private workspace
-        "./shared",           // Shared directory (all agents)
-        "/data/public"        // Absolute path (use with caution)
-      ],
-      "allow_write": [
-        "./workspace"         // Only write to own workspace
-      ]
-    }
-  }
-}
-```
-
-**Security notes:**
-- Paths are **canonicalized** (symlinks resolved) before permission checks
-- Relative paths are resolved relative to repository root
+File tools are automatically sandboxed to `agents/<name>/workspace/` plus the shared directory. Paths are canonicalized (symlinks resolved) before permission checks, and attempts to access anything outside the sandbox are denied.
 - Attempting to access unauthorized paths returns an error
 
 ---
@@ -680,11 +650,7 @@ Memory structure:
   "model": {"key": "gpt-4o-mini", "temperature": 0.5},
   "permissions": {
     "read_outboxes": ["coordinator", "human"],
-    "tools": ["file_read", "file_list", "memory_write", "shell"],
-    "file_access": {
-      "allow_read": ["./workspace", "./shared", "./data"],
-      "allow_write": ["./workspace"]
-    }
+    "tools": ["file_read", "file_list", "memory_write", "shell"]
   },
   "schedule": {"run_every_n_ticks": 2, "phase_offset": 1},
   "instructions": "You are a research specialist agent.

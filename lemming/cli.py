@@ -42,15 +42,13 @@ def show_agent_cmd(base_path: Path, name: str) -> None:
         print(f"Agent '{name}' not found")
         return
 
-    print(f"\n{'='*60}\nAgent: {agent.name}\n{'='*60}")
+    print(f"\n{'=' * 60}\nAgent: {agent.name}\n{'=' * 60}")
     print(f"Title: {agent.title}")
     print(f"Description: {agent.short_description}")
     if agent.workflow_description:
         print(f"Workflow: {agent.workflow_description}")
     print(f"Model: {agent.model.key} (temp={agent.model.temperature}, max_tokens={agent.model.max_tokens})")
-    print(
-        f"Schedule: every {agent.schedule.run_every_n_ticks} ticks (offset={agent.schedule.phase_offset})"
-    )
+    print(f"Schedule: every {agent.schedule.run_every_n_ticks} ticks (offset={agent.schedule.phase_offset})")
     print(f"Readable outboxes: {', '.join(agent.permissions.read_outboxes)}")
     print(f"Tools: {', '.join(agent.permissions.tools)}")
     print("\nInstructions preview:\n" + "-" * 40)
@@ -283,7 +281,7 @@ def serve_cmd(host: str, port: int) -> None:
         print("uvicorn is not installed. Install with `pip install .[api]`.")
         sys.exit(1)
 
-    uvicorn.run("lemming.api:app", host=host, port=port, reload=False)
+    uvicorn.run("lemming.api:app", host=host, port=port, reload=True)
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: lemming-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: bash start_render.sh
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+  - type: web
+    name: lemming-ui
+    env: docker
+    dockerfilePath: ui/Dockerfile
+    dockerContext: ./ui
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE
+        fromService:
+          name: lemming-backend
+          type: web
+          property: host

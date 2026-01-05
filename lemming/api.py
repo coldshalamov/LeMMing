@@ -1,22 +1,51 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .agents import discover_agents, load_agent
-from .engine import load_tick
-from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries
+from .agents import discover_agents, load_agent, validate_resume_data
+from .engine import load_tick, run_once
+from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries, write_outbox_entry
+from .models import ModelRegistry
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
+from .paths import (
+    get_agents_dir,
+    get_config_dir,
+    get_logs_dir,
+    validate_agent_name,
+    validate_path_prefix,
+)
+from .tools import ToolRegistry
+
+# Load secrets from local file if they exist
+SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent)) / "secrets.json"
+if SECRETS_PATH.exists():
+    try:
+        with open(SECRETS_PATH) as f:
+            secrets = json.load(f)
+            for k, v in secrets.items():
+                if v and not os.environ.get(k):
+                    os.environ[k] = v
+    except Exception:
+        pass
 
 BASE_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve().parent.parent))
-app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.0")
+MAX_LIMIT = 1000
+
+logger = logging.getLogger("lemming.api")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
+
+app = FastAPI(title="LeMMing API", description="API for LeMMing multi-agent system", version="0.4.1")
 
 # Configure CORS
 # Default to localhost:3000 for local development
@@ -30,6 +59,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 class ScheduleInfo(BaseModel):
@@ -56,6 +96,35 @@ class AgentInfo(BaseModel):
     credits: CreditsInfo | None = None
 
 
+class CreateAgentRequest(BaseModel):
+    name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")  # The slug/folder name
+    resume: dict[str, Any]  # The full resume JSON content
+    path_prefix: str | None = Field(
+        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
+    )  # Optional subfolder (e.g. "engineering/backend")
+
+    @field_validator("resume")
+    @classmethod
+    def check_resume_size(cls, v: dict[str, Any]) -> dict[str, Any]:
+        """Limit the complexity of the resume JSON."""
+        # Simple check: serialize and check string length
+        try:
+            content = json.dumps(v)
+            if len(content) > 50_000:  # 50KB limit
+                raise ValueError("Resume JSON is too large (max 50KB)")
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid resume JSON: {e}")
+        return v
+
+
+class CloneAgentRequest(BaseModel):
+    source_agent: str
+    target_name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
+    target_path_prefix: str | None = Field(
+        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
+    )
+
+
 class OutboxEntryModel(BaseModel):
     id: str
     created_at: str
@@ -65,6 +134,57 @@ class OutboxEntryModel(BaseModel):
     payload: dict[str, Any]
     tags: list[str] | None = None
     meta: dict[str, Any] | None = None
+
+
+class LogEntry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+
+class SendMessageRequest(BaseModel):
+    target: str = Field(..., max_length=50)
+    text: str = Field(..., max_length=20000)  # ~20KB limit for messages
+    importance: str = Field("normal", pattern="^(normal|high|critical)$")
+
+
+class ToolInfo(BaseModel):
+    id: str
+    description: str
+
+
+@app.post("/api/messages")
+async def send_message(request: SendMessageRequest) -> dict[str, str]:
+    """Send a message from 'human' to a target agent."""
+    tick = load_tick(BASE_PATH)
+
+    # Ensure human agent dir exists
+    human_dir = get_agents_dir(BASE_PATH) / "human"
+    if not human_dir.exists():
+        # Create it if missing (bootstrap usually does this)
+        human_dir.mkdir(parents=True, exist_ok=True)
+        (human_dir / "outbox").mkdir(exist_ok=True)
+
+    entry = OutboxEntry.create(
+        agent="human",
+        tick=tick,
+        kind="message",
+        payload={
+            "text": request.text,
+            "importance": request.importance,
+            "target": request.target,
+        },
+        tags=["human-originated"],
+    )
+    # The 'target' logic in engine relies on the message content or routing.
+    # But usually explicit visual routing requires 'recipient' metadata if we want strict routing.
+    # For now, we follow the cli.py 'send_cmd' pattern.
+
+    write_outbox_entry(BASE_PATH, "human", entry)
+    return {"status": "sent", "id": entry.id}
+
+
+class EngineConfig(BaseModel):
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
 
 
 @app.get("/")
@@ -106,6 +226,31 @@ def _build_agent_info(agent: Any, credits: dict[str, Any]) -> AgentInfo:
     )
 
 
+def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
+    try:
+        validate_agent_name(agent_name)
+    except ValueError:
+        return []
+
+    log_path = get_logs_dir(base_path, agent_name) / "structured.jsonl"
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    except OSError:
+        return []
+
+    entries: list[dict[str, Any]] = []
+    for line in lines[-limit:]:
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            entries.append(parsed)
+    return entries
+
+
 @app.get("/api/agents", response_model=list[AgentInfo])
 async def list_agents() -> list[AgentInfo]:
     agents, credits = _load_agents_with_credits(BASE_PATH)
@@ -123,10 +268,126 @@ async def get_agent(agent_name: str) -> AgentInfo:
     return _build_agent_info(agent, credits)
 
 
-@app.get("/api/agents/{agent_name}/outbox", response_model=list[OutboxEntryModel])
-async def get_agent_outbox(agent_name: str, limit: int = 20, since_tick: int | None = None) -> list[OutboxEntryModel]:
-    entries = read_outbox_entries(BASE_PATH, agent_name, limit=limit, since_tick=since_tick)
-    return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries]
+@app.post("/api/agents", status_code=201)
+async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
+    try:
+        validate_agent_name(request.name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Determine target directory
+    agents_dir = get_agents_dir(BASE_PATH)
+    if request.path_prefix:
+        try:
+            validate_path_prefix(request.path_prefix)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        target_dir = agents_dir / request.path_prefix / request.name
+    else:
+        target_dir = agents_dir / request.name
+
+    if target_dir.exists():
+        raise HTTPException(status_code=409, detail=f"Agent directory '{request.name}' already exists")
+
+    # Create directory structure
+    try:
+        target_dir.mkdir(parents=True, exist_ok=False)
+        (target_dir / "outbox").mkdir()
+        (target_dir / "memory").mkdir()
+        (target_dir / "logs").mkdir()
+        (target_dir / "workspace").mkdir()
+    except OSError as e:
+        logger.error(f"Failed to create directories for agent '{request.name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create agent directories")
+
+    # Construct resume.json
+    final_resume = request.resume.copy()
+    final_resume["name"] = request.name  # Ensure name matches folder
+
+    resume_path = target_dir / "resume.json"
+    errors = validate_resume_data(final_resume, resume_path=resume_path)
+    if errors:
+        import shutil
+
+        shutil.rmtree(target_dir, ignore_errors=True)
+        raise HTTPException(status_code=400, detail={"errors": errors})
+    try:
+        with open(resume_path, "w", encoding="utf-8") as f:
+            json.dump(final_resume, f, indent=2)
+    except OSError as e:
+        # Cleanup on failure
+        import shutil
+
+        shutil.rmtree(target_dir, ignore_errors=True)
+        logger.error(f"Failed to write resume.json for agent '{request.name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to write resume.json")
+
+    return {"status": "created", "path": str(target_dir.relative_to(BASE_PATH))}
+
+
+@app.post("/api/agents/clone", status_code=201)
+async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
+    try:
+        validate_agent_name(request.target_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Find source agent
+    try:
+        source_agent = load_agent(BASE_PATH, request.source_agent)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Source agent not found")
+
+    agents_dir = get_agents_dir(BASE_PATH)
+    if request.target_path_prefix:
+        try:
+            validate_path_prefix(request.target_path_prefix)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        target_dir = agents_dir / request.target_path_prefix / request.target_name
+    else:
+        target_dir = agents_dir / request.target_name
+
+    if target_dir.exists():
+        raise HTTPException(status_code=409, detail=f"Target directory '{request.target_name}' already exists")
+
+    # Copy logic
+    import shutil
+
+    try:
+        # We only copy the directory structure and resume.json, NOT memory/logs/outbox
+        target_dir.mkdir(parents=True)
+        (target_dir / "outbox").mkdir()
+        (target_dir / "memory").mkdir()
+        (target_dir / "logs").mkdir()
+        (target_dir / "workspace").mkdir()
+
+        # Read source resume, update name, write to target
+        with open(source_agent.resume_path, encoding="utf_8") as f:
+            source_data = json.load(f)
+
+        source_data["name"] = request.target_name
+
+        with open(target_dir / "resume.json", "w", encoding="utf-8") as f:
+            json.dump(source_data, f, indent=2)
+
+    except OSError as e:
+        # Cleanup
+        if target_dir.exists():
+            shutil.rmtree(target_dir, ignore_errors=True)
+        logger.error(f"Failed to clone agent '{request.target_name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to clone agent")
+
+    return {"status": "cloned", "path": str(target_dir.relative_to(BASE_PATH))}
+
+
+@app.get("/api/agents/{agent_name}/logs", response_model=list[LogEntry])
+async def get_agent_logs(agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
+    if limit <= 0:
+        raise HTTPException(status_code=400, detail="Limit must be positive")
+    return _read_agent_logs(BASE_PATH, agent_name, limit=limit)
 
 
 @app.get("/api/org-graph")
@@ -141,6 +402,17 @@ async def get_org_graph() -> dict[str, Any]:
         }
         for agent in agents
     }
+
+
+@app.get("/api/tools", response_model=list[ToolInfo])
+async def list_tools() -> list[ToolInfo]:
+    return [ToolInfo(**item) for item in ToolRegistry.list_tool_info()]
+
+
+@app.get("/api/models", response_model=list[str])
+async def list_models() -> list[str]:
+    registry = ModelRegistry(config_dir=get_config_dir(BASE_PATH))
+    return registry.list_keys()
 
 
 @app.get("/api/credits")
@@ -177,6 +449,8 @@ async def status() -> dict[str, Any]:
 async def list_messages(
     agent: str | None = None, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntryModel]:
+    if limit > MAX_LIMIT:
+        raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
     agent_names: list[str]
     if agent:
         try:
@@ -185,7 +459,11 @@ async def list_messages(
             raise HTTPException(status_code=404, detail=f"Agent '{agent}' not found")
         agent_names = [agent]
     else:
+        # Get all discovered agents
         agent_names = [a.name for a in discover_agents(BASE_PATH)]
+        # explicitly add human if not present (since human might not have a resume.json)
+        if "human" not in agent_names and (get_agents_dir(BASE_PATH) / "human").exists():
+            agent_names.append("human")
 
     entries: list[OutboxEntry] = []
     for agent_name in agent_names:
@@ -195,6 +473,62 @@ async def list_messages(
     return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries[:limit]]
 
 
+@app.post("/api/engine/tick")
+async def trigger_tick() -> dict[str, Any]:
+    """Manually trigger one engine tick."""
+    try:
+        # run_once(BASE_PATH) will:
+        # 1. Load current tick
+        # 2. run_tick for that tick
+        # 3. increment and persist_tick
+        results = run_once(BASE_PATH)
+
+        # After run_once, load_tick gives us the NEXT tick.
+        # So the tick we just ran is next_tick_in_file - 1.
+        current_tick = load_tick(BASE_PATH)
+
+        return {"status": "success", "tick": current_tick - 1, "agents_run": len(results)}
+    except Exception as e:
+        import traceback
+
+        logger.error(f"Tick failed: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Engine tick failed")
+
+
+@app.get("/api/engine/config", response_model=EngineConfig)
+async def get_engine_config() -> dict[str, Any]:
+    """Get non-sensitive portion of config (masked)."""
+    return {
+        "openai_api_key": "***" if os.environ.get("OPENAI_API_KEY") else None,
+        "anthropic_api_key": "***" if os.environ.get("ANTHROPIC_API_KEY") else None,
+    }
+
+
+@app.post("/api/engine/config")
+async def update_engine_config(config: EngineConfig) -> dict[str, str]:
+    """Update engine secrets and persist to secrets.json."""
+    current_secrets = {}
+    if SECRETS_PATH.exists():
+        try:
+            with open(SECRETS_PATH) as f:
+                current_secrets = json.load(f)
+        except Exception:
+            pass
+
+    if config.openai_api_key:
+        current_secrets["OPENAI_API_KEY"] = config.openai_api_key
+        os.environ["OPENAI_API_KEY"] = config.openai_api_key
+
+    if config.anthropic_api_key:
+        current_secrets["ANTHROPIC_API_KEY"] = config.anthropic_api_key
+        os.environ["ANTHROPIC_API_KEY"] = config.anthropic_api_key
+
+    with open(SECRETS_PATH, "w") as f:
+        json.dump(current_secrets, f, indent=2)
+
+    return {"status": "updated"}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
@@ -202,9 +536,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         while True:
             status_payload = await status()
             messages = await list_messages(limit=20)
-            await websocket.send_json(
-                {"status": status_payload, "messages": [m.model_dump() for m in messages]}
-            )
+            await websocket.send_json({"status": status_payload, "messages": [m.model_dump() for m in messages]})
             await asyncio.sleep(2.0)
     except WebSocketDisconnect:
         return

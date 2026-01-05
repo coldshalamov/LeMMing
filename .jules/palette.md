@@ -1,3 +1,3 @@
-## 2025-12-15 - Interactive Graph Accessibility
-**Learning:** Force-directed graphs often rely solely on mouse interactions (`onClick`), excluding keyboard users.
-**Action:** Always ensure graph nodes are keyboard-focusable (`tabIndex={0}`) and have appropriate ARIA roles (`role="button"`) and key handlers (`Enter`/`Space`).
+## 2025-05-23 - SVG Accessibility Interactions
+**Learning:** When making complex SVG visualizations (like a clock) interactive, standard `role="button"` or `role="radio"` on SVG groups (`<g>`) works well, but visual focus states require manual handling. CSS `focus-visible` on the group needs to trigger a child element (like a focus ring circle) using `group-focus`.
+**Action:** For future custom SVG widgets, wrap interactive parts in `<g>` with `tabIndex={0}`, add keyboard handlers for Enter/Space, and use `group` + `group-focus` classes to show a custom focus indicator (ring or color change) that fits the SVG's coordinate system.

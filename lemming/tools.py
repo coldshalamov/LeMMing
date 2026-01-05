@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
+from .paths import validate_agent_name
 
 
 @dataclass
@@ -48,52 +50,24 @@ class ToolRegistry:
         return list(cls._tools.keys())
 
     @classmethod
+    def list_tool_info(cls) -> list[dict[str, str]]:
+        return [
+            {"id": tool.name, "description": tool.description}
+            for tool in sorted(cls._tools.values(), key=lambda t: t.name)
+        ]
+
+    @classmethod
     def clear(cls) -> None:
         cls._tools.clear()
 
 
-def _get_allowed_paths(base_path: Path, agent_name: str, mode: str) -> list[Path]:
-    """Get allowed paths for an agent based on their file_access permissions.
+def _get_allowed_paths(base_path: Path, agent_name: str) -> list[Path]:
+    """Get allowed paths for an agent.
 
-    Args:
-        base_path: Repository base path
-        agent_name: Name of the agent
-        mode: Either "read" or "write"
-
-    Returns:
-        List of allowed paths (resolved to absolute)
+    Agents are sandboxed to their own workspace plus the shared directory. This
+    keeps file operations deterministic without additional per-agent overrides.
     """
-    from .agents import load_agent
 
-    try:
-        agent = load_agent(base_path, agent_name)
-    except Exception:  # pragma: no cover - defensive
-        # Fallback to default if agent not found
-        workspace = (base_path / "agents" / agent_name / "workspace").resolve()
-        shared = (base_path / "shared").resolve()
-        return [workspace, shared]
-
-    # Check if agent has file_access permissions configured
-    if agent.permissions.file_access is not None:
-        if mode == "read":
-            allow_list = agent.permissions.file_access.allow_read
-        elif mode == "write":
-            allow_list = agent.permissions.file_access.allow_write
-        else:
-            allow_list = []
-
-        # If the allow list is explicitly provided (even empty), respect it
-        allowed_paths = []
-        for path_str in allow_list:
-            path = Path(path_str)
-            if not path.is_absolute():
-                path = (base_path / path).resolve()
-            else:
-                path = path.resolve()
-            allowed_paths.append(path)
-        return allowed_paths
-
-    # Default: workspace + shared
     workspace = (base_path / "agents" / agent_name / "workspace").resolve()
     shared = (base_path / "shared").resolve()
     return [workspace, shared]
@@ -125,7 +99,7 @@ def _is_path_allowed(base_path: Path, agent_name: str, path: Path, mode: str) ->
     canonical_path = path.resolve()
 
     # Get allowed paths for this mode
-    allowed_paths = _get_allowed_paths(base_path, agent_name, mode)
+    allowed_paths = _get_allowed_paths(base_path, agent_name)
 
     # Check if canonical path has a prefix match with any allowed path
     for allowed in allowed_paths:
@@ -141,6 +115,7 @@ def _is_path_allowed(base_path: Path, agent_name: str, path: Path, mode: str) ->
 class FileReadTool(Tool):
     name = "file_read"
     description = "Read files from the agent workspace or shared directory."
+    MAX_READ_SIZE = 50 * 1024  # 50KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_arg = kwargs.get("path")
@@ -151,7 +126,15 @@ class FileReadTool(Tool):
             return ToolResult(False, "", f"Access denied: read permission denied for {path_arg}")
         if not target.exists() or not target.is_file():
             return ToolResult(False, "", "File not found")
+
         try:
+            # Check file size before reading
+            size = target.stat().st_size
+            if size > self.MAX_READ_SIZE:
+                return ToolResult(
+                    False, "", f"File too large ({size} bytes). Max size is {self.MAX_READ_SIZE} bytes."
+                )
+
             content = target.read_text(encoding="utf-8")
             return ToolResult(True, content)
         except Exception as exc:  # pragma: no cover - defensive
@@ -181,6 +164,7 @@ class FileWriteTool(Tool):
 class FileListTool(Tool):
     name = "file_list"
     description = "List directory contents within the workspace or shared directory."
+    MAX_ITEMS = 1000
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_arg = kwargs.get("path", ".")
@@ -189,35 +173,111 @@ class FileListTool(Tool):
             return ToolResult(False, "", f"Access denied: read permission denied for {path_arg}")
         if not target_dir.exists() or not target_dir.is_dir():
             return ToolResult(False, "", "Directory not found")
-        items = sorted(p.name for p in target_dir.iterdir())
+
+        # Use os.scandir for efficiency and to stop early
+        items = []
+        count = 0
+        import os
+
+        try:
+            with os.scandir(target_dir) as it:
+                for entry in it:
+                    items.append(entry.name)
+                    count += 1
+                    if count >= self.MAX_ITEMS:
+                        break
+        except OSError as e:
+            return ToolResult(False, "", f"Failed to list directory: {e}")
+
+        items.sort()
+        if count >= self.MAX_ITEMS:
+            items.append(f"\n... (truncated, limit {self.MAX_ITEMS})")
+
         return ToolResult(True, "\n".join(items))
 
 
 class ShellTool(Tool):
     name = "shell"
     description = "Execute shell commands in the agent workspace."
+    ALLOWED_EXECUTABLES = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
+    MAX_OUTPUT_SIZE = 50 * 1024  # 50KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         cmd = kwargs.get("command")
         if not cmd:
             return ToolResult(False, "", "Missing command")
+
+        try:
+            args = shlex.split(cmd)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid command format: {e}")
+
+        if not args:
+            return ToolResult(False, "", "Empty command")
+
+        exe = Path(args[0]).name
+        if exe not in self.ALLOWED_EXECUTABLES:
+            return ToolResult(
+                False,
+                "",
+                f"Security violation: '{exe}' is not in the allowed executables list.",
+            )
+
+        # Security checks
+        # Allow first arg (executable) to be absolute (e.g. /usr/bin/python)
+        # Check subsequent args for absolute paths or traversal attempts
+        for i, arg in enumerate(args):
+            # Check for directory traversal in any argument
+            if ".." in arg:
+                # Parse as potential option=value
+                parts = arg.split("=", 1)
+                value = parts[-1]  # Check value part (or whole arg if no =)
+
+                # Check for traversal in the value
+                if value == ".." or value.startswith("../") or value.endswith("/..") or "/../" in value:
+                    return ToolResult(False, "", f"Security violation: directory traversal '{arg}' not allowed")
+
+            # Block absolute paths in arguments (allow only for the command itself at index 0)
+            if i > 0:
+                parts = arg.split("=", 1)
+                value = parts[-1]
+                if Path(value).is_absolute():
+                    return ToolResult(False, "", f"Security violation: absolute path argument '{arg}' not allowed")
+
         workspace = (base_path / "agents" / agent_name / "workspace").resolve()
         workspace.mkdir(parents=True, exist_ok=True)
         try:
-            result = subprocess.run(
-                cmd,
+            # shell=False to prevent command injection chaining
+            # Use PIPE to control output size manually
+            process = subprocess.Popen(
+                args,
                 cwd=workspace,
-                shell=True,
-                capture_output=True,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=30,
             )
-            success = result.returncode == 0
-            error_text = result.stderr if not success else None
-            output = result.stdout.strip()
-            return ToolResult(success, output, error_text)
-        except subprocess.TimeoutExpired:
-            return ToolResult(False, "", "Command timed out")
+
+            try:
+                # Read stdout/stderr with limits
+                stdout_data, stderr_data = process.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                return ToolResult(False, "", "Command timed out")
+
+            success = process.returncode == 0
+
+            # Truncate output if needed
+            if len(stdout_data) > self.MAX_OUTPUT_SIZE:
+                stdout_data = stdout_data[: self.MAX_OUTPUT_SIZE] + f"\n... (truncated, limit {self.MAX_OUTPUT_SIZE})"
+
+            if len(stderr_data) > self.MAX_OUTPUT_SIZE:
+                stderr_data = stderr_data[: self.MAX_OUTPUT_SIZE] + f"\n... (truncated, limit {self.MAX_OUTPUT_SIZE})"
+
+            return ToolResult(success, stdout_data.strip(), stderr_data if not success else None)
+
+        except FileNotFoundError:
+            return ToolResult(False, "", f"Command not found: {args[0]}")
         except Exception as exc:  # pragma: no cover - defensive
             return ToolResult(False, "", f"Shell execution failed: {exc}")
 
@@ -254,11 +314,15 @@ class CreateAgentTool(Tool):
     description = "Create a new agent from the agent template."
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
-        if agent_name != "hr":
-            return ToolResult(False, "", "Tool restricted to hr agent")
         new_agent_name = kwargs.get("name")
         if not new_agent_name:
             return ToolResult(False, "", "Missing new agent name")
+
+        try:
+            validate_agent_name(new_agent_name)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid agent name: {e}")
+
         new_agent_path = base_path / "agents" / str(new_agent_name)
         if new_agent_path.exists():
             return ToolResult(False, "", "Agent already exists")
@@ -267,6 +331,12 @@ class CreateAgentTool(Tool):
             return ToolResult(False, "", "Agent template missing")
         try:
             shutil.copytree(template_path, new_agent_path)
+            resume_path = new_agent_path / "resume.json"
+            if resume_path.exists():
+                data = json.loads(resume_path.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    data["name"] = str(new_agent_name)
+                    resume_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
             return ToolResult(True, f"Created agent {new_agent_name}")
         except Exception as exc:  # pragma: no cover - defensive
             return ToolResult(False, "", f"Failed to create agent: {exc}")
@@ -280,10 +350,7 @@ class ListAgentsTool(Tool):
         from .agents import discover_agents
 
         agents = discover_agents(base_path)
-        info = [
-            {"name": ag.name, "title": ag.title, "description": ag.short_description}
-            for ag in agents
-        ]
+        info = [{"name": ag.name, "title": ag.title, "description": ag.short_description} for ag in agents]
         return ToolResult(True, json.dumps(info, indent=2))
 
 
@@ -296,4 +363,3 @@ ToolRegistry.register(MemoryReadTool())
 ToolRegistry.register(MemoryWriteTool())
 ToolRegistry.register(CreateAgentTool())
 ToolRegistry.register(ListAgentsTool())
-
