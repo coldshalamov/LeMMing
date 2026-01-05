@@ -131,9 +131,7 @@ class FileReadTool(Tool):
             # Check file size before reading
             size = target.stat().st_size
             if size > self.MAX_READ_SIZE:
-                return ToolResult(
-                    False, "", f"File too large ({size} bytes). Max size is {self.MAX_READ_SIZE} bytes."
-                )
+                return ToolResult(False, "", f"File too large ({size} bytes). Max size is {self.MAX_READ_SIZE} bytes.")
 
             content = target.read_text(encoding="utf-8")
             return ToolResult(True, content)

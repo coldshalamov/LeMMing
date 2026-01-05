@@ -338,7 +338,7 @@ def archive_old_memories(
                     continue
 
                 try:
-                    with open(entry.path, "r", encoding="utf-8") as f:
+                    with open(entry.path, encoding="utf-8") as f:
                         data = json.load(f)
 
                     timestamp_str = data.get("timestamp")
