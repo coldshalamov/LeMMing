@@ -144,18 +144,27 @@ class FileReadTool(Tool):
 class FileWriteTool(Tool):
     name = "file_write"
     description = "Write files into the agent workspace or shared directory."
+    MAX_WRITE_SIZE = 100 * 1024  # 100KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_arg = kwargs.get("path")
         content = kwargs.get("content", "")
         if not path_arg:
             return ToolResult(False, "", "Missing path")
+
+        # Check content size
+        content_str = str(content)
+        if len(content_str.encode("utf-8")) > self.MAX_WRITE_SIZE:
+             return ToolResult(
+                False, "", f"Content too large ({len(content_str.encode('utf-8'))} bytes). Max size is {self.MAX_WRITE_SIZE} bytes."
+            )
+
         target = _resolve_path(base_path, agent_name, str(path_arg))
         if not _is_path_allowed(base_path, agent_name, target, "write"):
             return ToolResult(False, "", f"Access denied: write permission denied for {path_arg}")
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(str(content), encoding="utf-8")
+            target.write_text(content_str, encoding="utf-8")
             return ToolResult(True, f"Wrote to {target}")
         except Exception as exc:  # pragma: no cover - defensive
             return ToolResult(False, "", f"Failed to write file: {exc}")
@@ -299,12 +308,24 @@ class MemoryReadTool(Tool):
 class MemoryWriteTool(Tool):
     name = "memory_write"
     description = "Write a key/value pair into the agent's memory store."
+    MAX_VALUE_SIZE = 50 * 1024  # 50KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         key = kwargs.get("key")
         value = kwargs.get("value")
         if not key:
             return ToolResult(False, "", "Missing key")
+
+        try:
+            # Check JSON serialized size
+            serialized = json.dumps(value)
+            if len(serialized) > self.MAX_VALUE_SIZE:
+                 return ToolResult(
+                    False, "", f"Memory value too large ({len(serialized)} bytes). Max size is {self.MAX_VALUE_SIZE} bytes."
+                )
+        except (TypeError, ValueError) as e:
+            return ToolResult(False, "", f"Invalid memory value: {e}")
+
         memory.save_memory(base_path, agent_name, str(key), value)
         return ToolResult(True, f"Saved memory for {key}")
 
