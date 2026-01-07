@@ -120,9 +120,7 @@ class CreateAgentRequest(BaseModel):
 class CloneAgentRequest(BaseModel):
     source_agent: str
     target_name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
-    target_path_prefix: str | None = Field(
-        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
-    )
+    target_path_prefix: str | None = Field(None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$")
 
 
 class OutboxEntryModel(BaseModel):

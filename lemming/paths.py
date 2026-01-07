@@ -42,7 +42,7 @@ def validate_path_prefix(prefix: str | None) -> None:
             raise ValueError("Path prefix cannot contain empty segments (//)")
 
         if part == "." or part == "..":
-             raise ValueError(f"Path prefix cannot contain '{part}' segments")
+            raise ValueError(f"Path prefix cannot contain '{part}' segments")
 
         # Strict allowlist: alphanumeric, underscores, hyphens
         if not re.match(r"^[a-zA-Z0-9_-]+$", part):
