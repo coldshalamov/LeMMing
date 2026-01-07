@@ -305,8 +305,13 @@ class MemoryWriteTool(Tool):
         value = kwargs.get("value")
         if not key:
             return ToolResult(False, "", "Missing key")
-        memory.save_memory(base_path, agent_name, str(key), value)
-        return ToolResult(True, f"Saved memory for {key}")
+        try:
+            memory.save_memory(base_path, agent_name, str(key), value)
+            return ToolResult(True, f"Saved memory for {key}")
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid memory key: {e}")
+        except Exception as exc:  # pragma: no cover - defensive
+            return ToolResult(False, "", f"Failed to save memory: {exc}")
 
 
 class CreateAgentTool(Tool):
