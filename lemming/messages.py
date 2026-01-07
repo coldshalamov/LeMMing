@@ -131,8 +131,8 @@ def _tick_from_filename_str(filename: str) -> int:
 
 def scan_outbox_files(
     base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
-) -> list[tuple[int, str]]:
-    """Scans outbox files and returns list of (tick, full_path_str) without loading content.
+) -> list[tuple[int, str, str]]:
+    """Scans outbox files and returns list of (tick, filename, full_path_str) without loading content.
 
     This is faster than read_outbox_entries when we only need to sort by tick/filename
     across multiple agents.
@@ -177,7 +177,7 @@ def scan_outbox_files(
                     if tick != -1:
                         if since_tick is not None and tick < since_tick:
                             continue
-                        results.append((tick, entry.path))
+                        results.append((tick, entry.name, entry.path))
 
             else:
                 for entry in it:
@@ -186,7 +186,7 @@ def scan_outbox_files(
                         if tick != -1:
                             if since_tick is not None and tick < since_tick:
                                 continue
-                            results.append((tick, entry.path))
+                            results.append((tick, entry.name, entry.path))
     except FileNotFoundError:
         pass
     return results
@@ -303,16 +303,19 @@ def collect_readable_outboxes(
             ]
 
     # Optimization: Scan metadata first to avoid loading content of old messages
-    candidates: list[tuple[int, str]] = []
+    candidates: list[tuple[int, str, str]] = []
+
     for other in read_outboxes:
         if other == agent_name:
             continue
-        # Pass the limit to scan_outbox_files to reduce memory usage and processing
-        # Each agent returns at most 'limit' newest messages.
-        candidates.extend(scan_outbox_files(base_path, other, since_tick=since_tick, limit=limit))
+        candidates.extend(
+            scan_outbox_files(base_path, other, since_tick=since_tick, limit=limit)
+        )
 
-    # Sort candidates by tick descending, then by filename descending (to match read_outbox_entries sort)
-    candidates.sort(key=lambda x: (x[0], os.path.basename(x[1])), reverse=True)
+    # Sort candidates by tick descending, then by filename descending
+    # x[1] is filename, so we don't need os.path.basename
+    # This avoids system calls during the sort.
+    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
 
     if len(candidates) <= limit:
         to_load = candidates
@@ -321,7 +324,7 @@ def collect_readable_outboxes(
         to_load = [c for c in candidates if c[0] >= cutoff_tick]
 
     entries: list[OutboxEntry] = []
-    for _, path_str in to_load:
+    for _, _, path_str in to_load:
         entry = _load_entry(Path(path_str))
         if entry is None:
             continue
