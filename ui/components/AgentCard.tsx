@@ -3,8 +3,6 @@
 import { AgentInfo } from "@/lib/types";
 import { OrgTimer } from "./OrgTimer";
 import {
-  Users,
-  Zap,
   Brain,
   Sparkles,
   Terminal,
@@ -119,17 +117,13 @@ export function AgentCard({
 
         {/* Stats Bars */}
         <div className="space-y-2 w-full">
-          <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+          <div
+            className="flex items-center gap-2 text-xs text-gray-500 font-mono"
+            title={`Intelligence: ${intelligence}/100`}
+          >
             <Brain size={12} />
             <span className="w-16">INT</span>
-            <div
-              className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-label="Intelligence"
-              aria-valuenow={intelligence}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
+            <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden" aria-hidden="true">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${intelligence}%` }}
@@ -139,17 +133,13 @@ export function AgentCard({
             <span className="w-6 text-right text-gray-400">{intelligence}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+          <div
+            className="flex items-center gap-2 text-xs text-gray-500 font-mono"
+            title={`Creativity: ${creativity}/100`}
+          >
             <Sparkles size={12} />
             <span className="w-16">CRE</span>
-            <div
-              className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-label="Creativity"
-              aria-valuenow={creativity}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
+            <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden" aria-hidden="true">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${creativity}%` }}
