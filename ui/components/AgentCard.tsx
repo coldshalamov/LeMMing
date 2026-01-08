@@ -44,14 +44,14 @@ function getAgentStats(model: string, temperature: number = 0.7) {
 }
 
 function ToolIcon({ tool }: { tool: string }) {
-  if (tool.includes("read")) return <FileText size={12} />;
+  if (tool.includes("read")) return <FileText size={12} aria-hidden="true" />;
   if (tool.includes("write"))
-    return <FileText size={12} className="text-yellow-400" />;
+    return <FileText size={12} className="text-yellow-400" aria-hidden="true" />;
   if (tool.includes("web") || tool.includes("browser"))
-    return <Globe size={12} />;
+    return <Globe size={12} aria-hidden="true" />;
   if (tool.includes("sql") || tool.includes("data"))
-    return <Database size={12} />;
-  return <Terminal size={12} />;
+    return <Database size={12} aria-hidden="true" />;
+  return <Terminal size={12} aria-hidden="true" />;
 }
 
 export function AgentCard({
@@ -72,7 +72,7 @@ export function AgentCard({
       onClick={onSelect}
       type="button"
       aria-pressed={isSelected}
-      aria-label={`Select agent ${agent.name}`}
+      aria-label={`Select agent ${agent.name}. Intelligence ${intelligence}%, Creativity ${creativity}%.`}
       className={clsx(
         "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan text-left w-full",
         isSelected
@@ -118,17 +118,12 @@ export function AgentCard({
         </div>
 
         {/* Stats Bars */}
-        <div className="space-y-2 w-full">
+        <div className="space-y-2 w-full" aria-hidden="true">
           <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
             <Brain size={12} />
             <span className="w-16">INT</span>
             <div
               className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-label="Intelligence"
-              aria-valuenow={intelligence}
-              aria-valuemin={0}
-              aria-valuemax={100}
             >
               <motion.div
                 initial={{ width: 0 }}
@@ -144,11 +139,6 @@ export function AgentCard({
             <span className="w-16">CRE</span>
             <div
               className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-label="Creativity"
-              aria-valuenow={creativity}
-              aria-valuemin={0}
-              aria-valuemax={100}
             >
               <motion.div
                 initial={{ width: 0 }}
