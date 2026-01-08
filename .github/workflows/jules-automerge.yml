@@ -7,6 +7,10 @@ on:
     - cron: '*/15 * * * *' # Every 15 minutes as a fallback
   workflow_dispatch: # Allow manual triggering
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   automerge:
     runs-on: ubuntu-latest
@@ -21,24 +25,18 @@ jobs:
           echo "Checking for Jules PRs..."
           
           # Find PRs that match Jules criteria (Author, Title, or Branch name)
-          PRS=$(gh pr list --state open --json number,title,author,headRefName --jq '.[] | select((.author.login | contains("jules")) or (.title | contains("Jules")) or (.headRefName | contains("jules"))) | .number')
+          # Only look for non-draft PRs since we can't convert drafts with default token
+          PRS=$(gh pr list --state open --json number,title,author,headRefName,isDraft --jq '.[] | select((.author.login | contains("jules")) or (.title | contains("Jules")) or (.headRefName | contains("jules"))) | select(.isDraft == false) | .number')
           
           if [ -z "$PRS" ]; then
-            echo "No matching Jules PRs found."
+            echo "No matching Jules PRs found (or all are drafts)."
             exit 0
           fi
           
           for PR in $PRS; do
             echo "Processing PR #$PR..."
             
-            # 1. Mark as ready if it's a draft
-            IS_DRAFT=$(gh pr view $PR --json isDraft --jq '.isDraft')
-            if [ "$IS_DRAFT" = "true" ]; then
-              echo "PR #$PR is a draft. Marking as ready for review..."
-              gh pr ready $PR
-            fi
-            
-            # 2. Attempt to merge
+            # Attempt to merge
             echo "Merging PR #$PR..."
             gh pr merge $PR --merge --delete-branch --auto || gh pr merge $PR --merge --delete-branch || echo "Failed to merge PR #$PR. It might have conflicts or require manual intervention."
           done
