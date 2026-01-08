@@ -231,14 +231,43 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
         return []
 
     log_path = get_logs_dir(base_path, agent_name) / "structured.jsonl"
-    try:
-        lines = log_path.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
+    if not log_path.exists():
         return []
+
+    # Safe log reading with DoS protection
+    # Read only the last 1MB of logs if the file is large
+    MAX_LOG_READ_SIZE = 1 * 1024 * 1024  # 1MB
+
+    try:
+        size = log_path.stat().st_size
+        if size == 0:
+            return []
+
+        with log_path.open("rb") as f:
+            if size > MAX_LOG_READ_SIZE:
+                f.seek(size - MAX_LOG_READ_SIZE)
+                content_bytes = f.read()
+                # We might have cut a multibyte char or be in middle of line.
+                # Skip to next newline to ensure clean start.
+                first_newline = content_bytes.find(b"\n")
+                if first_newline != -1:
+                    content_bytes = content_bytes[first_newline + 1 :]
+                else:
+                    # No newline found in the last 1MB? That's a huge line.
+                    # Just decode what we can, ignoring errors at the start/end
+                    pass
+            else:
+                content_bytes = f.read()
+
+        # Decode using replace to handle any remaining partial bytes gracefully
+        content = content_bytes.decode("utf-8", errors="replace")
+        lines = content.splitlines()
+
     except OSError:
         return []
 
     entries: list[dict[str, Any]] = []
+    # If we still have too many lines, take only the last 'limit'
     for line in lines[-limit:]:
         try:
             parsed = json.loads(line)
