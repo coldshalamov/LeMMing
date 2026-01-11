@@ -166,38 +166,6 @@ class MemoryWriteTool(Tool):
 
 
 class CreateAgentTool(Tool):
-    name = "create_agent"
-    description = "Create a new agent from the agent template."
-
-    def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
-        new_agent_name = kwargs.get("name")
-        if not new_agent_name:
-            return ToolResult(False, "", "Missing new agent name")
-
-        # Check serialized size
-        try:
-            serialized = json.dumps(value)
-            if len(serialized) > self.MAX_MEMORY_SIZE:
-                return ToolResult(
-                    False,
-                    "",
-                    f"Memory value too large ({len(serialized)} bytes). Max size is {self.MAX_MEMORY_SIZE} bytes.",
-                )
-        except (TypeError, ValueError) as e:
-            return ToolResult(False, "", f"Invalid memory value (not JSON serializable): {e}")
-
-        # Check key format validity via save_memory call or pre-check
-        # save_memory will handle the save, but we validated size
-        try:
-            memory.save_memory(base_path, agent_name, str(key), value)
-            return ToolResult(True, f"Saved memory for {key}")
-        except ValueError as e:
-            return ToolResult(False, "", f"Invalid memory key: {e}")
-        except Exception as exc:  # pragma: no cover - defensive
-            return ToolResult(False, "", f"Failed to save memory: {exc}")
-
-
-class CreateAgentTool(Tool):
     """Tool for creating new agents from the template."""
 
     name = "create_agent"
@@ -311,17 +279,9 @@ class ShellTool(Tool):
     """Tool for executing shell commands in agent workspace."""
 
     name = "shell"
-    description = "Execute a shell command in the agent's workspace directory."
+    description = "Execute a shell command in the agent's workspace directory. Allowed commands: grep, ls, cat, echo, head, tail, jq."
 
-    # Blocked commands/patterns for security
-    BLOCKED_PATTERNS = [
-        r"\bpython\b",
-        r"\bpython3\b",
-        r"\bpip\b",
-        r"\brm\b.*-rf",
-        r"\bsudo\b",
-        r"\bsu\b",
-    ]
+    ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         command = kwargs.get("command")
@@ -331,18 +291,29 @@ class ShellTool(Tool):
         if not isinstance(command, str):
             return ToolResult(False, "", "Command must be a string")
 
-        # Check for blocked commands
-        for pattern in self.BLOCKED_PATTERNS:
-            if re.search(pattern, command, re.IGNORECASE):
-                return ToolResult(False, "", f"Security violation: command contains blocked pattern '{pattern}'")
+        # Parse command
+        try:
+            args = shlex.split(command)
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid command format: {e}")
 
-        # Check for directory traversal in arguments
-        if ".." in command:
-            return ToolResult(False, "", "Security violation: directory traversal detected in command")
+        if not args:
+            return ToolResult(False, "", "Empty command")
 
-        # Check for absolute paths
-        if re.search(r"(/[a-zA-Z0-9_/-]+|[A-Z]:\\)", command):
-            return ToolResult(False, "", "Security violation: absolute path detected in command")
+        # Check against allowlist
+        executable = args[0]
+        if executable not in self.ALLOWED_COMMANDS:
+             return ToolResult(False, "", f"Command '{executable}' is not allowed. Allowed: {', '.join(sorted(self.ALLOWED_COMMANDS))}")
+
+        # Check arguments for traversal/absolute paths
+        for arg in args[1:]:
+             # Check for directory traversal
+            if ".." in arg:
+                return ToolResult(False, "", "Security violation: directory traversal detected in arguments")
+
+            # Check for absolute paths
+            if re.search(r"(/[a-zA-Z0-9_/-]+|[A-Z]:\\)", arg):
+                 return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
         agent_dir = get_agent_dir(base_path, agent_name)
@@ -354,9 +325,10 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
+            # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
-                command,
-                shell=True,
+                args,
+                shell=False,
                 cwd=workspace_dir,
                 capture_output=True,
                 text=True,
@@ -367,6 +339,8 @@ class ShellTool(Tool):
                 return ToolResult(True, result.stdout)
             else:
                 return ToolResult(False, result.stdout, result.stderr)
+        except FileNotFoundError:
+             return ToolResult(False, "", f"Command '{executable}' not found in system")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out after 30 seconds")
         except Exception as e:
