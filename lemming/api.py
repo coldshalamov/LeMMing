@@ -224,6 +224,69 @@ def _build_agent_info(agent: Any, credits: dict[str, Any]) -> AgentInfo:
     )
 
 
+def _read_last_lines(file_path: Path, limit: int) -> list[str]:
+    """Read the last 'limit' lines from a file efficiently."""
+    if limit <= 0:
+        return []
+
+    chunk_size = 8192
+    lines: list[bytes] = []
+
+    try:
+        with file_path.open("rb") as f:
+            f.seek(0, 2)  # Seek to end
+            file_size = f.tell()
+            if file_size == 0:
+                return []
+
+            remaining_bytes = file_size
+            buffer = b""
+
+            while remaining_bytes > 0 and len(lines) <= limit:
+                # Determine how much to read
+                read_size = min(chunk_size, remaining_bytes)
+                f.seek(-read_size, 1) # Seek backwards from current pos
+
+                pos = f.tell()
+                chunk = f.read(read_size)
+                f.seek(pos) # Go back to start of chunk
+
+                remaining_bytes -= read_size
+
+                buffer = chunk + buffer
+                split_lines = buffer.split(b"\n")
+
+                # The first element is potentially a partial line, keep it in buffer
+                # unless we are at the beginning of the file
+                if remaining_bytes > 0:
+                    buffer = split_lines[0]
+                    # The rest are full lines
+                    new_lines = split_lines[1:]
+                else:
+                    # We read the whole file (or the start of it), so everything is valid
+                    new_lines = split_lines
+                    buffer = b"" # Clear buffer as we consumed it
+
+                # Filter empty lines if desired. split('\n') ends with empty string if \n at end.
+                # If we read "A\nB\n", split -> ["A", "B", ""].
+                # We want ["A", "B"].
+                if new_lines and not new_lines[-1]:
+                     new_lines.pop()
+
+                lines = new_lines + lines # Prepend to what we have found
+
+                if len(lines) >= limit:
+                    break
+
+            # If we still have buffer content after reading start of file
+            if remaining_bytes == 0 and buffer and buffer not in lines:
+                lines.insert(0, buffer)
+
+            return [line.decode("utf-8", errors="replace") for line in lines[-limit:]]
+
+    except (FileNotFoundError, OSError):
+        return []
+
 def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
     try:
         validate_agent_name(agent_name)
@@ -231,15 +294,10 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
         return []
 
     log_path = get_logs_dir(base_path, agent_name) / "structured.jsonl"
-    try:
-        lines = log_path.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
-        return []
-    except OSError:
-        return []
+    lines = _read_last_lines(log_path, limit)
 
     entries: list[dict[str, Any]] = []
-    for line in lines[-limit:]:
+    for line in lines:
         try:
             parsed = json.loads(line)
         except json.JSONDecodeError:
