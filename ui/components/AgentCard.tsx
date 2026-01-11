@@ -3,8 +3,6 @@
 import { AgentInfo } from "@/lib/types";
 import { OrgTimer } from "./OrgTimer";
 import {
-  Users,
-  Zap,
   Brain,
   Sparkles,
   Terminal,
@@ -66,13 +64,24 @@ export function AgentCard({
     currentTick % agent.schedule.run_every_n_ticks ===
     agent.schedule.phase_offset % agent.schedule.run_every_n_ticks;
 
+  // Construct accessible label
+  const toolsList = agent.tools.length > 0 ? agent.tools.join(", ") : "no tools";
+  const creditsText = agent.credits
+    ? `, ${agent.credits.credits_left?.toFixed(1) ?? 0} credits remaining of ${agent.credits.max_credits}`
+    : "";
+  const scheduleText = `Runs every ${agent.schedule.run_every_n_ticks} ticks`;
+  const showDescription = isSelected || variant === "full";
+  const descriptionText = showDescription ? `. ${agent.description}` : "";
+
+  const ariaLabel = `Select agent ${agent.name}, ${agent.title}. Stats: ${intelligence}% Intelligence, ${creativity}% Creativity. Equipped with ${toolsList}. Schedule: ${scheduleText}${creditsText}${descriptionText}.`;
+
   return (
     <motion.button
       layoutId={`agent-card-${agent.name}`}
       onClick={onSelect}
       type="button"
       aria-pressed={isSelected}
-      aria-label={`Select agent ${agent.name}. Intelligence ${intelligence}%, Creativity ${creativity}%.`}
+      aria-label={ariaLabel}
       className={clsx(
         "relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan text-left w-full",
         isSelected
@@ -151,14 +160,17 @@ export function AgentCard({
         </div>
 
         {/* Description (Only if full or selected) */}
-        {(isSelected || variant === "full") && (
-          <div className="text-xs text-gray-400 leading-relaxed border-t border-white/5 pt-3 w-full">
+        {showDescription && (
+          <div
+            className="text-xs text-gray-400 leading-relaxed border-t border-white/5 pt-3 w-full"
+            aria-hidden="true"
+          >
             {agent.description}
           </div>
         )}
 
         {/* Toolbelt Chip Row */}
-        <div className="flex flex-wrap gap-1 pt-1 w-full">
+        <div className="flex flex-wrap gap-1 pt-1 w-full" aria-hidden="true">
           {agent.tools.map((tool) => (
             <div
               key={tool}
@@ -172,7 +184,10 @@ export function AgentCard({
 
         {/* Credits */}
         {agent.credits && (
-          <div className="mt-2 text-[10px] font-mono text-gray-500 flex justify-between w-full">
+          <div
+            className="mt-2 text-[10px] font-mono text-gray-500 flex justify-between w-full"
+            aria-hidden="true"
+          >
             <span>CREDITS</span>
             <span
               className={clsx(

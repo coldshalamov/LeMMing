@@ -51,80 +51,81 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
                 aria-label="Select start phase offset"
                 className="relative"
             >
-                {/* Clock circle */}
-                <circle
-                    cx="100"
-                    cy="100"
-                    r="90"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.1)"
-                    strokeWidth="2"
-                />
+                <svg width="200" height="200" viewBox="0 0 200 200">
+                    {/* Clock circle */}
+                    <circle
+                        cx="100"
+                        cy="100"
+                        r="90"
+                        fill="none"
+                        stroke="rgba(255,255,255,0.1)"
+                        strokeWidth="2"
+                    />
 
-                {/* Hour markers */}
-                {positions.map((pos) => {
-                    const isActivation = activationPoints.includes(pos.index);
-                    const isFirst = pos.index === offset;
-                    const isHovered = hoveredPosition === pos.index;
+                    {/* Hour markers */}
+                    {positions.map((pos) => {
+                        const isActivation = activationPoints.includes(pos.index);
+                        const isFirst = pos.index === offset;
+                        const isHovered = hoveredPosition === pos.index;
 
-                    return (
-                        <g
-                            key={pos.index}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Set start offset to position ${pos.index === 0 ? 12 : pos.index}`}
-                            aria-pressed={isFirst}
-                            onClick={() => onChange(pos.index)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    onChange(pos.index);
-                                }
-                            }}
-                            onMouseEnter={() => setHoveredPosition(pos.index)}
-                            className="cursor-pointer focus:outline-none group"
-                        >
-                            {/* Clickable area */}
-                            <circle
-                                cx={pos.x}
-                                cy={pos.y}
-                                r="15"
-                                fill="transparent"
-                            />
-
-                            {/* Visual marker */}
-                            <circle
-                                cx={pos.x}
-                                cy={pos.y}
-                                r={isFirst ? 8 : isActivation ? 6 : 3}
-                                fill={
-                                    isFirst
-                                        ? "#ef4444" // Red for first activation
-                                        : isActivation
-                                            ? "#9ca3af" // Grey for subsequent
-                                            : "rgba(255,255,255,0.2)" // Dim for inactive
-                                }
-                                className={clsx(
-                                    "transition-all",
-                                    isHovered && "opacity-80 scale-110"
-                                )}
-                                style={{
-                                    filter: isFirst ? "drop-shadow(0 0 8px #ef4444)" : "none",
+                        return (
+                            <g
+                                key={pos.index}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Set start offset to position ${pos.index === 0 ? 12 : pos.index}`}
+                                aria-pressed={isFirst}
+                                onClick={() => onChange(pos.index)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        onChange(pos.index);
+                                    }
                                 }}
-                            />
+                                onMouseEnter={() => setHoveredPosition(pos.index)}
+                                className="cursor-pointer focus:outline-none group"
+                            >
+                                {/* Clickable area */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r="15"
+                                    fill="transparent"
+                                />
 
-                            {/* Focus Ring Indicator (Visible only on keyboard focus) */}
-                            <circle
-                                cx={pos.x}
-                                cy={pos.y}
-                                r="18"
-                                fill="none"
-                                stroke="#22d3ee"
-                                strokeWidth="2"
-                                className="opacity-0 transition-opacity group-focus:opacity-100"
-                            />
+                                {/* Visual marker */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r={isFirst ? 8 : isActivation ? 6 : 3}
+                                    fill={
+                                        isFirst
+                                            ? "#ef4444" // Red for first activation
+                                            : isActivation
+                                                ? "#9ca3af" // Grey for subsequent
+                                                : "rgba(255,255,255,0.2)" // Dim for inactive
+                                    }
+                                    className={clsx(
+                                        "transition-all",
+                                        isHovered && "opacity-80 scale-110"
+                                    )}
+                                    style={{
+                                        filter: isFirst ? "drop-shadow(0 0 8px #ef4444)" : "none",
+                                    }}
+                                />
 
-                            {/* Position label */}
+                                {/* Focus Ring Indicator (Visible only on keyboard focus) */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r="18"
+                                    fill="none"
+                                    stroke="#22d3ee"
+                                    strokeWidth="2"
+                                    className="opacity-0 transition-opacity group-focus:opacity-100"
+                                />
+
+                                {/* Position label */}
                                 <text
                                     x={pos.x}
                                     y={pos.y + 25}
