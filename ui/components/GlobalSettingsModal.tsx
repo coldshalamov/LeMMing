@@ -13,8 +13,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
     const [config, setConfig] = useState({ openai_api_key: "", anthropic_api_key: "" });
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [isExisting, setIsExisting] = useState({ openai: false, anthropic: false });
-    const [showOpenAI, setShowOpenAI] = useState(false);
-    const [showAnthropic, setShowAnthropic] = useState(false);
+    const [showPassword, setShowPassword] = useState({ openai: false, anthropic: false });
 
     useEffect(() => {
         getEngineConfig().then(data => {
@@ -95,7 +94,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             <div className="relative">
                                 <input
                                     id="openai-key"
-                                    type={showOpenAI ? "text" : "password"}
+                                    type={showPassword.openai ? "text" : "password"}
                                     placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                     value={config.openai_api_key}
                                     onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
@@ -103,11 +102,11 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => setShowOpenAI(!showOpenAI)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                                    aria-label={showOpenAI ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
+                                    onClick={() => setShowPassword(prev => ({ ...prev, openai: !prev.openai }))}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    aria-label={showPassword.openai ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
                                 >
-                                    {showOpenAI ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    {showPassword.openai ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                             </div>
                         </div>
@@ -126,7 +125,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             <div className="relative">
                                 <input
                                     id="anthropic-key"
-                                    type={showAnthropic ? "text" : "password"}
+                                    type={showPassword.anthropic ? "text" : "password"}
                                     placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                     value={config.anthropic_api_key}
                                     onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
@@ -134,11 +133,11 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => setShowAnthropic(!showAnthropic)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                                    aria-label={showAnthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
+                                    onClick={() => setShowPassword(prev => ({ ...prev, anthropic: !prev.anthropic }))}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    aria-label={showPassword.anthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
                                 >
-                                    {showAnthropic ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    {showPassword.anthropic ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                             </div>
                         </div>

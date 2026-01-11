@@ -285,9 +285,6 @@ def collect_readable_outboxes(
         agents_dir = get_agents_dir(base_path)
         if not agents_dir.exists():
             return []
-        read_outboxes = [
-            d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
-        ]
         # Optimization: Use os.scandir to avoid creating Path objects
         with os.scandir(agents_dir) as it:
             read_outboxes = [
