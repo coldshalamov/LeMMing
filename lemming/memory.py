@@ -4,14 +4,28 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+import re
 
 from .paths import get_memory_dir
 
 logger = logging.getLogger(__name__)
+
+
+def validate_memory_key(key: str) -> None:
+    """Validate memory key to prevent path traversal."""
+    if not key:
+        raise ValueError("Memory key cannot be empty")
+
+    # Strict allowlist: alphanumeric, underscores, hyphens
+    if not re.match(r"^[a-zA-Z0-9_-]+$", key):
+        raise ValueError(
+            f"Memory key '{key}' is invalid. Only alphanumeric characters, underscores, and hyphens are allowed."
+        )
 
 
 def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
@@ -24,6 +38,7 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
         key: Memory key (e.g., "context", "facts", "goals")
         value: Value to store (will be JSON serialized)
     """
+    validate_memory_key(key)
     memory_dir = get_memory_dir(base_path, agent_name)
     memory_dir.mkdir(parents=True, exist_ok=True)
 
@@ -51,6 +66,11 @@ def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
     Returns:
         The stored value, or None if not found
     """
+    try:
+        validate_memory_key(key)
+    except ValueError:
+        return None
+
     memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
     if not memory_file.exists():
@@ -89,7 +109,16 @@ def list_memories(base_path: Path, agent_name: str) -> list[str]:
     if not memory_dir.exists():
         return []
 
-    return [f.stem for f in memory_dir.glob("*.json")]
+    # Optimization: Use os.scandir to avoid creating Path objects
+    try:
+        with os.scandir(memory_dir) as it:
+            return [
+                entry.name[:-5]  # Faster than partition or split for known suffix
+                for entry in it
+                if entry.is_file() and entry.name.endswith(".json")
+            ]
+    except FileNotFoundError:
+        return []
 
 
 def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
@@ -104,6 +133,11 @@ def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
     Returns:
         True if deleted, False if not found
     """
+    try:
+        validate_memory_key(key)
+    except ValueError:
+        return False
+
     memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
     if not memory_file.exists():
@@ -172,9 +206,7 @@ def append_memory_event(
     save_memory(base_path, agent_name, key, current)
 
 
-def load_recent_memory_events(
-    base_path: Path, agent_name: str, key: str, limit: int = 5
-) -> list[dict[str, Any]]:
+def load_recent_memory_events(base_path: Path, agent_name: str, key: str, limit: int = 5) -> list[dict[str, Any]]:
     """Load up to ``limit`` most recent events from a list-based memory key."""
 
     events = load_memory(base_path, agent_name, key)
@@ -186,9 +218,7 @@ def load_recent_memory_events(
     return events[-limit:]
 
 
-def summarize_memory_events(
-    base_path: Path, agent_name: str, key: str, limit: int = 5
-) -> str:
+def summarize_memory_events(base_path: Path, agent_name: str, key: str, limit: int = 5) -> str:
     """
     Provide a short, human-readable summary of recent events for an agent.
     """
@@ -325,43 +355,47 @@ def archive_old_memories(
     cutoff_time = datetime.now(UTC) - timedelta(days=days_old)
     archived_count = 0
 
-    for memory_file in memory_dir.glob("*.json"):
-        if memory_file.parent == archive_dir:
-            continue
+    try:
+        with os.scandir(memory_dir) as it:
+            for entry in it:
+                if not entry.is_file() or not entry.name.endswith(".json"):
+                    continue
 
-        try:
-            with memory_file.open("r", encoding="utf-8") as f:
-                entry = json.load(f)
+                try:
+                    with open(entry.path, encoding="utf-8") as f:
+                        data = json.load(f)
 
-            timestamp_str = entry.get("timestamp")
-            if not timestamp_str:
-                continue
+                    timestamp_str = data.get("timestamp")
+                    if not timestamp_str:
+                        continue
 
-            timestamp = datetime.fromisoformat(timestamp_str)
-            if timestamp < cutoff_time:
-                # Move to archive
-                archive_path = archive_dir / memory_file.name
-                shutil.move(str(memory_file), str(archive_path))
-                archived_count += 1
-                logger.info(
-                    "memory_archived",
-                    extra={
-                        "event": "memory_archived",
-                        "agent": agent_name,
-                        "key": memory_file.stem,
-                    },
-                )
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                    if timestamp < cutoff_time:
+                        # Move to archive
+                        archive_path = archive_dir / entry.name
+                        shutil.move(entry.path, str(archive_path))
+                        archived_count += 1
+                        logger.info(
+                            "memory_archived",
+                            extra={
+                                "event": "memory_archived",
+                                "agent": agent_name,
+                                "key": entry.name[:-5],
+                            },
+                        )
 
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning(
-                "memory_archive_failed",
-                extra={
-                    "event": "memory_archive_failed",
-                    "agent": agent_name,
-                    "key": memory_file.stem,
-                    "error": str(exc),
-                },
-            )
+                except Exception as exc:  # pragma: no cover - defensive
+                    logger.warning(
+                        "memory_archive_failed",
+                        extra={
+                            "event": "memory_archive_failed",
+                            "agent": agent_name,
+                            "key": entry.name[:-5],
+                            "error": str(exc),
+                        },
+                    )
+    except FileNotFoundError:
+        pass
 
     return archived_count
 

@@ -1,29 +1,31 @@
 {
   "name": "agent_template",
-  "title": "Replace with agent title",
-  "short_description": "Single-sentence summary of what this agent does.",
-  "workflow_description": "Numbered or bulleted list of how the agent processes inputs and produces outputs.",
-  "instructions": "Plain-language directions for the agent. Avoid tool-specific jargon unless required.",
+  "title": "Agent Template",
+  "short_description": "Generic agent template for cloning",
+  "workflow_description": "Standard agent workflow: read inbox, process task, result to outbox.",
+  "instructions": "You are a standard LeMMing agent. Your job is to receive tasks from the manager, execute them using your allowed tools, and report the results back via your outbox.",
   "model": {
     "key": "gpt-4.1-mini",
     "temperature": 0.2,
     "max_tokens": 2048
   },
   "permissions": {
-    "read_outboxes": ["*"],
-    "tools": ["memory_read", "memory_write"],
-    "send_outboxes": [],
-    "file_access": {
-      "allow_read": [],
-      "allow_write": []
-    }
+    "read_outboxes": [
+      "manager",
+      "human"
+    ],
+    "tools": [
+      "file_read",
+      "file_write",
+      "file_list"
+    ]
   },
   "schedule": {
     "run_every_n_ticks": 1,
     "phase_offset": 0
   },
   "credits": {
-    "max_credits": 500.0,
-    "soft_cap": 250.0
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
   }
 }
