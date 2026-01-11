@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import heapq
+import itertools
 import json
 import logging
 import os
@@ -285,9 +286,6 @@ def collect_readable_outboxes(
         agents_dir = get_agents_dir(base_path)
         if not agents_dir.exists():
             return []
-        read_outboxes = [
-            d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
-        ]
         # Optimization: Use os.scandir to avoid creating Path objects
         with os.scandir(agents_dir) as it:
             read_outboxes = [
@@ -297,7 +295,6 @@ def collect_readable_outboxes(
     # Optimization: Scan metadata first to avoid loading content of old messages
     # We use heapq.merge to combine pre-sorted lists from each agent,
     # avoiding a massive sort of all candidates and os.path.basename calls.
-    import itertools
 
     iterables = []
     for other in read_outboxes:
