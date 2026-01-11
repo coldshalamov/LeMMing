@@ -125,53 +125,6 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
                             />
 
                             {/* Position label */}
-                            <text
-                                x={pos.x}
-                                y={pos.y + 25}
-                                textAnchor="middle"
-                                className="text-[10px] font-mono fill-white/30"
-                            >
-                                {/* Clickable area (invisible but larger target) */}
-                                <circle
-                                    cx={pos.x}
-                                    cy={pos.y}
-                                    r="15"
-                                    fill="transparent"
-                                />
-
-                                {/* Focus indicator ring */}
-                                <circle
-                                    cx={pos.x}
-                                    cy={pos.y}
-                                    r="18"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    className="text-brand-cyan opacity-0 group-focus:opacity-100 transition-opacity"
-                                />
-
-                                {/* Visual marker */}
-                                <circle
-                                    cx={pos.x}
-                                    cy={pos.y}
-                                    r={isFirst ? 8 : isActivation ? 6 : 3}
-                                    fill={
-                                        isFirst
-                                            ? "#ef4444" // Red for first activation
-                                            : isActivation
-                                                ? "#9ca3af" // Grey for subsequent
-                                                : "rgba(255,255,255,0.2)" // Dim for inactive
-                                    }
-                                    className={clsx(
-                                        "transition-all",
-                                        isHovered && "opacity-80 scale-110"
-                                    )}
-                                    style={{
-                                        filter: isFirst ? "drop-shadow(0 0 8px #ef4444)" : "none",
-                                    }}
-                                />
-
-                                {/* Position label */}
                                 <text
                                     x={pos.x}
                                     y={pos.y + 25}
