@@ -27,3 +27,7 @@
 1. Added `MAX_WRITE_SIZE` (100KB) to `FileWriteTool`.
 2. Added `MAX_MEMORY_SIZE` (50KB) to `MemoryWriteTool`.
 3. Validated content size before attempting write operations.
+## 2024-01-10 - Efficient Log Reading (Tail)
+**Vulnerability:** The API endpoint `GET /api/agents/{name}/logs` was reading the entire log file into memory using `path.read_text().splitlines()`, even when only a small `limit` was requested. This posed a Denial of Service (DoS) risk via memory exhaustion if log files grew large (e.g., >100MB).
+**Learning:** Python's standard file reading methods are memory-inefficient for "tail" operations on large files. Reading the whole file just to get the last N lines is an anti-pattern for production logging APIs.
+**Prevention:** Implemented a `_read_last_lines` helper that reads the file in binary chunks from the end (using `seek(0, 2)` and seeking backwards). This ensures memory usage is proportional to the *requested* data (limit), not the total file size. The implementation carefully handles UTF-8 decoding and newline splitting across binary chunks.

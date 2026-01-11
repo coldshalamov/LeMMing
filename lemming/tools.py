@@ -342,48 +342,27 @@ class CreateAgentTool(Tool):
         if not new_agent_name:
             return ToolResult(False, "", "Missing new agent name")
 
+        # Check serialized size
         try:
-            validate_agent_name(new_agent_name)
+            serialized = json.dumps(value)
+            if len(serialized) > self.MAX_MEMORY_SIZE:
+                return ToolResult(
+                    False,
+                    "",
+                    f"Memory value too large ({len(serialized)} bytes). Max size is {self.MAX_MEMORY_SIZE} bytes.",
+                )
+        except (TypeError, ValueError) as e:
+            return ToolResult(False, "", f"Invalid memory value (not JSON serializable): {e}")
+
+        # Check key format validity via save_memory call or pre-check
+        # save_memory will handle the save, but we validated size
+        try:
+            memory.save_memory(base_path, agent_name, str(key), value)
+            return ToolResult(True, f"Saved memory for {key}")
         except ValueError as e:
-            return ToolResult(False, "", f"Invalid agent name: {e}")
-
-        new_agent_path = base_path / "agents" / str(new_agent_name)
-        if new_agent_path.exists():
-            return ToolResult(False, "", "Agent already exists")
-        template_path = base_path / "agents" / "agent_template"
-        if not template_path.exists():
-            return ToolResult(False, "", "Agent template missing")
-        try:
-            shutil.copytree(template_path, new_agent_path)
-            resume_path = new_agent_path / "resume.json"
-            if resume_path.exists():
-                data = json.loads(resume_path.read_text(encoding="utf-8"))
-                if isinstance(data, dict):
-                    data["name"] = str(new_agent_name)
-                    resume_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-            return ToolResult(True, f"Created agent {new_agent_name}")
+            return ToolResult(False, "", f"Invalid memory key: {e}")
         except Exception as exc:  # pragma: no cover - defensive
-            return ToolResult(False, "", f"Failed to create agent: {exc}")
+            return ToolResult(False, "", f"Failed to save memory: {exc}")
 
 
-class ListAgentsTool(Tool):
-    name = "list_agents"
-    description = "List all agents and basic information."
-
-    def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:  # noqa: ARG002
-        from .agents import discover_agents
-
-        agents = discover_agents(base_path)
-        info = [{"name": ag.name, "title": ag.title, "description": ag.short_description} for ag in agents]
-        return ToolResult(True, json.dumps(info, indent=2))
-
-
-# Register default tools
-ToolRegistry.register(FileReadTool())
-ToolRegistry.register(FileWriteTool())
-ToolRegistry.register(FileListTool())
-ToolRegistry.register(ShellTool())
-ToolRegistry.register(MemoryReadTool())
-ToolRegistry.register(MemoryWriteTool())
-ToolRegistry.register(CreateAgentTool())
-ToolRegistry.register(ListAgentsTool())
+class CreateAgentTool(Tool):
