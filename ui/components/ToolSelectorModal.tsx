@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, FileText, Code, Terminal, Database, Settings, Plus } from "lucide-react";
+import { X, FileText, Code, Terminal, Database, Settings, Plus, Check } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -121,6 +121,9 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                 onClick={onClose}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tool-selector-title"
             >
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
@@ -132,7 +135,7 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                     {/* Header */}
                     <div className="p-6 border-b border-white/5 flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-bold text-white">Select Capabilities</h2>
+                            <h2 id="tool-selector-title" className="text-2xl font-bold text-white">Select Capabilities</h2>
                             <p className="text-sm text-gray-400 mt-1">Choose what your agent can do</p>
                         </div>
                         <button
@@ -145,7 +148,7 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                     </div>
 
                     {/* Category Filter */}
-                    <div className="p-4 border-b border-white/5 flex gap-2">
+                    <div className="p-4 border-b border-white/5 flex gap-2" role="group" aria-label="Filter tools by category">
                         <button
                             type="button"
                             onClick={() => setActiveCategory(null)}
@@ -200,13 +203,21 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                                     >
                                         <div className="flex items-start gap-3">
                                             <div className={clsx(
-                                                "p-2 rounded-lg",
+                                                "p-2 rounded-lg relative",
                                                 isSelected ? "bg-brand-cyan/20" : "bg-white/10"
                                             )}>
                                                 <Icon size={20} className={isSelected ? "text-brand-cyan" : "text-gray-400"} />
+                                                {isSelected && (
+                                                    <div className="absolute -top-1 -right-1 bg-brand-cyan text-black rounded-full p-0.5 shadow-lg animate-in fade-in zoom-in duration-200">
+                                                        <Check size={10} strokeWidth={4} />
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex-1">
-                                                <div className="font-medium text-white mb-1">{tool.name}</div>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="font-medium text-white mb-1">{tool.name}</div>
+                                                    {isSelected && <div className="text-[10px] text-brand-cyan font-bold tracking-wider">SELECTED</div>}
+                                                </div>
                                                 <div className="text-xs text-gray-400 leading-relaxed">{tool.description}</div>
                                                 {tool.hasAdvanced && (
                                                     <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-500">
