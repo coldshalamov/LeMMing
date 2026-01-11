@@ -30,7 +30,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
             await updateEngineConfig(config);
             setStatus("success");
             setTimeout(onClose, 1500);
-        } catch (err) {
+        } catch {
             setStatus("error");
         }
     };
