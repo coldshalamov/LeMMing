@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
 COPY . /app
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -e ".[api,llm]"
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e ".[api,llm]"
 
 # Create data directories for agents and logs
 RUN mkdir -p /app/agents /app/logs

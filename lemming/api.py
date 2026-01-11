@@ -120,9 +120,7 @@ class CreateAgentRequest(BaseModel):
 class CloneAgentRequest(BaseModel):
     source_agent: str
     target_name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
-    target_path_prefix: str | None = Field(
-        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
-    )
+    target_path_prefix: str | None = Field(None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$")
 
 
 class OutboxEntryModel(BaseModel):
@@ -226,6 +224,39 @@ def _build_agent_info(agent: Any, credits: dict[str, Any]) -> AgentInfo:
     )
 
 
+def _read_last_lines(file_path: Path, limit: int) -> list[str]:
+    """Efficiently read the last N lines from a file."""
+    if limit <= 0:
+        return []
+
+    chunk_size = 8192
+    try:
+        with file_path.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            end_pos = f.tell()
+            if end_pos == 0:
+                return []
+
+            pos = end_pos
+            lines_found = 0
+
+            while pos > 0 and lines_found < limit:
+                read_len = min(chunk_size, pos)
+                pos -= read_len
+                f.seek(pos)
+                chunk = f.read(read_len)
+                lines_found += chunk.count(b"\n")
+
+            f.seek(pos)
+            data = f.read(end_pos - pos)
+            text = data.decode("utf-8", errors="ignore")
+            lines = text.splitlines()
+
+            return lines[-limit:]
+    except OSError:
+        return []
+
+
 def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
     try:
         validate_agent_name(agent_name)
@@ -233,15 +264,10 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
         return []
 
     log_path = get_logs_dir(base_path, agent_name) / "structured.jsonl"
-    try:
-        lines = log_path.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
-        return []
-    except OSError:
-        return []
+    lines = _read_last_lines(log_path, limit)
 
     entries: list[dict[str, Any]] = []
-    for line in lines[-limit:]:
+    for line in lines:
         try:
             parsed = json.loads(line)
         except json.JSONDecodeError:
