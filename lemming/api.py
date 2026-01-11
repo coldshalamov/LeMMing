@@ -69,6 +69,19 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Content Security Policy:
+    # - default-src 'self': Only allow resources from the same origin
+    # - img-src 'self' data: https: Allow images from self, data URIs (e.g. base64), and https
+    # - script-src 'self' 'unsafe-inline' https: Allow scripts from self, inline (needed for Swagger UI), and https
+    # - style-src 'self' 'unsafe-inline' https: Allow styles from self, inline (needed for Swagger UI), and https
+    # - object-src 'none': Disable plugins like Flash
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "img-src 'self' data: https:; "
+        "script-src 'self' 'unsafe-inline' https:; "
+        "style-src 'self' 'unsafe-inline' https:; "
+        "object-src 'none'"
+    )
     return response
 
 
@@ -120,9 +133,7 @@ class CreateAgentRequest(BaseModel):
 class CloneAgentRequest(BaseModel):
     source_agent: str
     target_name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
-    target_path_prefix: str | None = Field(
-        None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$"
-    )
+    target_path_prefix: str | None = Field(None, max_length=100, pattern=r"^[a-zA-Z0-9/_-]+$")
 
 
 class OutboxEntryModel(BaseModel):
@@ -226,6 +237,39 @@ def _build_agent_info(agent: Any, credits: dict[str, Any]) -> AgentInfo:
     )
 
 
+def _read_last_lines(file_path: Path, limit: int) -> list[str]:
+    """Efficiently read the last N lines from a file."""
+    if limit <= 0:
+        return []
+
+    chunk_size = 8192
+    try:
+        with file_path.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            end_pos = f.tell()
+            if end_pos == 0:
+                return []
+
+            pos = end_pos
+            lines_found = 0
+
+            while pos > 0 and lines_found < limit:
+                read_len = min(chunk_size, pos)
+                pos -= read_len
+                f.seek(pos)
+                chunk = f.read(read_len)
+                lines_found += chunk.count(b"\n")
+
+            f.seek(pos)
+            data = f.read(end_pos - pos)
+            text = data.decode("utf-8", errors="ignore")
+            lines = text.splitlines()
+
+            return lines[-limit:]
+    except OSError:
+        return []
+
+
 def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
     try:
         validate_agent_name(agent_name)
@@ -233,14 +277,43 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
         return []
 
     log_path = get_logs_dir(base_path, agent_name) / "structured.jsonl"
-    try:
-        lines = log_path.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
+    if not log_path.exists():
         return []
+
+    # Safe log reading with DoS protection
+    # Read only the last 1MB of logs if the file is large
+    MAX_LOG_READ_SIZE = 1 * 1024 * 1024  # 1MB
+
+    try:
+        size = log_path.stat().st_size
+        if size == 0:
+            return []
+
+        with log_path.open("rb") as f:
+            if size > MAX_LOG_READ_SIZE:
+                f.seek(size - MAX_LOG_READ_SIZE)
+                content_bytes = f.read()
+                # We might have cut a multibyte char or be in middle of line.
+                # Skip to next newline to ensure clean start.
+                first_newline = content_bytes.find(b"\n")
+                if first_newline != -1:
+                    content_bytes = content_bytes[first_newline + 1 :]
+                else:
+                    # No newline found in the last 1MB? That's a huge line.
+                    # Just decode what we can, ignoring errors at the start/end
+                    pass
+            else:
+                content_bytes = f.read()
+
+        # Decode using replace to handle any remaining partial bytes gracefully
+        content = content_bytes.decode("utf-8", errors="replace")
+        lines = content.splitlines()
+
     except OSError:
         return []
 
     entries: list[dict[str, Any]] = []
+    # If we still have too many lines, take only the last 'limit'
     for line in lines[-limit:]:
         try:
             parsed = json.loads(line)
