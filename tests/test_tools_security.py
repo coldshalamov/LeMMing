@@ -60,7 +60,8 @@ def test_shell_tool_prohibits_python(tmp_path):
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     assert not result.success
-    assert "security violation" in result.error.lower()
+    # The message changed from "blocked pattern" to "not allowed"
+    assert "not allowed" in result.error.lower()
     assert "python" in result.error.lower()
 
 
@@ -104,3 +105,41 @@ def test_shell_tool_absolute_path_argument(tmp_path):
     assert not result.success
     assert "security violation" in result.error.lower()
     assert "absolute path" in result.error.lower()
+
+
+def test_shell_tool_pipe_bypass(tmp_path):
+    """Ensure ShellTool does not execute pipes due to shell=False."""
+    base_path = tmp_path / "lemming"
+    agents_dir = base_path / "agents"
+    agent_name = "tester"
+    agent_dir = agents_dir / agent_name
+    workspace = agent_dir / "workspace"
+    workspace.mkdir(parents=True)
+
+    tool = ShellTool()
+
+    # Attempt to use a pipe
+    # "echo" is allowed. "base64" is not. "sh" is not.
+    # But if shell=False, this will be treated as echo arguments.
+    command = 'echo "hello" | base64'
+
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
+
+    if result.success:
+        # If success, it means it executed "echo" with arguments "\"hello\"", "|", "base64"
+        # The output should NOT be base64 encoded "hello".
+        # It should be "hello | base64"
+        assert "| base64" in result.output
+    else:
+        # It might fail if echo treats | as an error? standard echo prints it.
+        pass
+
+    # Verify that we cannot execute multiple commands
+    command = "echo hello; echo world"
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
+
+    if result.success:
+        # Should print "hello; echo world" literally
+        assert "; echo world" in result.output
+        assert "hello" in result.output
+        assert result.output.strip() == "hello; echo world"
