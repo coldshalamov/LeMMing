@@ -140,6 +140,16 @@ def scan_outbox_files(
 
     If limit > 0, returns only the most recent 'limit' entries using heapq.
     """
+    return [
+        (tick, path)
+        for tick, path, _ in _scan_outbox_files_optimized(base_path, agent_name, since_tick, limit)
+    ]
+
+
+def _scan_outbox_files_optimized(
+    base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
+) -> list[tuple[int, str, str]]:
+    """Internal optimized version returning (tick, full_path_str, filename)."""
     outbox_dir = get_outbox_dir(base_path, agent_name)
     if not outbox_dir.exists():
         return []

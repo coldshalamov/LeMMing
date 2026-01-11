@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -147,6 +148,31 @@ class MemoryWriteTool(Tool):
         value = kwargs.get("value")
         if not key:
             return ToolResult(False, "", "Missing key")
+
+        # Check size of value when serialized
+        try:
+            serialized = json.dumps(value)
+            if len(serialized) > self.MAX_MEMORY_SIZE:
+                return ToolResult(
+                    False,
+                    "",
+                    f"Memory value too large ({len(serialized)} bytes). Max size is {self.MAX_MEMORY_SIZE} bytes.",
+                )
+        except (TypeError, ValueError):
+            return ToolResult(False, "", "Memory value is not JSON serializable")
+
+        memory.save_memory(base_path, agent_name, str(key), value)
+        return ToolResult(True, f"Saved memory for {key}")
+
+
+class CreateAgentTool(Tool):
+    name = "create_agent"
+    description = "Create a new agent from the agent template."
+
+    def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
+        new_agent_name = kwargs.get("name")
+        if not new_agent_name:
+            return ToolResult(False, "", "Missing new agent name")
 
         # Check serialized size
         try:
