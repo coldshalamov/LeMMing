@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Key, Shield, Check, AlertTriangle } from "lucide-react";
+import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
@@ -13,6 +13,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
     const [config, setConfig] = useState({ openai_api_key: "", anthropic_api_key: "" });
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [isExisting, setIsExisting] = useState({ openai: false, anthropic: false });
+    const [showPassword, setShowPassword] = useState({ openai: false, anthropic: false });
 
     useEffect(() => {
         getEngineConfig().then(data => {
@@ -29,7 +30,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
             await updateEngineConfig(config);
             setStatus("success");
             setTimeout(onClose, 1500);
-        } catch (err) {
+        } catch {
             setStatus("error");
         }
     };
@@ -42,6 +43,9 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
                 onClick={onClose}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
             >
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
@@ -57,11 +61,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <Shield className="text-brand-cyan" size={20} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">System Config</h2>
+                                <h2 id="modal-title" className="text-xl font-bold text-white">System Config</h2>
                                 <p className="text-xs text-gray-400">Manage LLM providers and secrets</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                            aria-label="Close settings"
+                        >
                             <X size={20} className="text-gray-400" />
                         </button>
                     </div>
@@ -74,7 +82,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
                         {/* OpenAI Key */}
                         <div className="space-y-2">
-                            <label className="flex items-center justify-between">
+                            <label htmlFor="openai-key" className="flex items-center justify-between">
                                 <span className="flex items-center gap-2 text-sm font-medium text-gray-300">
                                     <Key size={14} className="text-brand-cyan" />
                                     OpenAI API Key
@@ -83,18 +91,29 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
                                 )}
                             </label>
-                            <input
-                                type="password"
-                                placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
-                                value={config.openai_api_key}
-                                onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
-                                className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none font-mono text-sm"
-                            />
+                            <div className="relative">
+                                <input
+                                    id="openai-key"
+                                    type={showPassword.openai ? "text" : "password"}
+                                    placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
+                                    value={config.openai_api_key}
+                                    onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
+                                    className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none font-mono text-sm"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(prev => ({ ...prev, openai: !prev.openai }))}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    aria-label={showPassword.openai ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
+                                >
+                                    {showPassword.openai ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Claude Key */}
                         <div className="space-y-2">
-                            <label className="flex items-center justify-between">
+                            <label htmlFor="anthropic-key" className="flex items-center justify-between">
                                 <span className="flex items-center gap-2 text-sm font-medium text-gray-300">
                                     <Key size={14} className="text-brand-purple" />
                                     Anthropic API Key
@@ -103,13 +122,24 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
                                 )}
                             </label>
-                            <input
-                                type="password"
-                                placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
-                                value={config.anthropic_api_key}
-                                onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
-                                className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-purple focus:outline-none font-mono text-sm"
-                            />
+                            <div className="relative">
+                                <input
+                                    id="anthropic-key"
+                                    type={showPassword.anthropic ? "text" : "password"}
+                                    placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
+                                    value={config.anthropic_api_key}
+                                    onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
+                                    className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none font-mono text-sm"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(prev => ({ ...prev, anthropic: !prev.anthropic }))}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    aria-label={showPassword.anthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
+                                >
+                                    {showPassword.anthropic ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
                         </div>
                     </div>
 

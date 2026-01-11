@@ -20,3 +20,14 @@
 **Prevention:**
 1. Never allow execution of general-purpose interpreters (`python`, `node`, `bash`) directly on the host in a "sandboxed" tool unless that tool uses a robust isolation mechanism (like Docker or Firecracker).
 2. Use strict allowlists for executables that are known to be safe and have limited scope (like `grep`, `cat` with strict argument validation).
+## 2025-05-24 - DoS Risk in FileWriteTool and MemoryWriteTool
+**Vulnerability:** The `FileWriteTool` and `MemoryWriteTool` did not enforce any size limits on the data being written. This allowed an attacker (or a malfunctioning agent) to write arbitrarily large files (e.g., 10GB+), potentially causing a Denial of Service (DoS) by exhausting disk space or memory.
+**Learning:** Tools that perform I/O operations must always have explicit resource limits (size, count, timeout). Relying on implied trust in agents is dangerous, especially as agents can hallucinate or be subject to prompt injection.
+**Prevention:**
+1. Added `MAX_WRITE_SIZE` (100KB) to `FileWriteTool`.
+2. Added `MAX_MEMORY_SIZE` (50KB) to `MemoryWriteTool`.
+3. Validated content size before attempting write operations.
+## 2024-01-10 - Efficient Log Reading (Tail)
+**Vulnerability:** The API endpoint `GET /api/agents/{name}/logs` was reading the entire log file into memory using `path.read_text().splitlines()`, even when only a small `limit` was requested. This posed a Denial of Service (DoS) risk via memory exhaustion if log files grew large (e.g., >100MB).
+**Learning:** Python's standard file reading methods are memory-inefficient for "tail" operations on large files. Reading the whole file just to get the last N lines is an anti-pattern for production logging APIs.
+**Prevention:** Implemented a `_read_last_lines` helper that reads the file in binary chunks from the end (using `seek(0, 2)` and seeking backwards). This ensures memory usage is proportional to the *requested* data (limit), not the total file size. The implementation carefully handles UTF-8 decoding and newline splitting across binary chunks.

@@ -12,9 +12,41 @@ def validate_agent_name(name: str) -> None:
     # Strict allowlist: alphanumeric, underscores, hyphens
     if not re.match(r"^[a-zA-Z0-9_-]+$", name):
         raise ValueError(
-            f"Agent name '{name}' is invalid. Only alphanumeric characters, " "underscores, and hyphens are allowed."
             f"Agent name '{name}' is invalid. Only alphanumeric characters, underscores, and hyphens are allowed."
         )
+
+
+def validate_path_prefix(prefix: str | None) -> None:
+    """Validate that the path prefix is safe and follows strict rules.
+
+    Allowed characters in segments: alphanumeric, underscores, hyphens.
+    Separator: forward slash (/).
+    No '..' or '.' segments.
+    No leading or trailing slashes (must be relative).
+    No empty segments (//).
+    """
+    if not prefix:
+        return
+
+    if prefix.startswith("/"):
+        raise ValueError("Path prefix cannot start with '/' (must be relative)")
+
+    if prefix.endswith("/"):
+        raise ValueError("Path prefix cannot end with '/'")
+
+    # Normalize to avoid empty segments and check for ..
+    parts = prefix.split("/")
+
+    for part in parts:
+        if not part:
+            raise ValueError("Path prefix cannot contain empty segments (//)")
+
+        if part == "." or part == "..":
+            raise ValueError(f"Path prefix cannot contain '{part}' segments")
+
+        # Strict allowlist: alphanumeric, underscores, hyphens
+        if not re.match(r"^[a-zA-Z0-9_-]+$", part):
+            raise ValueError(f"Invalid path segment '{part}'. Only alphanumeric, '_', '-' allowed.")
 
 
 def get_config_dir(base_path: Path) -> Path:

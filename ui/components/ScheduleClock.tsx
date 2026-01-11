@@ -46,11 +46,10 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
 
     return (
         <div className="flex flex-col items-center gap-4">
-            <svg
-                width="200"
-                height="200"
-                className="cursor-pointer"
-                onMouseLeave={() => setHoveredPosition(null)}
+            <div
+                role="radiogroup"
+                aria-label="Select start phase offset"
+                className="relative"
             >
                 {/* Clock circle */}
                 <circle
@@ -132,15 +131,63 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
                                 textAnchor="middle"
                                 className="text-[10px] font-mono fill-white/30"
                             >
-                                {pos.index === 0 ? "12" : pos.index}
-                            </text>
-                        </g>
-                    );
-                })}
+                                {/* Clickable area (invisible but larger target) */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r="15"
+                                    fill="transparent"
+                                />
 
-                {/* Center dot */}
-                <circle cx="100" cy="100" r="3" fill="rgba(255,255,255,0.3)" />
-            </svg>
+                                {/* Focus indicator ring */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r="18"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className="text-brand-cyan opacity-0 group-focus:opacity-100 transition-opacity"
+                                />
+
+                                {/* Visual marker */}
+                                <circle
+                                    cx={pos.x}
+                                    cy={pos.y}
+                                    r={isFirst ? 8 : isActivation ? 6 : 3}
+                                    fill={
+                                        isFirst
+                                            ? "#ef4444" // Red for first activation
+                                            : isActivation
+                                                ? "#9ca3af" // Grey for subsequent
+                                                : "rgba(255,255,255,0.2)" // Dim for inactive
+                                    }
+                                    className={clsx(
+                                        "transition-all",
+                                        isHovered && "opacity-80 scale-110"
+                                    )}
+                                    style={{
+                                        filter: isFirst ? "drop-shadow(0 0 8px #ef4444)" : "none",
+                                    }}
+                                />
+
+                                {/* Position label */}
+                                <text
+                                    x={pos.x}
+                                    y={pos.y + 25}
+                                    textAnchor="middle"
+                                    className="text-[10px] font-mono fill-white/30 pointer-events-none"
+                                >
+                                    {pos.index === 0 ? "12" : pos.index}
+                                </text>
+                            </g>
+                        );
+                    })}
+
+                    {/* Center dot */}
+                    <circle cx="100" cy="100" r="3" fill="rgba(255,255,255,0.3)" />
+                </svg>
+            </div>
 
             <div className="text-xs font-mono text-gray-400 text-center">
                 <div>
