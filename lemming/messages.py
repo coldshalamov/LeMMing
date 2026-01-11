@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import uuid
-import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -133,8 +132,8 @@ def _tick_from_filename_str(filename: str) -> int:
 
 def scan_outbox_files(
     base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
-) -> list[tuple[int, str, str]]:
-    """Scans outbox files and returns list of (tick, filename, full_path_str) without loading content.
+) -> list[tuple[int, str]]:
+    """Scans outbox files and returns list of (tick, filename) without loading content.
 
     This is faster than read_outbox_entries when we only need to sort by tick/filename
     across multiple agents.
@@ -142,18 +141,17 @@ def scan_outbox_files(
     If limit > 0, returns only the most recent 'limit' entries using heapq.
     """
     return [
-        (tick, path)
-        for tick, path, _ in _scan_outbox_files_optimized(base_path, agent_name, since_tick, limit)
+        (tick, filename) for tick, filename, _ in _scan_outbox_files_optimized(base_path, agent_name, since_tick, limit)
     ]
 
 
 def _scan_outbox_files_optimized(
     base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
 ) -> list[tuple[int, str, str]]:
-    """Internal optimized version returning (tick, full_path_str, filename)."""
+    """Internal optimized version returning (tick, filename, full_path_str)."""
     outbox_dir = get_outbox_dir(base_path, agent_name)
-    if not outbox_dir.exists():
-        return []
+    # Optimization: removed outbox_dir.exists() check to rely on try/except block below
+    # which saves a stat call.
 
     results = []
     try:
@@ -206,8 +204,7 @@ def read_outbox_entries(
     base_path: Path, agent_name: str, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntry]:
     outbox_dir = get_outbox_dir(base_path, agent_name)
-    if not outbox_dir.exists():
-        return []
+    # Optimization: removed outbox_dir.exists() check to rely on try/except block below
 
     if limit <= 0:
         return []
@@ -275,8 +272,7 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
     This avoids reading and parsing the JSON files, which is significantly faster.
     """
     outbox_dir = get_outbox_dir(base_path, agent_name)
-    if not outbox_dir.exists():
-        return 0
+    # Optimization: removed outbox_dir.exists() check to rely on try/except block below
 
     try:
         count = 0
@@ -315,12 +311,15 @@ def collect_readable_outboxes(
         if other == agent_name:
             continue
         # Each agent returns at most 'limit' newest messages, sorted descending.
-        iterables.append(scan_outbox_files(base_path, other, since_tick=since_tick, limit=limit))
+        iterables.append(_scan_outbox_files_optimized(base_path, other, since_tick=since_tick, limit=limit))
 
-    # Merge sorted streams. scan_outbox_files returns (tick, filename, path)
+    # Merge sorted streams. _scan_outbox_files_optimized returns (tick, filename, path)
     # We want to sort by (tick, filename) descending.
     # scan_outbox_files output is already sorted by this key.
-    merged = heapq.merge(*iterables, key=lambda x: (x[0], x[1]), reverse=True)
+    # Optimization: Removed key lambda because (tick, filename, path) tuple comparison is sufficient
+    # and equivalent to (tick, filename) since filename implies tick and is unique per agent,
+    # and globally unique (UUID). This avoids lambda overhead per item.
+    merged = heapq.merge(*iterables, reverse=True)
 
     # Take only the top 'limit' entries
     to_load = list(itertools.islice(merged, limit))
