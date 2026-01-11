@@ -9,10 +9,23 @@ import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+import re
 
 from .paths import get_memory_dir
 
 logger = logging.getLogger(__name__)
+
+
+def validate_memory_key(key: str) -> None:
+    """Validate memory key to prevent path traversal."""
+    if not key:
+        raise ValueError("Memory key cannot be empty")
+
+    # Strict allowlist: alphanumeric, underscores, hyphens
+    if not re.match(r"^[a-zA-Z0-9_-]+$", key):
+        raise ValueError(
+            f"Memory key '{key}' is invalid. Only alphanumeric characters, underscores, and hyphens are allowed."
+        )
 
 
 def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
@@ -25,6 +38,7 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
         key: Memory key (e.g., "context", "facts", "goals")
         value: Value to store (will be JSON serialized)
     """
+    validate_memory_key(key)
     memory_dir = get_memory_dir(base_path, agent_name)
     memory_dir.mkdir(parents=True, exist_ok=True)
 
@@ -52,6 +66,11 @@ def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
     Returns:
         The stored value, or None if not found
     """
+    try:
+        validate_memory_key(key)
+    except ValueError:
+        return None
+
     memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
     if not memory_file.exists():
@@ -114,6 +133,11 @@ def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
     Returns:
         True if deleted, False if not found
     """
+    try:
+        validate_memory_key(key)
+    except ValueError:
+        return False
+
     memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
     if not memory_file.exists():
@@ -338,7 +362,7 @@ def archive_old_memories(
                     continue
 
                 try:
-                    with open(entry.path, "r", encoding="utf-8") as f:
+                    with open(entry.path, encoding="utf-8") as f:
                         data = json.load(f)
 
                     timestamp_str = data.get("timestamp")
