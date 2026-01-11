@@ -69,6 +69,19 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Content Security Policy:
+    # - default-src 'self': Only allow resources from the same origin
+    # - img-src 'self' data: https: Allow images from self, data URIs (e.g. base64), and https
+    # - script-src 'self' 'unsafe-inline' https: Allow scripts from self, inline (needed for Swagger UI), and https
+    # - style-src 'self' 'unsafe-inline' https: Allow styles from self, inline (needed for Swagger UI), and https
+    # - object-src 'none': Disable plugins like Flash
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "img-src 'self' data: https:; "
+        "script-src 'self' 'unsafe-inline' https:; "
+        "style-src 'self' 'unsafe-inline' https:; "
+        "object-src 'none'"
+    )
     return response
 
 
