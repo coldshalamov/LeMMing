@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import heapq
+import itertools
 import json
 import logging
 import os
@@ -222,8 +223,10 @@ def read_outbox_entries(
     min_collected_tick = float("inf")
 
     for name in filenames:
-        entry_path = outbox_dir / name
-        tick_val = _tick_from_filename(entry_path)
+        # Optimization: Parse tick from filename string directly to avoid Path creation.
+        # _tick_from_filename_str returns -1 on error.
+        tick_val_int = _tick_from_filename_str(name)
+        tick_val = tick_val_int if tick_val_int != -1 else None
 
         # If we encounter a file with a tick older than since_tick, we can stop
         # because subsequent files (sorted by tick desc) will have even smaller ticks.
@@ -237,6 +240,7 @@ def read_outbox_entries(
             if tick_val is not None and min_collected_tick > tick_val:
                 break
 
+        entry_path = outbox_dir / name
         entry = _load_entry(entry_path)
         if entry is None:
             continue
@@ -285,9 +289,6 @@ def collect_readable_outboxes(
         agents_dir = get_agents_dir(base_path)
         if not agents_dir.exists():
             return []
-        read_outboxes = [
-            d.name for d in agents_dir.iterdir() if d.is_dir() and d.name not in {agent_name, "agent_template"}
-        ]
         # Optimization: Use os.scandir to avoid creating Path objects
         with os.scandir(agents_dir) as it:
             read_outboxes = [
@@ -297,7 +298,6 @@ def collect_readable_outboxes(
     # Optimization: Scan metadata first to avoid loading content of old messages
     # We use heapq.merge to combine pre-sorted lists from each agent,
     # avoiding a massive sort of all candidates and os.path.basename calls.
-    import itertools
 
     iterables = []
     for other in read_outboxes:
