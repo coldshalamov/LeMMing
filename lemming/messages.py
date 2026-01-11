@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import uuid
+import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
