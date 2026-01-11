@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import heapq
+import itertools
 import json
 import logging
 import os
@@ -294,7 +295,6 @@ def collect_readable_outboxes(
     # Optimization: Scan metadata first to avoid loading content of old messages
     # We use heapq.merge to combine pre-sorted lists from each agent,
     # avoiding a massive sort of all candidates and os.path.basename calls.
-    import itertools
 
     iterables = []
     for other in read_outboxes:
