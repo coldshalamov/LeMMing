@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
-from .paths import get_agents_dir, get_agent_dir
+from .paths import get_agents_dir, get_agent_dir, validate_agent_name
 
 
 def _is_path_allowed(base_path: Path, agent_name: str, target_path: Path, mode: str) -> bool:
@@ -27,10 +27,14 @@ def _is_path_allowed(base_path: Path, agent_name: str, target_path: Path, mode: 
         base_path: Base path of the LeMMing workspace
         agent_name: Name of the agent
         target_path: Path to check access for
-        mode: Access mode ("read" or "write")
+        mode: Access mode ("read" or "write") - reserved for future use
 
     Returns:
         True if access is allowed, False otherwise
+
+    Note:
+        The 'mode' parameter is reserved for future use to implement
+        different permissions for read vs write operations.
     """
     # Resolve paths to handle symlinks and relative paths
     try:
@@ -84,7 +88,12 @@ class Tool(ABC):
 
 
 class ToolRegistry:
-    """Registry for all available tools."""
+    """Registry for all available tools.
+
+    This is a class-level registry that maintains a global mapping of tool names
+    to tool instances. The _tools dict is intentionally shared across all instances
+    as part of the singleton registry pattern.
+    """
 
     _tools: dict[str, Tool] = {}
 
@@ -127,6 +136,8 @@ class MemoryReadTool(Tool):
 
 
 class MemoryWriteTool(Tool):
+    """Tool for writing key/value pairs to agent memory with size limits."""
+
     name = "memory_write"
     description = "Write a key/value pair into the agent's memory store."
     MAX_MEMORY_SIZE = 50 * 1024  # 50KB
@@ -175,17 +186,14 @@ class CreateAgentTool(Tool):
         if not new_agent_name:
             return ToolResult(False, "", "Missing 'name' parameter")
 
-        # Validate agent name for security (prevent path traversal)
+        # Validate agent name for security (reuse centralized validation)
         if not isinstance(new_agent_name, str):
             return ToolResult(False, "", "Agent name must be a string")
 
-        # Check for path traversal attempts
-        if ".." in new_agent_name or "/" in new_agent_name or "\\" in new_agent_name:
-            return ToolResult(False, "", "Invalid agent name: path traversal or invalid characters detected")
-
-        # Check for other invalid characters
-        if not re.match(r"^[a-zA-Z0-9_-]+$", new_agent_name):
-            return ToolResult(False, "", "Invalid agent name: only alphanumeric, underscore, and hyphen allowed")
+        try:
+            validate_agent_name(new_agent_name)
+        except ValueError as e:
+            return ToolResult(False, "", str(e))
 
         agents_dir = get_agents_dir(base_path)
         template_dir = agents_dir / "agent_template"
