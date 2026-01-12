@@ -4,11 +4,12 @@ import asyncio
 import json
 import logging
 import os
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -59,6 +60,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Simple in-memory rate limiter
+# Map: client_ip -> list of timestamps
+_request_timestamps: dict[str, list[float]] = {}
+
+
+def rate_limiter(limit: int = 10, window: int = 60):
+    async def dependency(request: Request):
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+
+        # Initialize
+        if client_ip not in _request_timestamps:
+            _request_timestamps[client_ip] = []
+
+        # Filter old timestamps
+        _request_timestamps[client_ip] = [t for t in _request_timestamps[client_ip] if now - t < window]
+
+        if len(_request_timestamps[client_ip]) >= limit:
+            logger.warning(f"Rate limit exceeded for {client_ip}")
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+        _request_timestamps[client_ip].append(now)
+
+    return dependency
 
 
 @app.middleware("http")
@@ -162,7 +189,7 @@ class ToolInfo(BaseModel):
     description: str
 
 
-@app.post("/api/messages")
+@app.post("/api/messages", dependencies=[Depends(rate_limiter(limit=10, window=60))])
 async def send_message(request: SendMessageRequest) -> dict[str, str]:
     """Send a message from 'human' to a target agent."""
     tick = load_tick(BASE_PATH)
@@ -341,7 +368,7 @@ async def get_agent(agent_name: str) -> AgentInfo:
     return _build_agent_info(agent, credits)
 
 
-@app.post("/api/agents", status_code=201)
+@app.post("/api/agents", status_code=201, dependencies=[Depends(rate_limiter(limit=5, window=60))])
 async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     try:
         validate_agent_name(request.name)
