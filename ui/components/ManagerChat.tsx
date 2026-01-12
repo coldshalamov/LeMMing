@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, User, Bot } from "lucide-react";
+import { Send, User, Bot, Loader2 } from "lucide-react";
 import { OutboxEntry } from "../lib/types";
 import { sendMessage } from "../lib/api";
 import clsx from "clsx";
@@ -133,10 +133,10 @@ export function ManagerChat({ messages }: ManagerChatProps) {
                 <button
                     type="submit"
                     disabled={!inputValue.trim() || isSending}
-                    aria-label="Send message"
+                    aria-label={isSending ? "Sending message..." : "Send message"}
                     className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                    <Send size={18} />
+                    {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 </button>
             </form>
         </div>
