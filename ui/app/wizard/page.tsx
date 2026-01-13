@@ -187,6 +187,7 @@ export default function WizardPage() {
             href="/"
             className="text-white/40 hover:text-white transition-colors p-1.5 hover:bg-white/5 rounded-full"
             title="Close Wizard"
+            aria-label="Close Wizard and return to dashboard"
           >
             <X size={18} />
           </Link>
@@ -692,6 +693,12 @@ export default function WizardPage() {
                   <button
                     onClick={handleBack}
                     className="px-6 py-2 rounded border border-neo-border text-gray-400 hover:text-white flex items-center gap-2"
+                    title={stepIdx === 0 ? "Cancel wizard" : `Go back to ${STEPS[stepIdx - 1]?.label}`}
+                    aria-label={
+                      stepIdx === 0
+                        ? "Cancel wizard and return to dashboard"
+                        : `Go back to ${STEPS[stepIdx - 1]?.label} step`
+                    }
                   >
                     <ArrowLeft size={16} />
                     {stepIdx === 0 ? "Cancel" : "Back"}
@@ -701,6 +708,8 @@ export default function WizardPage() {
                     <button
                       onClick={handleNext}
                       className="px-6 py-2 rounded bg-brand-cyan text-black font-bold hover:bg-cyan-300 flex items-center gap-2"
+                      title={`Continue to ${STEPS[stepIdx + 1]?.label}`}
+                      aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
                     >
                       Next <ArrowRight size={16} />
                     </button>
