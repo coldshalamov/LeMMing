@@ -7,7 +7,6 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
-import os
 import re
 import shlex
 import shutil
@@ -18,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
-from .paths import get_agents_dir, get_agent_dir, validate_agent_name
+from .paths import get_agent_dir, get_agents_dir, validate_agent_name
 
 
 def _is_path_allowed(base_path: Path, agent_name: str, target_path: Path, mode: str) -> bool:
@@ -161,8 +160,13 @@ class MemoryWriteTool(Tool):
         except (TypeError, ValueError):
             return ToolResult(False, "", "Memory value is not JSON serializable")
 
-        memory.save_memory(base_path, agent_name, str(key), value)
-        return ToolResult(True, f"Saved memory for {key}")
+        try:
+            memory.save_memory(base_path, agent_name, str(key), value)
+            return ToolResult(True, f"Saved memory for {key}")
+        except ValueError as e:
+            return ToolResult(False, "", f"Invalid memory key: {e}")
+        except Exception as e:
+            return ToolResult(False, "", f"Failed to save memory: {e}")
 
 
 class CreateAgentTool(Tool):
