@@ -1,8 +1,6 @@
 
-import pytest
-import json
-from pathlib import Path
 from lemming.tools import FileWriteTool, MemoryWriteTool
+
 
 def test_file_write_limit(tmp_path):
     tool = FileWriteTool()
@@ -24,7 +22,7 @@ def test_file_write_limit(tmp_path):
     )
 
     assert not result.success
-    assert "Content too large" in result.error
+    assert "content too large" in result.error.lower()
     assert not (workspace / "large_file.txt").exists()
 
 def test_file_write_within_limit(tmp_path):
@@ -61,7 +59,7 @@ def test_memory_write_limit(tmp_path):
     )
 
     assert not result.success
-    assert "Memory value too large" in result.error
+    assert "memory value too large" in result.error.lower()
 
     # Verify file not created
     mem_path = tmp_path / "agents" / agent_name / "memory" / "large_mem.json"
@@ -83,28 +81,4 @@ def test_memory_write_within_limit(tmp_path):
     assert result.success
     mem_path = tmp_path / "agents" / agent_name / "memory" / "small_mem.json"
     assert mem_path.exists()
-    assert "too large" in result.error.lower()
-    assert not (workspace / "large_file.txt").exists()
-
-def test_memory_write_limit(tmp_path):
-    base_path = tmp_path
-    agents_dir = base_path / "agents"
-    agent_name = "test_agent"
-    memory_dir = agents_dir / agent_name / "memory"
-    memory_dir.mkdir(parents=True)
-
-    tool = MemoryWriteTool()
-
-    # Create large content (1MB)
-    large_content = {"data": "x" * (1024 * 1024)}
-
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=base_path,
-        key="large_memory",
-        value=large_content
-    )
-
-    assert not result.success
-    assert "too large" in result.error.lower()
-    assert not (memory_dir / "large_memory.json").exists()
+    assert not result.error
