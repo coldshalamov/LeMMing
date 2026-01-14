@@ -316,7 +316,9 @@ class ShellTool(Tool):
                 return ToolResult(False, "", "Security violation: directory traversal detected in arguments")
 
             # Check for absolute paths
-            if re.search(r"(/[a-zA-Z0-9_/-]+|[A-Z]:\\)", arg):
+            # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
+            # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
+            if Path(arg).is_absolute():
                  return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
