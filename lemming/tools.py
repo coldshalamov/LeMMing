@@ -45,12 +45,12 @@ def _is_path_allowed(base_path: Path, agent_name: str, target_path: Path, mode: 
 
     # Agents can access their own workspace
     agent_workspace = (resolved_base / "agents" / agent_name / "workspace").resolve()
-    if str(resolved_target).startswith(str(agent_workspace)):
+    if resolved_target.is_relative_to(agent_workspace):
         return True
 
     # Agents can access the shared directory
     shared_dir = (resolved_base / "shared").resolve()
-    if str(resolved_target).startswith(str(shared_dir)):
+    if resolved_target.is_relative_to(shared_dir):
         return True
 
     # All other paths are denied
@@ -211,7 +211,7 @@ class CreateAgentTool(Tool):
             resolved_agents = agents_dir.resolve()
 
             # Ensure the new agent directory is within the agents directory
-            if not str(resolved_new).startswith(str(resolved_agents)):
+            if not resolved_new.is_relative_to(resolved_agents):
                 return ToolResult(False, "", "Security violation: path traversal attempt detected")
         except Exception as e:
             return ToolResult(False, "", f"Path validation error: {e}")
