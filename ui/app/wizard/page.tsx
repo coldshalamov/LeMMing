@@ -16,6 +16,7 @@ import {
   X,
   Brain,
   Plus,
+  Copy,
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -84,6 +85,7 @@ export default function WizardPage() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showToolModal, setShowToolModal] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const stepIdx = currentStep;
   const StepIcon = STEPS[stepIdx].icon;
@@ -145,6 +147,17 @@ export default function WizardPage() {
     }),
     [formData],
   );
+
+  const handleCopyConfig = async () => {
+    try {
+      const config = JSON.stringify(previewAgent, null, 2);
+      await navigator.clipboard.writeText(config);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-neo-bg text-foreground font-sans flex flex-col">
@@ -577,13 +590,27 @@ export default function WizardPage() {
                     {/* Visual Summary Card */}
                     <div className="bg-gradient-to-br from-neo-panel to-neo-surface border border-neo-border rounded-xl overflow-hidden">
                       {/* Header */}
-                      <div className="p-6 border-b border-white/5 bg-black/20">
-                        <h3 className="text-2xl font-bold text-white mb-1">
-                          {formData.name || "Unnamed Agent"}
-                        </h3>
-                        <p className="text-brand-cyan text-sm font-mono uppercase">
-                          {formData.title || "No Title"}
-                        </p>
+                      <div className="p-6 border-b border-white/5 bg-black/20 flex justify-between items-start">
+                        <div>
+                          <h3 className="text-2xl font-bold text-white mb-1">
+                            {formData.name || "Unnamed Agent"}
+                          </h3>
+                          <p className="text-brand-cyan text-sm font-mono uppercase">
+                            {formData.title || "No Title"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleCopyConfig}
+                          className="text-xs flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors"
+                          aria-label="Copy agent configuration JSON to clipboard"
+                        >
+                          {isCopied ? (
+                            <Check size={14} className="text-brand-lime" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                          {isCopied ? "COPIED" : "COPY JSON"}
+                        </button>
                       </div>
 
                       {/* Details Grid */}
