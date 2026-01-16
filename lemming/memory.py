@@ -15,6 +15,9 @@ from .paths import get_memory_dir
 
 logger = logging.getLogger(__name__)
 
+# Pre-compile regex for performance
+MEMORY_KEY_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+
 
 def validate_memory_key(key: str) -> None:
     """Validate memory key to prevent path traversal."""
@@ -22,7 +25,7 @@ def validate_memory_key(key: str) -> None:
         raise ValueError("Memory key cannot be empty")
 
     # Strict allowlist: alphanumeric, underscores, hyphens
-    if not re.match(r"^[a-zA-Z0-9_-]+$", key):
+    if not MEMORY_KEY_PATTERN.match(key):
         raise ValueError(
             f"Memory key '{key}' is invalid. Only alphanumeric characters, underscores, and hyphens are allowed."
         )
@@ -40,13 +43,20 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any) -> None:
     """
     validate_memory_key(key)
     memory_dir = get_memory_dir(base_path, agent_name)
-    memory_dir.mkdir(parents=True, exist_ok=True)
+    # Optimization: Removed immediate mkdir call. We rely on try/except
+    # in the write operation to handle missing directories, saving a stat call.
 
     memory_file = memory_dir / f"{key}.json"
     entry = {"key": key, "value": value, "timestamp": datetime.now(UTC).isoformat(), "agent": agent_name}
 
-    with memory_file.open("w", encoding="utf-8") as f:
-        json.dump(entry, f, indent=2)
+    try:
+        with memory_file.open("w", encoding="utf-8") as f:
+            json.dump(entry, f, indent=2)
+    except FileNotFoundError:
+        # Parent directory likely doesn't exist
+        memory_dir.mkdir(parents=True, exist_ok=True)
+        with memory_file.open("w", encoding="utf-8") as f:
+            json.dump(entry, f, indent=2)
 
     logger.debug(
         "memory_saved",
@@ -73,13 +83,15 @@ def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
 
     memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
-    if not memory_file.exists():
-        return None
+    # Optimization: Removed .exists() check. Using try/except FileNotFoundError (EAFP)
+    # is faster as it saves a stat call.
 
     try:
         with memory_file.open("r", encoding="utf-8") as f:
             entry = json.load(f)
         return entry.get("value")
+    except FileNotFoundError:
+        return None
     except Exception as exc:
         logger.error(
             "memory_load_failed",
@@ -106,8 +118,7 @@ def list_memories(base_path: Path, agent_name: str) -> list[str]:
     """
     memory_dir = get_memory_dir(base_path, agent_name)
 
-    if not memory_dir.exists():
-        return []
+    # Optimization: removed memory_dir.exists() check to rely on try/except block below
 
     # Optimization: Use os.scandir to avoid creating Path objects
     try:
@@ -140,15 +151,18 @@ def delete_memory(base_path: Path, agent_name: str, key: str) -> bool:
 
     memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
 
-    if not memory_file.exists():
-        return False
+    # Optimization: Removed .exists() check. Using try/except FileNotFoundError (EAFP)
+    # is faster as it saves a stat call.
 
-    memory_file.unlink()
-    logger.info(
-        "memory_deleted",
-        extra={"event": "memory_deleted", "agent": agent_name, "key": key},
-    )
-    return True
+    try:
+        memory_file.unlink()
+        logger.info(
+            "memory_deleted",
+            extra={"event": "memory_deleted", "agent": agent_name, "key": key},
+        )
+        return True
+    except FileNotFoundError:
+        return False
 
 
 def append_to_memory_list(base_path: Path, agent_name: str, key: str, item: Any) -> None:
@@ -369,17 +383,17 @@ def archive_old_memories(
         Number of memories archived
     """
     memory_dir = get_memory_dir(base_path, agent_name)
-    if not memory_dir.exists():
-        return 0
-
-    archive_dir = memory_dir / "archive"
-    archive_dir.mkdir(exist_ok=True)
+    # Optimization: removed memory_dir.exists() check to rely on try/except block below
 
     cutoff_time = datetime.now(UTC) - timedelta(days=days_old)
     archived_count = 0
 
     try:
         with os.scandir(memory_dir) as it:
+            # Only create archive directory if we can scan the memory directory
+            archive_dir = memory_dir / "archive"
+            archive_dir.mkdir(exist_ok=True)
+
             for entry in it:
                 if not entry.is_file() or not entry.name.endswith(".json"):
                     continue
