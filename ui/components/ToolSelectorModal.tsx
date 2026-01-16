@@ -1,7 +1,7 @@
 // Tool Selector Modal - User-Friendly Tool Selection
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, FileText, Code, Terminal, Database, Settings, Plus, Check } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -86,6 +86,17 @@ interface ToolSelectorModalProps {
 export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelectorModalProps) {
     const [selected, setSelected] = useState<Set<string>>(new Set(selectedTools));
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                onClose();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onClose]);
 
     const toggleTool = (toolId: string) => {
         const newSelected = new Set(selected);

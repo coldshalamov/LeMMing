@@ -24,6 +24,17 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
         }).catch(err => console.error(err));
     }, []);
 
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                onClose();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onClose]);
+
     const handleSave = async () => {
         setStatus("loading");
         try {
