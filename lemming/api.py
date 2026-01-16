@@ -425,7 +425,7 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     return {"status": "created", "path": str(target_dir.relative_to(BASE_PATH))}
 
 
-@app.post("/api/agents/clone", status_code=201)
+@app.post("/api/agents/clone", status_code=201, dependencies=[Depends(rate_limiter(limit=5, window=60))])
 async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
     try:
         validate_agent_name(request.target_name)
