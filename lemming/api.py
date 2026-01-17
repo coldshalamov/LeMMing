@@ -573,7 +573,7 @@ async def list_messages(
     return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries[:limit]]
 
 
-@app.post("/api/engine/tick")
+@app.post("/api/engine/tick", dependencies=[Depends(rate_limiter(limit=5, window=60))])
 async def trigger_tick() -> dict[str, Any]:
     """Manually trigger one engine tick."""
     try:
@@ -604,9 +604,12 @@ async def get_engine_config() -> dict[str, Any]:
     }
 
 
-@app.post("/api/engine/config")
+@app.post("/api/engine/config", dependencies=[Depends(rate_limiter(limit=5, window=60))])
 async def update_engine_config(config: EngineConfig) -> dict[str, str]:
-    """Update engine secrets and persist to secrets.json."""
+    """Update engine secrets and persist to secrets.json.
+
+    TODO: Add authentication for this endpoint.
+    """
     current_secrets = {}
     if SECRETS_PATH.exists():
         try:

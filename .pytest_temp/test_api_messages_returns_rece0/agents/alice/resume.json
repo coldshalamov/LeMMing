@@ -1,1 +1,0 @@
-{"name": "alice", "title": "Demo agent", "short_description": "Testing agent", "model": {"key": "demo-model"}, "permissions": {"read_outboxes": [], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": ""}
