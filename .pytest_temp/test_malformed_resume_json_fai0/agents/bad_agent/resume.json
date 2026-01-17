@@ -1,0 +1,1 @@
+{"name": "bad_agent", "title": "Bad Agent", "short_description": "bad agent", "model": {"key": "gpt-4.1-mini"}, "permissions": {"read_outboxes": "*", "tools": ["memory_read"]}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": ""}

@@ -1,0 +1,13 @@
+{
+  "id": "92d5a54825544600a32aae29aee66d2e",
+  "tick": 2,
+  "agent": "alice",
+  "kind": "message",
+  "payload": {
+    "text": "hello"
+  },
+  "tags": [],
+  "created_at": "2026-01-17T11:54:15.867209+00:00",
+  "recipients": null,
+  "meta": {}
+}

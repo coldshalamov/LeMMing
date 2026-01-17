@@ -3,6 +3,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import Any, cast
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -21,14 +22,6 @@ def send_message(content: str):
         agent="human", tick=0, kind="task", payload={"content": content, "to": ["manager"]}, tags=["chat"]
     )
 
-    filename = f"msg_{int(time.time()*1000)}.json"
-    entry = OutboxEntry(
-        agent="human",
-        kind="task",  # Or 'chat'
-        payload={"content": content, "to": ["manager"]},
-        tags=["chat"],
-    )
-
     filename = f"msg_{int(time.time() * 1000)}.json"
     with open(outbox_dir / filename, "w", encoding="utf-8") as f:
         json.dump(entry.to_dict(), f, indent=2)
@@ -36,7 +29,7 @@ def send_message(content: str):
     print("\n[Human] -> Sent to Manager")
 
 
-def get_latest_manager_reply(since_ts: float) -> dict | None:
+def get_latest_manager_reply(since_ts: float) -> dict[str, Any] | None:
     """Check manager outbox for new messages."""
     manager_outbox = get_outbox_dir(BASE_PATH, "manager")
     if not manager_outbox.exists():
@@ -72,12 +65,12 @@ def get_latest_manager_reply(since_ts: float) -> dict | None:
         return None
 
     # Sort by timestamp
-    messages.sort(key=lambda x: x["created_at"])
-    return messages[-1]
+    messages.sort(key=lambda x: cast(dict[str, Any], x)["created_at"])
+    return cast(dict[str, Any], messages[-1])
 
 
 async def chat_loop():
-    print("🤖 LeMMing Manager Chat")
+    print("???? LeMMing Manager Chat")
     print("-----------------------")
     print("Type your message and press Enter. Ctrl+C to exit.")
 

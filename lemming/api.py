@@ -309,7 +309,7 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
 
     # Safe log reading with DoS protection
     # Read only the last 1MB of logs if the file is large
-    MAX_LOG_READ_SIZE = 1 * 1024 * 1024  # 1MB
+    max_log_read_size = 1 * 1024 * 1024  # 1MB
 
     try:
         size = log_path.stat().st_size
@@ -317,8 +317,8 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
             return []
 
         with log_path.open("rb") as f:
-            if size > MAX_LOG_READ_SIZE:
-                f.seek(size - MAX_LOG_READ_SIZE)
+            if size > max_log_read_size:
+                f.seek(size - max_log_read_size)
                 content_bytes = f.read()
                 # We might have cut a multibyte char or be in middle of line.
                 # Skip to next newline to ensure clean start.

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .agents import DEFAULT_CREDITS, discover_agents
-from .paths import get_agents_dir, get_config_dir
+from .paths import get_agent_dir, get_agents_dir, get_config_dir
 
 
 def _copy_if_missing(src: Path, dest: Path) -> bool:
@@ -126,6 +126,13 @@ def bootstrap(base_path: Path) -> dict[str, Any]:
                     "credits_left": agent.credits.max_credits,
                 }
                 updated = True
+            
+            # Ensure agent directories exist (outbox, memory, workspace, logs)
+            agent_dir = get_agent_dir(base_path, agent.name)
+            (agent_dir / "outbox").mkdir(parents=True, exist_ok=True)
+            (agent_dir / "memory").mkdir(parents=True, exist_ok=True)
+            (agent_dir / "workspace").mkdir(parents=True, exist_ok=True)
+            (agent_dir / "logs").mkdir(parents=True, exist_ok=True)
         if updated:
             credits_path.parent.mkdir(parents=True, exist_ok=True)
             credits_path.write_text(json.dumps(credits, indent=2), encoding="utf-8")

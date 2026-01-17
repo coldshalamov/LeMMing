@@ -1,0 +1,1 @@
+{"name": "agent_a", "title": "Agent A", "short_description": "Test agent", "model": {"key": "test-model"}, "permissions": {"read_outboxes": [], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "Test agent instructions"}

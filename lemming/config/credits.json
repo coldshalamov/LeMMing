@@ -18,5 +18,15 @@
     "model": "gpt-4.1-mini",
     "cost_per_action": 0.011,
     "credits_left": 200.0
+  },
+  "manager": {
+    "model": "gpt-4o",
+    "cost_per_action": 0.01,
+    "credits_left": 1000.0
+  },
+  "human": {
+    "model": "none",
+    "cost_per_action": 0.01,
+    "credits_left": 999999.0
   }
 }

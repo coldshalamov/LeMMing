@@ -1,0 +1,9 @@
+{
+  "agent_a": {
+    "model": "test-model",
+    "cost_per_action": 0.01,
+    "credits_left": 9.99,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  }
+}

@@ -99,7 +99,7 @@ def compute_fire_point(agent: Agent) -> float:
 def should_run(agent: Agent, tick: int) -> bool:
     n = agent.schedule.run_every_n_ticks or 1
     offset = agent.schedule.phase_offset or 0
-    return (tick + (offset % n)) % n == 0
+    return (tick % n) == (offset % n)
 
 
 def get_firing_agents(agents: list[Agent], tick: int) -> list[Agent]:
@@ -382,7 +382,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         key = update.get("key")
         if not key:
             continue
-        op = (update.get("op") or "write").lower()
+        op = (update.get("op") or "set").lower()
         if op == "delete":
             deleted = delete_memory(base_path, agent.name, key)
             if not deleted:
@@ -396,7 +396,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
                     },
                 )
             continue
-        if op != "write":
+        if op not in ("set", "append", "merge", "write"):
             logger.warning(
                 "memory_op_unknown",
                 extra={
@@ -407,7 +407,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
                 },
             )
             continue
-        save_memory(base_path, agent.name, key, update.get("value"))
+        save_memory(base_path, agent.name, key, update.get("value"), operation=op, tick=tick)
 
     # Deduct credits
     deduct_credits(agent.name, cost_per_action, base_path)

@@ -7,7 +7,6 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
-import re
 import shlex
 import shutil
 import subprocess
@@ -283,7 +282,10 @@ class ShellTool(Tool):
     """Tool for executing shell commands in agent workspace."""
 
     name = "shell"
-    description = "Execute a shell command in the agent's workspace directory. Allowed commands: grep, ls, cat, echo, head, tail, jq."
+    description = (
+        "Execute a shell command in the agent's workspace directory. "
+        "Allowed: grep, ls, cat, echo, head, tail, jq."
+    )
 
     ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
 
@@ -307,7 +309,8 @@ class ShellTool(Tool):
         # Check against allowlist
         executable = args[0]
         if executable not in self.ALLOWED_COMMANDS:
-             return ToolResult(False, "", f"Command '{executable}' is not allowed. Allowed: {', '.join(sorted(self.ALLOWED_COMMANDS))}")
+            allowed = ", ".join(sorted(self.ALLOWED_COMMANDS))
+            return ToolResult(False, "", f"Command '{executable}' is not allowed. Allowed: {allowed}")
 
         # Check arguments for traversal/absolute paths
         for arg in args[1:]:
