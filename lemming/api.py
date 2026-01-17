@@ -15,7 +15,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import discover_agents, load_agent, validate_resume_data
 from .engine import load_tick, run_once
-from .messages import OutboxEntry, count_outbox_entries, read_outbox_entries, write_outbox_entry
+from .messages import (
+    OutboxEntry,
+    count_outbox_entries,
+    read_multi_agent_outbox_entries,
+    read_outbox_entries,
+    write_outbox_entry,
+)
 from .models import ModelRegistry
 from .org import compute_virtual_inbox_sources, get_agent_credits, get_credits, get_org_config
 from .paths import (
@@ -565,12 +571,8 @@ async def list_messages(
         if "human" not in agent_names and (get_agents_dir(BASE_PATH) / "human").exists():
             agent_names.append("human")
 
-    entries: list[OutboxEntry] = []
-    for agent_name in agent_names:
-        entries.extend(read_outbox_entries(BASE_PATH, agent_name, limit=limit, since_tick=since_tick))
-
-    entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
-    return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries[:limit]]
+    entries = read_multi_agent_outbox_entries(BASE_PATH, agent_names, limit=limit, since_tick=since_tick)
+    return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries]
 
 
 @app.post("/api/engine/tick")

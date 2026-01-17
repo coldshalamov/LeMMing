@@ -1,1 +1,0 @@
-{"name": "human", "title": "Human", "short_description": "Agent human", "workflow_description": "", "model": {"key": "gpt-4.1-mini"}, "permissions": {"read_outboxes": ["*"], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "", "credits": {"max_credits": 10, "soft_cap": 5}}

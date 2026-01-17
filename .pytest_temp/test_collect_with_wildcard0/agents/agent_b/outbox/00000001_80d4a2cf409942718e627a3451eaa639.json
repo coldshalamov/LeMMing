@@ -1,0 +1,13 @@
+{
+  "id": "80d4a2cf409942718e627a3451eaa639",
+  "tick": 1,
+  "agent": "agent_b",
+  "kind": "msg",
+  "payload": {
+    "text": "agent_b"
+  },
+  "tags": [],
+  "created_at": "2026-01-17T19:18:41.659801+00:00",
+  "recipients": null,
+  "meta": {}
+}
