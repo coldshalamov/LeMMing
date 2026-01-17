@@ -8,6 +8,8 @@ import {
   MessageSquare,
   Brain,
   Wrench,
+  Copy,
+  Check,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -19,6 +21,7 @@ interface LogMessageProps {
 
 export function LogMessage({ payload, kind }: LogMessageProps) {
   const [expanded, setExpanded] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Try to find a primary message
   const text =
@@ -78,6 +81,17 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
     !expanded && "truncate",
   );
 
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
@@ -106,8 +120,21 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
       </div>
 
       {expanded && (
-        <div className="pl-6 pr-2 pb-2 text-[10px] font-mono text-gray-500 overflow-x-auto">
-          <pre className="bg-black/20 p-2 rounded border border-white/5 whitespace-pre-wrap break-all">
+        <div className="relative pl-6 pr-2 pb-2 text-[10px] font-mono text-gray-500 overflow-x-auto group/code">
+          <button
+            onClick={handleCopy}
+            className={clsx(
+              "absolute top-4 right-4 p-1.5 rounded border border-white/10 transition-all z-10",
+              isCopied
+                ? "bg-green-500/10 text-green-400 border-green-500/20"
+                : "bg-black/40 text-gray-400 hover:text-white hover:bg-white/10 opacity-0 group-hover/code:opacity-100 focus:opacity-100"
+            )}
+            aria-label={isCopied ? "Copied" : "Copy JSON payload"}
+            title="Copy JSON"
+          >
+            {isCopied ? <Check size={12} /> : <Copy size={12} />}
+          </button>
+          <pre className="bg-black/20 p-2 rounded border border-white/5 whitespace-pre-wrap break-all min-h-[40px]">
             {JSON.stringify(payload, null, 2)}
           </pre>
         </div>
