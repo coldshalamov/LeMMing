@@ -260,7 +260,7 @@ export default function Dashboard() {
       {/* 5) Bottom Control Bar */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
         <div className="flex items-center gap-4 p-2 pl-6 pr-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl">
-          <div className="flex flex-col">
+          <div className="flex flex-col" role="status" aria-live="polite">
             <span className="text-[10px] font-mono text-brand-lime uppercase tracking-widest">
               System Status
             </span>

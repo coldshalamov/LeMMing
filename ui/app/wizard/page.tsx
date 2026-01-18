@@ -17,6 +17,7 @@ import {
   Brain,
   Plus,
   Copy,
+  Loader2,
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -751,7 +752,11 @@ export default function WizardPage() {
                           : "bg-brand-lime text-black hover:bg-lime-400",
                       )}
                     >
-                      <Save size={16} />
+                      {isDeploying ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Save size={16} />
+                      )}
                       {isDeploying ? "DEPLOYING..." : "DEPLOY AGENT"}
                     </button>
                   )}
