@@ -1,0 +1,10 @@
+{
+  "key": "small_mem",
+  "value": {
+    "data": "small"
+  },
+  "timestamp_utc": "2026-01-18T16:26:14.542305+00:00",
+  "agent": "test_agent",
+  "operation": "set",
+  "tick": null
+}

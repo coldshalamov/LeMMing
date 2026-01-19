@@ -34,5 +34,19 @@
   "gpt-4.1-mini": {
     "provider": "openai",
     "model_name": "gpt-4o-mini"
+  },
+  "cli-echo": {
+    "provider": "cli",
+    "model_name": "echo",
+    "provider_config": {
+        "command": ["cmd", "/c", "echo"]
+    }
+  },
+  "cli-powershell": {
+    "provider": "cli",
+    "model_name": "powershell",
+    "provider_config": {
+        "command": ["powershell", "-NoProfile", "-NonInteractive", "-Command"]
+    }
   }
 }

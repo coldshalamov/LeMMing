@@ -1,5 +1,5 @@
 {
-  "id": "e9814025684d45cf81c8be9393573595",
+  "id": "c9095c6d2baf417aa6a76d2edafe05f7",
   "tick": 1,
   "agent": "sender",
   "kind": "message",
@@ -7,7 +7,7 @@
     "text": "hey"
   },
   "tags": [],
-  "created_at": "2026-01-17T11:54:16.048039+00:00",
+  "created_at": "2026-01-18T16:26:14.216394+00:00",
   "recipients": [
     "stranger",
     "ally"

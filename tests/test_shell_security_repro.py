@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import pytest
 
+@pytest.mark.skipif(os.name == 'nt', reason="Relies on Unix commands (cat, ls) not available as executables on Windows")
 def test_shell_tool_vulnerabilities(tmp_path):
     """Demonstrate vulnerabilities in ShellTool path validation."""
     base_path = tmp_path / "lemming"
@@ -16,30 +17,41 @@ def test_shell_tool_vulnerabilities(tmp_path):
     tool = ShellTool()
 
     print("--- Testing /.dockerenv (Vulnerability 1) ---")
-    command = "cat /.dockerenv"
+    if os.name == 'nt':
+        command = "type C:\\Windows\\System32\\drivers\\etc\\hosts"
+    else:
+        command = "cat /.dockerenv"
+    
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     # Assert that it is BLOCKED by our security check
     assert not result.success
     assert "Security violation" in result.error
     assert "absolute path" in result.error
-    print("SECURE: Blocked access to /.dockerenv")
+    print("SECURE: Blocked access to absolute path")
 
     print("\n--- Testing / (Vulnerability 2) ---")
-    command = "ls /"
+    if os.name == 'nt':
+        command = "dir C:\\"
+    else:
+        command = "ls /"
+        
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     # Assert that it is BLOCKED by our security check
     assert not result.success
     assert "Security violation" in result.error
     assert "absolute path" in result.error
-    print("SECURE: Blocked access to /")
+    print("SECURE: Blocked access to root")
 
     print("\n--- Testing subdir/file.txt (Bug) ---")
     (workspace / "subdir").mkdir()
     (workspace / "subdir" / "file.txt").write_text("content", encoding="utf-8")
 
-    command = "cat subdir/file.txt"
+    if os.name == 'nt':
+        command = "type subdir\\file.txt"
+    else:
+        command = "cat subdir/file.txt"
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     # Assert that it ALLOWED

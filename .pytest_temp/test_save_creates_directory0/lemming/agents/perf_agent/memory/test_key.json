@@ -3,7 +3,7 @@
   "value": {
     "foo": "bar"
   },
-  "timestamp_utc": "2026-01-17T11:54:16.128120+00:00",
+  "timestamp_utc": "2026-01-18T16:26:14.315408+00:00",
   "agent": "perf_agent",
   "operation": "set",
   "tick": null

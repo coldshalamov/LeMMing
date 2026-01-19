@@ -119,7 +119,14 @@ def get_firing_agents(agents: list[Agent], tick: int) -> list[Agent]:
 
 def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, str]]:
     messages: list[dict[str, str]] = []
-    messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
+    
+    # If the model is a CLI-based model, we might want a simpler prompt
+    # We can detect this by checking the model key or passing provider info
+    is_cli = agent.model.key.startswith("cli-")
+
+    if not is_cli:
+        messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
+    
     messages.append({"role": "system", "content": f"YOUR ROLE: {agent.title}\n\n{agent.instructions}"})
 
     memory_context = get_memory_context(base_path, agent.name)
@@ -132,18 +139,28 @@ def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, st
         agent.permissions.read_outboxes,
         limit=30,
     )
-    messages.append({"role": "user", "content": format_outbox_context(incoming)})
-
-    messages.append(
-        {
-            "role": "user",
-            "content": (
-                f"Current tick: {tick}\n"
-                f"Available tools: {', '.join(agent.permissions.tools)}\n"
-                "Provide your response as JSON following the schema."
-            ),
-        }
-    )
+    
+    if is_cli:
+        # For CLI agents, we only want the actual text of the latest messages
+        if incoming:
+            # Just take the latest message's text as the prompt
+            latest = incoming[0]
+            text = latest.payload.get("text", json.dumps(latest.payload))
+            messages.append({"role": "user", "content": text})
+        else:
+            messages.append({"role": "user", "content": ""})
+    else:
+        messages.append({"role": "user", "content": format_outbox_context(incoming)})
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    f"Current tick: {tick}\n"
+                    f"Available tools: {', '.join(agent.permissions.tools)}\n"
+                    "Provide your response as JSON following the schema."
+                ),
+            }
+        )
     return messages
 
 

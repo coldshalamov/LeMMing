@@ -7,26 +7,50 @@
   "spec_writer": {
     "model": "gpt-4.1-mini",
     "cost_per_action": 0.012,
-    "credits_left": 250.0
+    "credits_left": 250.0,
+    "max_credits": 400.0,
+    "soft_cap": 200.0
   },
   "log_summarizer": {
     "model": "gpt-4.1-mini",
     "cost_per_action": 0.012,
-    "credits_left": 220.0
+    "credits_left": 220.0,
+    "max_credits": 350.0,
+    "soft_cap": 175.0
   },
   "ui_copy_editor": {
     "model": "gpt-4.1-mini",
     "cost_per_action": 0.011,
-    "credits_left": 200.0
+    "credits_left": 200.0,
+    "max_credits": 300.0,
+    "soft_cap": 150.0
   },
   "manager": {
     "model": "gpt-4o",
     "cost_per_action": 0.01,
-    "credits_left": 1000.0
+    "credits_left": 1000.0,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
   },
   "human": {
     "model": "none",
     "cost_per_action": 0.01,
-    "credits_left": 999999.0
+    "credits_left": 999999.0,
+    "max_credits": 999999.0,
+    "soft_cap": 999999.0
+  },
+  "manager_cli": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": 1000.0,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "echo_cli": {
+    "model": "cli-powershell",
+    "cost_per_action": 0.01,
+    "credits_left": 999.99,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
   }
 }

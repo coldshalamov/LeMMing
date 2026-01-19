@@ -356,9 +356,89 @@ class ShellTool(Tool):
             return ToolResult(False, "", f"Failed to execute command: {e}")
 
 
+class FileReadTool(Tool):
+    """Tool for reading files in agent workspace or shared directory."""
+
+    name = "file_read"
+    description = "Read the content of a file in the agent's workspace or shared directory."
+
+    def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
+        path_str = kwargs.get("path")
+
+        if not path_str:
+            return ToolResult(False, "", "Missing 'path' parameter")
+
+        # Determine target path
+        agent_dir = get_agent_dir(base_path, agent_name)
+        workspace_dir = agent_dir / "workspace"
+
+        if path_str.startswith("shared/"):
+            target_path = base_path / path_str
+        else:
+            target_path = workspace_dir / path_str
+
+        # Security check
+        if not _is_path_allowed(base_path, agent_name, target_path, "read"):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
+
+        if not target_path.exists():
+            return ToolResult(False, "", f"File '{path_str}' not found")
+
+        if not target_path.is_file():
+            return ToolResult(False, "", f"'{path_str}' is not a file")
+
+        try:
+            content = target_path.read_text(encoding="utf-8")
+            return ToolResult(True, content)
+        except Exception as e:
+            return ToolResult(False, "", f"Failed to read file: {e}")
+
+
+class FileListTool(Tool):
+    """Tool for listing files in agent workspace or shared directory."""
+
+    name = "file_list"
+    description = "List files in the agent's workspace or shared directory."
+
+    def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
+        path_str = kwargs.get("path", ".")
+
+        # Determine target path
+        agent_dir = get_agent_dir(base_path, agent_name)
+        workspace_dir = agent_dir / "workspace"
+
+        if path_str.startswith("shared/"):
+            target_path = (base_path / path_str).resolve()
+            base_search = (base_path / "shared").resolve()
+        else:
+            target_path = (workspace_dir / path_str).resolve()
+            base_search = workspace_dir.resolve()
+
+        # Security check: must be within workspace or shared
+        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
+             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+
+        if not target_path.exists():
+            return ToolResult(False, "", f"Directory '{path_str}' not found")
+
+        if not target_path.is_dir():
+            return ToolResult(False, "", f"'{path_str}' is not a directory")
+
+        try:
+            files = []
+            for item in target_path.iterdir():
+                suffix = "/" if item.is_dir() else ""
+                files.append(f"{item.name}{suffix}")
+            return ToolResult(True, "\n".join(files))
+        except Exception as e:
+            return ToolResult(False, "", f"Failed to list files: {e}")
+
+
 # Register all tools
 ToolRegistry.register(MemoryReadTool())
 ToolRegistry.register(MemoryWriteTool())
 ToolRegistry.register(CreateAgentTool())
 ToolRegistry.register(FileWriteTool())
+ToolRegistry.register(FileReadTool())
+ToolRegistry.register(FileListTool())
 ToolRegistry.register(ShellTool())

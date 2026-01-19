@@ -88,42 +88,6 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operatio
     )
 
 
-    # Handle different operations
-    if operation == "append":
-        # Load existing value and append
-        existing = load_memory(base_path, agent_name, key)
-        if existing is None:
-            existing = []
-        if not isinstance(existing, list):
-            existing = [existing]
-        existing.append(value)
-        value = existing
-    elif operation == "merge":
-        # Load existing value and merge (for dicts)
-        existing = load_memory(base_path, agent_name, key)
-        if existing is None:
-            existing = {}
-        if not isinstance(existing, dict):
-            raise ValueError(f"Cannot merge into non-dict value for key {key}")
-        if not isinstance(value, dict):
-            raise ValueError(f"Merge value must be a dict for key {key}")
-        existing.update(value)
-        value = existing
-    elif operation != "set":
-        raise ValueError(f"Unknown memory operation: {operation}")
-    try:
-        with memory_file.open("w", encoding="utf-8") as f:
-            json.dump(entry, f, indent=2)
-    except FileNotFoundError:
-        # Parent directory likely doesn't exist
-        memory_dir.mkdir(parents=True, exist_ok=True)
-        with memory_file.open("w", encoding="utf-8") as f:
-            json.dump(entry, f, indent=2)
-
-    logger.debug(
-        "memory_saved",
-        extra={"event": "memory_saved", "agent": agent_name, "key": key},
-    )
 
 
 def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
