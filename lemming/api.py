@@ -4,12 +4,13 @@ import asyncio
 import json
 import logging
 import os
+import secrets
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -71,6 +72,23 @@ app.add_middleware(
 # Simple in-memory rate limiter
 # Map: client_ip -> list of timestamps
 _request_timestamps: dict[str, list[float]] = {}
+
+
+async def verify_admin_access(request: Request):
+    """Verify admin access if configured."""
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    # If no key is configured, allow access (default local dev mode)
+    if not admin_key:
+        return
+
+    # If key is configured, enforce it
+    request_key = request.headers.get("X-Admin-Key")
+    # Use constant-time comparison to prevent timing attacks
+    if not request_key or not secrets.compare_digest(request_key, admin_key):
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing admin key",
+        )
 
 
 def rate_limiter(limit: int = 10, window: int = 60):
@@ -575,7 +593,10 @@ async def list_messages(
     return [OutboxEntryModel(**_serialize_entry(entry)) for entry in entries]
 
 
-@app.post("/api/engine/tick", dependencies=[Depends(rate_limiter(limit=10, window=60))])
+@app.post(
+    "/api/engine/tick",
+    dependencies=[Depends(rate_limiter(limit=10, window=60)), Depends(verify_admin_access)],
+)
 async def trigger_tick() -> dict[str, Any]:
     """Manually trigger one engine tick."""
     try:
@@ -606,7 +627,10 @@ async def get_engine_config() -> dict[str, Any]:
     }
 
 
-@app.post("/api/engine/config", dependencies=[Depends(rate_limiter(limit=5, window=60))])
+@app.post(
+    "/api/engine/config",
+    dependencies=[Depends(rate_limiter(limit=5, window=60)), Depends(verify_admin_access)],
+)
 async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     """Update engine secrets and persist to secrets.json."""
     current_secrets = {}
