@@ -14,6 +14,7 @@ export function ManagerChat({ messages }: ManagerChatProps) {
     const [inputValue, setInputValue] = useState("");
     const [isSending, setIsSending] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Filter messages relevant to the Manager interaction
     // We want: 
@@ -34,6 +35,14 @@ export function ManagerChat({ messages }: ManagerChatProps) {
         }
     }, [chatHistory.length]);
 
+    // Auto-resize textarea
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+        }
+    }, [inputValue]);
+
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!inputValue.trim() || isSending) return;
@@ -50,6 +59,17 @@ export function ManagerChat({ messages }: ManagerChatProps) {
         } finally {
             setIsSending(false);
         }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setInputValue(e.target.value);
     };
 
     return (
@@ -122,19 +142,22 @@ export function ManagerChat({ messages }: ManagerChatProps) {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-3 bg-black/40 border-t border-white/5 flex gap-2">
-                <input
+            <form onSubmit={handleSend} className="p-3 bg-black/40 border-t border-white/5 flex gap-2 items-end">
+                <textarea
+                    ref={textareaRef}
                     value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
                     placeholder="Type your instructions..."
                     aria-label="Message to Manager"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-purple/50 focus:bg-white/10 transition-all font-mono"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-purple/50 focus:bg-white/10 transition-all font-mono resize-none min-h-[38px] max-h-[120px]"
                 />
                 <button
                     type="submit"
                     disabled={!inputValue.trim() || isSending}
                     aria-label={isSending ? "Sending message..." : "Send message"}
-                    className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-[38px] flex items-center justify-center"
                 >
                     {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 </button>
