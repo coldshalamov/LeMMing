@@ -73,7 +73,7 @@ def create_example_agent(base_path: Path) -> bool:
         "title": "Example planning agent",
         "short_description": "Creates a simple plan each tick.",
         "workflow_description": "Drafts a short TODO list and updates its memory.",
-        "model": {"key": "gpt-4.1-mini", "temperature": 0.2, "max_tokens": 1024},
+        "model": {"key": "gpt-4o-mini", "temperature": 0.2, "max_tokens": 1024},
         "permissions": {"read_outboxes": [], "tools": ["memory_read", "memory_write"]},
         "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
         "credits": DEFAULT_CREDITS,
@@ -91,12 +91,32 @@ def create_example_agent(base_path: Path) -> bool:
 
 
 def ensure_logs_dir(base_path: Path) -> bool:
-    """Ensure the top-level logs directory exists."""
+    """Ensure top-level logs directory exists."""
 
     logs_dir = base_path / "logs"
     if logs_dir.exists():
         return False
     logs_dir.mkdir(parents=True, exist_ok=True)
+    return True
+
+
+def ensure_departments_dir(base_path: Path) -> bool:
+    """Ensure departments directory exists for department metadata."""
+
+    departments_dir = base_path / "departments"
+    if departments_dir.exists():
+        return False
+    departments_dir.mkdir(parents=True, exist_ok=True)
+    return True
+
+
+def ensure_social_dir(base_path: Path) -> bool:
+    """Ensure social directory exists for social graph analysis."""
+
+    social_dir = base_path / "social"
+    if social_dir.exists():
+        return False
+    social_dir.mkdir(parents=True, exist_ok=True)
     return True
 
 
@@ -107,6 +127,8 @@ def bootstrap(base_path: Path) -> dict[str, Any]:
     template_created = ensure_agent_template(base_path)
     example_created = create_example_agent(base_path)
     logs_created = ensure_logs_dir(base_path)
+    departments_created = ensure_departments_dir(base_path)
+    social_created = ensure_social_dir(base_path)
 
     # Touch credits to ensure entries exist for any agents present.
     agents = discover_agents(base_path)
@@ -126,7 +148,7 @@ def bootstrap(base_path: Path) -> dict[str, Any]:
                     "credits_left": agent.credits.max_credits,
                 }
                 updated = True
-            
+
             # Ensure agent directories exist (outbox, memory, workspace, logs)
             agent_dir = get_agent_dir(base_path, agent.name)
             (agent_dir / "outbox").mkdir(parents=True, exist_ok=True)
@@ -142,4 +164,6 @@ def bootstrap(base_path: Path) -> dict[str, Any]:
         "template_created": template_created,
         "example_created": example_created,
         "logs_dir_created": logs_created,
+        "departments_created": departments_created,
+        "social_created": social_created,
     }

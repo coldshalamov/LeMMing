@@ -5,7 +5,7 @@
   "workflow_description": "Standard agent workflow: read inbox, process task, result to outbox.",
   "instructions": "You are a standard LeMMing agent. Your job is to receive tasks from the manager, execute them using your allowed tools, and report the results back via your outbox.",
   "model": {
-    "key": "gpt-4.1-mini",
+    "key": "gpt-4o-mini",
     "temperature": 0.2,
     "max_tokens": 2048
   },

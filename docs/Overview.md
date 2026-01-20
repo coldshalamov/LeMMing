@@ -13,6 +13,7 @@ Think of it as an **AI company in a folder**: every worker has a desk (its direc
 - Quickly prototype multi-agent behaviors without standing up message buses or databases.
 - Enforce safety by default: workers can only read outboxes and files they are permitted to access; credits gate their run budget.
 - Provide a stable ABI for LLM workers: resumes declare their identity, tools, and schedule; outputs follow a JSON contract so the engine can apply changes and keep going safely.
+- Enable social organization: departments group related agents, social graph tracks relationships, and emergent intelligence evolves from interactions.
 
 ## Minimal glossary
 - **Agent:** A worker persona backed by a directory under `agents/`. Its identity is defined by `resume.json` (and optional `resume.txt`).

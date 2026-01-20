@@ -96,3 +96,27 @@ Credits live in `lemming/config/credits.json`. Each agent has a `credits_left` b
 4. **Tick 4:** `manager` fires again, reads the latest outboxes, and updates `memory/status.json` with merged progress.
 
 By inspecting the folders after each tick you can reconstruct the entire conversation and decision trail.
+
+## Department = logical grouping of agents
+
+A department is a set of agents that work together towards a common goal. Department metadata lives in `departments/<name>.json`:
+
+```jsonc
+{
+  "name": "content_team",           // Department identifier
+  "description": "Content creation workflow",
+  "version": "1.0.0",           // Semantic version
+  "author": "Organization Name",   // Creator attribution
+  "tags": ["content", "writing"],  // Categorization
+  "dependencies": ["research"],     // Other departments needed
+  "readme": "# Department docs\n..." // Detailed documentation
+}
+```
+
+Departments enable:
+- **Modularity**: Package and share groups of agents
+- **Organization**: Structure large multi-agent systems
+- **Social analysis**: Track relationships between departments
+- **Emergent behavior**: Complex workflows from simple interactions
+
+Use `python -m lemming.cli department-*` commands to manage departments.

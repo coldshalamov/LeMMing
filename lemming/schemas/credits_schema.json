@@ -9,7 +9,9 @@
     "properties": {
       "model": {"type": "string", "minLength": 1},
       "cost_per_action": {"type": "number", "minimum": 0},
-      "credits_left": {"type": "number"}
+      "credits_left": {"type": "number"},
+      "max_credits": {"type": "number"},
+      "soft_cap": {"type": "number"}
     }
   }
 }

@@ -1,0 +1,221 @@
+{
+  "generated_at": "2026-01-19T16:15:20.936592+00:00",
+  "relationships": [
+    {
+      "source": "ui_copy_editor",
+      "target": "spec_writer",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "ui_copy_editor",
+      "target": "agent_template",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "spec_writer",
+      "target": "ui_copy_editor",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "spec_writer",
+      "target": "manager_cli",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "spec_writer",
+      "target": "manager",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "spec_writer",
+      "target": "log_summarizer",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "spec_writer",
+      "target": "human",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "spec_writer",
+      "target": "echo_cli",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "manager_cli",
+      "target": "echo_cli",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "manager_cli",
+      "target": "human",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "manager_cli",
+      "target": "manager",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "manager",
+      "target": "human",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "manager",
+      "target": "spec_writer",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "manager",
+      "target": "log_summarizer",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "manager",
+      "target": "ui_copy_editor",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "log_summarizer",
+      "target": "agent_template",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "log_summarizer",
+      "target": "spec_writer",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "log_summarizer",
+      "target": "ui_copy_editor",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "human",
+      "target": "ui_copy_editor",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "human",
+      "target": "spec_writer",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "human",
+      "target": "manager_cli",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "human",
+      "target": "manager",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "human",
+      "target": "log_summarizer",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "human",
+      "target": "echo_cli",
+      "relationship_type": "informed_by",
+      "strength": 0.8,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "echo_cli",
+      "target": "manager_cli",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "echo_cli",
+      "target": "manager",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    },
+    {
+      "source": "echo_cli",
+      "target": "human",
+      "relationship_type": "informed_by",
+      "strength": 0.7,
+      "last_interaction_tick": 0,
+      "interaction_count": 0
+    }
+  ]
+}

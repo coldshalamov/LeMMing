@@ -1,0 +1,11 @@
+{
+  "name": "content_team",
+  "description": "A complete content creation and management workflow",
+  "version": "1.0.0",
+  "created_at": "2025-01-19T10:00:00Z",
+  "author": "LeMMing Team",
+  "contact": "contact@lemming.ai",
+  "dependencies": ["research"],
+  "tags": ["content", "writing", "editing", "publishing"],
+  "readme": "# Content Team Department\n\nThis department manages the complete content creation workflow from planning to publishing.\n\n## Workflow\n1. Content Planner creates content calendar\n2. Content Writer drafts articles\n3. Content Editor reviews and edits\n4. Content Publisher approves and publishes\n\n## Installation\nCopy all agent folders to your agents/ directory and run bootstrap.\n\n## Configuration\n- Each agent has its own schedule and permissions\n- Adjust run_every_n_ticks to control frequency\n- Modify permissions to change who reads whose outbox"
+}

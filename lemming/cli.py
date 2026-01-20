@@ -9,6 +9,13 @@ from pathlib import Path
 from .agents import discover_agents, load_agent
 from .bootstrap import bootstrap as run_bootstrap
 from .config_validation import validate_everything
+from .department import (
+    analyze_social_graph,
+    discover_departments,
+    export_org_structure,
+    save_org_structure,
+    save_social_graph,
+)
 from .engine import load_tick, run_forever, run_once
 from .memory import get_memory_summary
 from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
@@ -86,6 +93,10 @@ def bootstrap_cmd(base_path: Path) -> None:
         print("Created agents/example_planner")
     if result["logs_dir_created"]:
         print("Created logs/ directory")
+    if result["departments_created"]:
+        print("Created departments/ directory")
+    if result["social_created"]:
+        print("Created social/ directory")
     if not any(result.values()):
         print("Everything already set up. Nothing to do.")
 
@@ -214,6 +225,135 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
         print(f"{importance_marker} [Tick {entry.tick}] {entry.agent} ({entry.kind}): {text}")
 
 
+def department_list_cmd(base_path: Path) -> None:
+    """List all discovered departments."""
+    departments = discover_departments(base_path)
+
+    if not departments:
+        print("No departments found.")
+        print("Create one with: python -m lemming.cli department-create <name> --description <desc>")
+        return
+
+    print(f"\nFound {len(departments)} department(s):\n")
+    for dept in departments:
+        print(f"  • {dept.name} v{dept.version}")
+        print(f"    {dept.description}")
+        if dept.author:
+            print(f"    Author: {dept.author}")
+        if dept.tags:
+            print(f"    Tags: {', '.join(dept.tags)}")
+        print()
+
+
+def department_create_cmd(base_path: Path, name: str, description: str, author: str = "") -> None:
+    """Create a new department."""
+    from .department import DepartmentMetadata, save_department, validate_department
+
+    dept = DepartmentMetadata(
+        name=name,
+        description=description,
+        author=author,
+    )
+
+    errors = validate_department(dept)
+    if errors:
+        print("Validation errors:")
+        for error in errors:
+            print(f"  • {error}")
+        sys.exit(1)
+
+    save_department(base_path, dept)
+    print(f"[OK] Created department: {name}")
+
+
+def department_show_cmd(base_path: Path, name: str) -> None:
+    """Show details of a specific department."""
+    from .department import DepartmentMetadata, get_department_agents, get_department_file
+
+    dept_file = get_department_file(base_path, name)
+
+    if not dept_file.exists():
+        print(f"Department not found: {name}")
+        sys.exit(1)
+
+    import json
+
+    with dept_file.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+        dept = DepartmentMetadata.from_dict(data)
+
+    # Get agents in this department
+    agents = get_department_agents(base_path, name)
+
+    print(f"\n{dept.name} v{dept.version}")
+    print(f"Description: {dept.description}")
+    if dept.author:
+        print(f"Author: {dept.author}")
+    if dept.contact:
+        print(f"Contact: {dept.contact}")
+    if dept.created_at:
+        print(f"Created: {dept.created_at}")
+    if dept.tags:
+        print(f"Tags: {', '.join(dept.tags)}")
+    if dept.dependencies:
+        print(f"Dependencies: {', '.join(dept.dependencies)}")
+
+    print(f"\nAgents ({len(agents)}):")
+    for agent in agents:
+        print(f"  • {agent.name} ({agent.title})")
+
+    if dept.readme:
+        print(f"\nREADME:\n{dept.readme}")
+
+
+def department_export_cmd(base_path: Path, output: str = "organization.json") -> None:
+    """Export complete organization structure to JSON."""
+    org_structure = export_org_structure(base_path)
+
+    output_path = Path(output)
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(org_structure, f, indent=2)
+
+    print(f"[OK] Exported organization to {output_path}")
+    print(f"  Agents: {org_structure['statistics']['total_agents']}")
+    print(f"  Departments: {org_structure['statistics']['total_departments']}")
+    print(f"  Relationships: {org_structure['statistics']['total_relationships']}")
+
+
+def department_analyze_cmd(base_path: Path, output: str = "social_graph.json") -> None:
+    """Analyze and export social graph of organization."""
+    tick = load_tick(base_path)
+
+    # Analyze social graph
+    relationships = analyze_social_graph(base_path, tick)
+    save_social_graph(base_path, relationships)
+
+    # Export to specified output
+    output_path = Path(output)
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "current_tick": tick,
+                "relationships": [rel.to_dict() for rel in relationships],
+            },
+            f,
+            indent=2,
+        )
+
+    print(f"[OK] Analyzed social graph: {len(relationships)} relationships")
+    print(f"  Output: {output_path}")
+
+    # Show summary
+    relationship_types: dict[str, int] = {}
+    for rel in relationships:
+        rtype = rel.relationship_type
+        relationship_types[rtype] = relationship_types.get(rtype, 0) + 1
+
+    print("\nRelationship types:")
+    for rtype, count in sorted(relationship_types.items()):
+        print(f"  {rtype}: {count}")
+
+
 def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
     """Interactive chat mode with an agent."""
     target = target_agent if target_agent else "example_planner"
@@ -332,6 +472,23 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser = subparsers.add_parser("chat", help="Interactive chat with an agent")
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
+    # Department management commands
+    dept_parser = subparsers.add_parser("department-list", help="List all departments")
+
+    dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
+    dept_create_parser.add_argument("name", help="Department name")
+    dept_create_parser.add_argument("--description", "-d", required=True, help="Department description")
+    dept_create_parser.add_argument("--author", "-a", default="", help="Author name")
+
+    dept_show_parser = subparsers.add_parser("department-show", help="Show department details")
+    dept_show_parser.add_argument("name", help="Department name")
+
+    dept_export_parser = subparsers.add_parser("department-export", help="Export organization structure")
+    dept_export_parser.add_argument("--output", "-o", default="organization.json", help="Output file path")
+
+    dept_analyze_parser = subparsers.add_parser("department-analyze", help="Analyze social graph")
+    dept_analyze_parser.add_argument("--output", "-o", default="social_graph.json", help="Output file path")
+
     return parser
 
 
@@ -377,6 +534,16 @@ def main() -> None:
         inbox_cmd(base_path, args.agent, args.limit)
     elif args.command == "chat":
         chat_cmd(base_path, args.agent)
+    elif args.command == "department-list":
+        department_list_cmd(base_path)
+    elif args.command == "department-create":
+        department_create_cmd(base_path, args.name, args.description, args.author)
+    elif args.command == "department-show":
+        department_show_cmd(base_path, args.name)
+    elif args.command == "department-export":
+        department_export_cmd(base_path, args.output)
+    elif args.command == "department-analyze":
+        department_analyze_cmd(base_path, args.output)
     else:  # pragma: no cover - parser enforces valid commands
         parser.error(f"Unknown command {args.command}")
 

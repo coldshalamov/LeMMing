@@ -7,12 +7,13 @@
 LeMMing is a **filesystem-first multi-agent orchestration framework** that simulates an organization of LLM workers communicating via permissioned outboxes in discrete ticks.
 
 ## Start here
-- [Overview](docs/Overview.md) — mental model for “AI company in a folder”
+- [Overview](docs/Overview.md) — mental model for "AI company in a folder"
 - [Concepts](docs/Concepts.md) — core primitives and glossary
 - [Architecture](docs/Architecture.md) — how the engine executes each tick
 - [Scheduling](docs/Scheduling.md) — exact firing math and visuals
 - [Tools & Connectors](docs/Tools_and_Connectors.md) — permissions and forward compatibility
 - [Modularity & Departments](docs/Modularity_and_Departments.md) — how to share bundles of agents
+- [Departments & Social Organization](docs/Departments_and_Social_Organization.md) — organize agents into departments
 - [UI Vision](docs/UI_Vision.md) — dashboard north star
 
 ## ✨ Key Features
@@ -102,6 +103,35 @@ python -m lemming.cli inspect <agent_name>
 Add credits to an agent:
 ```bash
 python -m lemming.cli top-up <agent_name> 100.0
+```
+
+### Department Management
+
+Manage departments (groups of agents):
+
+List all departments:
+```bash
+python -m lemming.cli department-list
+```
+
+Create a new department:
+```bash
+python -m lemming.cli department-create marketing --description "Handles marketing campaigns"
+```
+
+Show department details:
+```bash
+python -m lemming.cli department-show marketing
+```
+
+Export organization structure:
+```bash
+python -m lemming.cli department-export --output org.json
+```
+
+Analyze social graph:
+```bash
+python -m lemming.cli department-analyze --output social.json
 ```
 
 ### API Server & Dashboard

@@ -1,0 +1,10 @@
+{
+  "name": "research",
+  "description": "Handles research tasks and information gathering",
+  "version": "1.0.0",
+  "created_at": "2025-01-19T10:00:00Z",
+  "author": "LeMMing Team",
+  "dependencies": [],
+  "tags": ["research", "information", "analysis"],
+  "readme": "# Research Department\n\nThis department handles research tasks, information gathering, and analysis.\n\n## Agents\n- market_researcher: Researches market trends and competitive analysis\n- tech_researcher: Researches technical topics and documentation\n\n## Workflow\n1. Receive research requests from other departments\n2. Gather information from various sources\n3. Analyze and synthesize findings\n4. Report results to requesting departments\n\n## Integration\nThis department is designed to work with:\n- Content Team: Provides research for articles\n- Product Team: Provides technical and market research\n- Marketing Team: Provides competitive analysis"
+}
