@@ -366,8 +366,7 @@ def collect_readable_outboxes(
 def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks: int = 100) -> int:
     removed = 0
     agents_dir = get_agents_dir(base_path)
-    if not agents_dir.exists():
-        return 0
+    # Optimization: Removed agents_dir.exists() check to rely on try/except block below
 
     # Optimization: Use os.scandir to iterate agents efficiently
     try:
@@ -376,12 +375,15 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
                 if not agent_entry.is_dir():
                     continue
 
-                outbox_dir = get_outbox_dir(base_path, agent_entry.name)
-                if not outbox_dir.exists():
-                    continue
+                # Optimization: Construct path manually to avoid get_outbox_dir overhead
+                # (validation + Path creation). Structure: agents_dir / agent_name / "outbox"
+                # agent_entry.path is the full path to the agent dir.
+                outbox_dir_str = os.path.join(agent_entry.path, "outbox")
+
+                # Optimization: Removed outbox_dir.exists() check to rely on try/except block
 
                 try:
-                    with os.scandir(outbox_dir) as outbox_it:
+                    with os.scandir(outbox_dir_str) as outbox_it:
                         for entry in outbox_it:
                             if not entry.is_file() or not entry.name.endswith(".json"):
                                 continue
@@ -391,16 +393,17 @@ def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks
                                 continue
 
                             if current_tick - tick_val > max_age_ticks:
-                                entry_path = outbox_dir / entry.name
                                 try:
-                                    entry_path.unlink()
+                                    # Optimization: Use os.unlink directly on entry.path
+                                    # to avoid Path object creation and syscall overhead
+                                    os.unlink(entry.path)
                                     removed += 1
                                 except Exception as exc:  # pragma: no cover
                                     logger.error(
                                         "outbox_cleanup_failed",
                                         extra={
                                             "event": "outbox_cleanup_failed",
-                                            "path": str(entry_path),
+                                            "path": entry.path,
                                             "error": str(exc),
                                         },
                                     )
