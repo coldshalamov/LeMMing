@@ -305,7 +305,7 @@ def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> lis
             results.append(ToolResult(False, "", f"Unknown tool: {tool_name}"))
             continue
 
-        result = tool.execute(agent.name, base_path, **args)
+        result = tool.execute(agent.name, base_path, agent_path=agent.path, **args)
         results.append(result)
     return results
 

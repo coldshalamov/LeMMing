@@ -19,7 +19,13 @@ from . import memory
 from .paths import get_agent_dir, get_agents_dir, validate_agent_name
 
 
-def _is_path_allowed(base_path: Path, agent_name: str, target_path: Path, mode: str) -> bool:
+def _is_path_allowed(
+    base_path: Path,
+    agent_name: str,
+    target_path: Path,
+    mode: str,
+    agent_path: Path | None = None,
+) -> bool:
     """Check if an agent is allowed to access a given path.
 
     Args:
@@ -27,6 +33,7 @@ def _is_path_allowed(base_path: Path, agent_name: str, target_path: Path, mode: 
         agent_name: Name of the agent
         target_path: Path to check access for
         mode: Access mode ("read" or "write") - reserved for future use
+        agent_path: Optional direct path to agent directory (for nested agents)
 
     Returns:
         True if access is allowed, False otherwise
@@ -43,7 +50,11 @@ def _is_path_allowed(base_path: Path, agent_name: str, target_path: Path, mode: 
         return False
 
     # Agents can access their own workspace
-    agent_workspace = (resolved_base / "agents" / agent_name / "workspace").resolve()
+    if agent_path:
+        agent_workspace = (agent_path / "workspace").resolve()
+    else:
+        agent_workspace = (resolved_base / "agents" / agent_name / "workspace").resolve()
+
     if resolved_target.is_relative_to(agent_workspace):
         return True
 
@@ -233,6 +244,7 @@ class FileWriteTool(Tool):
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_str = kwargs.get("path")
         content = kwargs.get("content")
+        agent_path = kwargs.get("agent_path")
 
         if not path_str:
             return ToolResult(False, "", "Missing 'path' parameter")
@@ -251,7 +263,11 @@ class FileWriteTool(Tool):
             )
 
         # Determine target path (workspace or shared)
-        agent_dir = get_agent_dir(base_path, agent_name)
+        if agent_path:
+            agent_dir = agent_path
+        else:
+            agent_dir = get_agent_dir(base_path, agent_name)
+
         workspace_dir = agent_dir / "workspace"
 
         # If path starts with "shared/", write to shared directory
@@ -261,7 +277,7 @@ class FileWriteTool(Tool):
             target_path = workspace_dir / path_str
 
         # Security check: ensure path is allowed
-        if not _is_path_allowed(base_path, agent_name, target_path, "write"):
+        if not _is_path_allowed(base_path, agent_name, target_path, "write", agent_path=agent_path):
             return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         # Ensure parent directory exists
@@ -291,6 +307,8 @@ class ShellTool(Tool):
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         command = kwargs.get("command")
+        agent_path = kwargs.get("agent_path")
+
         if not command:
             return ToolResult(False, "", "Missing 'command' parameter")
 
@@ -325,7 +343,11 @@ class ShellTool(Tool):
                  return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
-        agent_dir = get_agent_dir(base_path, agent_name)
+        if agent_path:
+            agent_dir = agent_path
+        else:
+            agent_dir = get_agent_dir(base_path, agent_name)
+
         workspace_dir = agent_dir / "workspace"
 
         # Ensure workspace exists
@@ -364,12 +386,17 @@ class FileReadTool(Tool):
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_str = kwargs.get("path")
+        agent_path = kwargs.get("agent_path")
 
         if not path_str:
             return ToolResult(False, "", "Missing 'path' parameter")
 
         # Determine target path
-        agent_dir = get_agent_dir(base_path, agent_name)
+        if agent_path:
+            agent_dir = agent_path
+        else:
+            agent_dir = get_agent_dir(base_path, agent_name)
+
         workspace_dir = agent_dir / "workspace"
 
         if path_str.startswith("shared/"):
@@ -378,7 +405,7 @@ class FileReadTool(Tool):
             target_path = workspace_dir / path_str
 
         # Security check
-        if not _is_path_allowed(base_path, agent_name, target_path, "read"):
+        if not _is_path_allowed(base_path, agent_name, target_path, "read", agent_path=agent_path):
             return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
@@ -402,9 +429,14 @@ class FileListTool(Tool):
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_str = kwargs.get("path", ".")
+        agent_path = kwargs.get("agent_path")
 
         # Determine target path
-        agent_dir = get_agent_dir(base_path, agent_name)
+        if agent_path:
+            agent_dir = agent_path
+        else:
+            agent_dir = get_agent_dir(base_path, agent_name)
+
         workspace_dir = agent_dir / "workspace"
 
         if path_str.startswith("shared/"):
