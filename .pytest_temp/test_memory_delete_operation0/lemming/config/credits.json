@@ -1,9 +1,0 @@
-{
-  "remover": {
-    "model": "gpt-4.1-mini",
-    "cost_per_action": 0.01,
-    "credits_left": 0.99,
-    "max_credits": 10.0,
-    "soft_cap": 5.0
-  }
-}

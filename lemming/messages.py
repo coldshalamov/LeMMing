@@ -301,6 +301,45 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
         return 0
 
 
+def read_multi_agent_outbox_entries(
+    base_path: Path, agent_names: list[str], limit: int = 50, since_tick: int | None = None
+) -> list[OutboxEntry]:
+    """Efficiently read outbox entries across multiple agents.
+
+    This avoids loading 'limit' entries for *each* agent and then sorting them.
+    Instead, it scans metadata (filenames) from all agents, merges the sorted streams,
+    picks the top 'limit' candidates globally, and ONLY loads those files.
+    """
+    if limit <= 0:
+        return []
+
+    # 1. Gather sorted metadata streams from all agents
+    iterables = []
+    for agent_name in agent_names:
+        iterables.append(_scan_outbox_files_optimized(base_path, agent_name, since_tick=since_tick, limit=limit))
+
+    # 2. Merge sorted streams to find global top candidates
+    # _scan_outbox_files_optimized returns (tick, filename, full_path) sorted descending by tick.
+    # Optimization: (tick, filename, path) tuple comparison is sufficient
+    # and equivalent to (tick, filename) since filename implies tick and is unique per agent.
+    merged = heapq.merge(*iterables, reverse=True)
+
+    # 3. Take top 'limit' candidates
+    to_load = list(itertools.islice(merged, limit))
+
+    # 4. Load only the necessary files
+    entries: list[OutboxEntry] = []
+    for _, _, path_str in to_load:
+        entry = _load_entry(Path(path_str))
+        if entry is None:
+            continue
+        entries.append(entry)
+
+    # 5. Final sort (just in case created_at differs for same tick, or to be safe)
+    entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
+    return entries
+
+
 def collect_readable_outboxes(
     base_path: Path,
     agent_name: str,
@@ -317,38 +356,11 @@ def collect_readable_outboxes(
             read_outboxes = [
                 entry.name for entry in it if entry.is_dir() and entry.name not in {agent_name, "agent_template"}
             ]
+    else:
+        # Filter out self if present
+        read_outboxes = [name for name in read_outboxes if name != agent_name]
 
-    # Optimization: Scan metadata first to avoid loading content of old messages
-    # We use heapq.merge to combine pre-sorted lists from each agent,
-    # avoiding a massive sort of all candidates and os.path.basename calls.
-
-    iterables = []
-    for other in read_outboxes:
-        if other == agent_name:
-            continue
-        # Each agent returns at most 'limit' newest messages, sorted descending.
-        iterables.append(_scan_outbox_files_optimized(base_path, other, since_tick=since_tick, limit=limit))
-
-    # Merge sorted streams. _scan_outbox_files_optimized returns (tick, filename, path)
-    # We want to sort by (tick, filename) descending.
-    # scan_outbox_files output is already sorted by this key.
-    # Optimization: Removed key lambda because (tick, filename, path) tuple comparison is sufficient
-    # and equivalent to (tick, filename) since filename implies tick and is unique per agent,
-    # and globally unique (UUID). This avoids lambda overhead per item.
-    merged = heapq.merge(*iterables, reverse=True)
-
-    # Take only the top 'limit' entries
-    to_load = list(itertools.islice(merged, limit))
-
-    entries: list[OutboxEntry] = []
-    for _, _, path_str in to_load:
-        entry = _load_entry(Path(path_str))
-        if entry is None:
-            continue
-        entries.append(entry)
-
-    entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
-    return entries[:limit]
+    return read_multi_agent_outbox_entries(base_path, read_outboxes, limit=limit, since_tick=since_tick)
 
 
 def cleanup_old_outbox_entries(base_path: Path, current_tick: int, max_age_ticks: int = 100) -> int:

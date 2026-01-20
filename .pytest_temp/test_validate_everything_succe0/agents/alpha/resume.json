@@ -1,1 +1,0 @@
-{"name": "alpha", "title": "Alpha", "short_description": "Agent alpha", "workflow_description": "", "instructions": "Follow the plan.", "model": {"key": "gpt-4.1-mini"}, "permissions": {"read_outboxes": ["*"], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "credits": {"max_credits": 10, "soft_cap": 5}}
