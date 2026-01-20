@@ -162,7 +162,7 @@ export default function Dashboard() {
       </div>
 
       {/* 3) Manager Sidebar (Left) */}
-      <div className="absolute top-24 left-6 bottom-24 w-[400px] z-20 pointer-events-auto">
+      <div className="absolute top-24 left-6 bottom-24 w-[400px] z-20 pointer-events-none">
         {messages && <ManagerChat messages={messages} />}
       </div>
 
