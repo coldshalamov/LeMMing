@@ -221,10 +221,12 @@ def _validate_resume_dict(resume_path: Path, data: dict[str, Any]) -> list[str]:
 
 def load_agent(base_path: Path, name: str) -> Agent:
     resume_path = get_resume_json_path(base_path, name)
-    if not resume_path.exists():
+    # Optimization: Use EAFP to avoid redundant stat call.
+    try:
+        data = _load_resume_json(resume_path)
+    except FileNotFoundError:
         raise FileNotFoundError(f"Missing resume.json for agent {name}")
 
-    data = _load_resume_json(resume_path)
     return Agent.from_resume_data(resume_path, data)
 
 
@@ -233,8 +235,8 @@ def discover_agents(base_path: Path) -> list[Agent]:
     agents: list[Agent] = []
     seen_names: set[str] = set()
 
-    if not agents_dir.exists():
-        return agents
+    # Optimization: Removed agents_dir.exists() check. os.scandir will raise
+    # OSError (caught below) if the directory doesn't exist.
 
     # Optimization: Use recursive scan with os.scandir to avoid redundant stat calls.
     # scandir yields DirEntry objects which have cached stat() info.
