@@ -111,11 +111,11 @@ def get_agent_logger(base_path: Path, agent_name: str) -> logging.Logger:
     """
 
     log_path = base_path / "agents" / agent_name / "logs" / "structured.jsonl"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger(f"lemming.agent.{agent_name}")
 
     if not logger.handlers:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         handler = logging.FileHandler(log_path)
         handler.setFormatter(StructuredFormatter())
         logger.addHandler(handler)

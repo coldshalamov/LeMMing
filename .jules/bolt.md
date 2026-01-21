@@ -7,3 +7,7 @@
 ## 2024-05-23 - [EAFP for File I/O]
 **Learning:** `Path.exists()` incurs an extra syscall. In this file-heavy architecture, using EAFP (try/except FileNotFoundError) for `load_memory` and `delete_memory` saves significant overhead. For `save_memory`, optimistic writing (assuming directory exists) with a fallback to `mkdir` handles the common case (updates) efficiently.
 **Action:** Apply EAFP pattern to other file operations like `resume.json` or logs if they become bottlenecks.
+
+## 2024-05-23 - [Redundant Syscalls in Hot Paths]
+**Learning:** `mkdir(exist_ok=True)` is cheap but not free (~0.04ms). In hot paths like logging (called every tick/action), calling it repeatedly adds up.
+**Action:** Move filesystem setup code inside initialization blocks (e.g., inside `if not logger.handlers:`) to ensure it runs only once per process.
