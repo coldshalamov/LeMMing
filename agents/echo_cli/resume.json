@@ -1,11 +1,11 @@
 {
   "name": "echo_cli",
-  "title": "Powershell Runner",
-  "short_description": "Executes Powershell commands via CLI provider.",
-  "workflow_description": "Receives commands as prompts from manager, executes them, returns output.",
+  "title": "Echo Runner",
+  "short_description": "Echoes back the prompt via CLI provider.",
+  "workflow_description": "Receives text from manager, echoes it back.",
   "instructions": "Ignored by CLI provider.",
   "model": {
-    "key": "cli-powershell",
+    "key": "cli-echo",
     "temperature": 0.0,
     "max_tokens": 4096
   },

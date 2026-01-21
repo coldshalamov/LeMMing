@@ -47,7 +47,7 @@
     "soft_cap": 500.0
   },
   "echo_cli": {
-    "model": "cli-powershell",
+    "model": "cli-echo",
     "cost_per_action": 0.01,
     "credits_left": 999.99,
     "max_credits": 1000.0,
