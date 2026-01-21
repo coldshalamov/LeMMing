@@ -39,14 +39,7 @@
     "provider": "cli",
     "model_name": "echo",
     "provider_config": {
-        "command": ["cmd", "/c", "echo"]
-    }
-  },
-  "cli-powershell": {
-    "provider": "cli",
-    "model_name": "powershell",
-    "provider_config": {
-        "command": ["powershell", "-NoProfile", "-NonInteractive", "-Command"]
+        "command": ["echo"]
     }
   }
 }
