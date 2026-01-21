@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, User, Bot, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, User, Bot, Loader2, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { OutboxEntry } from "../lib/types";
 import { sendMessage } from "../lib/api";
 import clsx from "clsx";
@@ -9,6 +9,12 @@ interface ManagerChatProps {
     messages: OutboxEntry[];
     compact?: boolean; // If we want to collapse it
 }
+
+const SUGGESTED_PROMPTS = [
+    "What is the status of my agents?",
+    "Create a new researcher agent",
+    "Help me optimize workflow"
+];
 
 export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
     const [inputValue, setInputValue] = useState("");
@@ -130,8 +136,25 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
                             aria-label="Chat history"
                         >
                             {chatHistory.length === 0 && (
-                                <div className="text-center text-gray-500 text-xs italic mt-10">
-                                    Start a conversation with the Manager to begin orchestrating your organization.
+                                <div className="flex flex-col items-center justify-center mt-8 px-4">
+                                    <div className="text-gray-500 text-xs italic mb-4 text-center">
+                                        Start a conversation with the Manager...
+                                    </div>
+                                    <div className="flex flex-col gap-2 w-full">
+                                        {SUGGESTED_PROMPTS.map((prompt) => (
+                                            <button
+                                                key={prompt}
+                                                onClick={() => {
+                                                    setInputValue(prompt);
+                                                    textareaRef.current?.focus();
+                                                }}
+                                                className="text-xs text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-brand-purple/30 transition-colors text-gray-300 flex items-center gap-2 group"
+                                            >
+                                                <Sparkles size={12} className="text-brand-purple opacity-50 group-hover:opacity-100 transition-opacity" />
+                                                {prompt}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
