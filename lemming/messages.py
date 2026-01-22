@@ -96,10 +96,20 @@ def outbox_filename(entry: OutboxEntry) -> str:
 
 def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> Path:
     outbox_dir = get_outbox_dir(base_path, agent_name)
-    outbox_dir.mkdir(parents=True, exist_ok=True)
+    # Optimization: removed outbox_dir.mkdir call to rely on try/except block below
+    # which saves a syscall.
+
     entry_path = outbox_dir / outbox_filename(entry)
-    with entry_path.open("w", encoding="utf-8") as f:
-        json.dump(entry.to_dict(), f, indent=2)
+
+    try:
+        with entry_path.open("w", encoding="utf-8") as f:
+            json.dump(entry.to_dict(), f, indent=2)
+    except FileNotFoundError:
+        # Parent directory likely doesn't exist
+        outbox_dir.mkdir(parents=True, exist_ok=True)
+        with entry_path.open("w", encoding="utf-8") as f:
+            json.dump(entry.to_dict(), f, indent=2)
+
     return entry_path
 
 

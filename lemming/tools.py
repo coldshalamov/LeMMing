@@ -280,16 +280,19 @@ class FileWriteTool(Tool):
         if not _is_path_allowed(base_path, agent_name, target_path, "write", agent_path=agent_path):
             return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
-        # Ensure parent directory exists
-        try:
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            return ToolResult(False, "", f"Failed to create parent directory: {e}")
-
         # Write file
+        # Optimization: optimistic write to avoid syscall overhead for directory check
         try:
             target_path.write_text(content, encoding="utf-8")
             return ToolResult(True, f"Wrote {len(content)} bytes to {path_str}")
+        except FileNotFoundError:
+            # Parent directory likely doesn't exist
+            try:
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                target_path.write_text(content, encoding="utf-8")
+                return ToolResult(True, f"Wrote {len(content)} bytes to {path_str}")
+            except Exception as e:
+                return ToolResult(False, "", f"Failed to write file after creating directory: {e}")
         except Exception as e:
             return ToolResult(False, "", f"Failed to write file: {e}")
 
