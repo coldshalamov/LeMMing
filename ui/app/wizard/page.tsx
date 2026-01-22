@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { AgentCard } from "@/components/AgentCard";
 import { AgentInfo } from "@/lib/types";
 import { createAgent, useModels } from "@/lib/api";
@@ -87,6 +87,17 @@ export default function WizardPage() {
   const [error, setError] = useState<string | null>(null);
   const [showToolModal, setShowToolModal] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  // Use callback ref to ensure focus is applied when the new step element is actually mounted
+  // which handles Framer Motion's AnimatePresence delay correctly.
+  const headingRef = useCallback((node: HTMLHeadingElement | null) => {
+    if (node) {
+      // Small timeout to ensure browser is ready to accept focus during animation
+      setTimeout(() => {
+        node.focus();
+      }, 50);
+    }
+  }, []);
 
   const stepIdx = currentStep;
   const StepIcon = STEPS[stepIdx].icon;
@@ -221,11 +232,20 @@ export default function WizardPage() {
                 className="space-y-8"
               >
                 <div className="flex items-center gap-4 mb-8">
-                  <div className="w-12 h-12 rounded-xl bg-neo-surface border border-neo-border flex items-center justify-center text-brand-cyan">
+                  <div
+                    className="w-12 h-12 rounded-xl bg-neo-surface border border-neo-border flex items-center justify-center text-brand-cyan"
+                    aria-hidden="true"
+                  >
                     <StepIcon size={24} />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">{STEPS[stepIdx].label}</h2>
+                    <h2
+                      ref={headingRef}
+                      tabIndex={-1}
+                      className="text-2xl font-bold outline-none"
+                    >
+                      {STEPS[stepIdx].label}
+                    </h2>
                     <p className="text-white/50">
                       Configure your agent&apos;s{" "}
                       {STEPS[stepIdx].label.toLowerCase()}
