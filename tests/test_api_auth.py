@@ -92,3 +92,72 @@ def test_admin_auth_configured_failure(client: TestClient, tmp_path):
         # update_engine_config
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
         assert resp.status_code == 401
+
+def test_agent_creation_auth_configured(client: TestClient, tmp_path):
+    """Verify agent creation/cloning is protected when admin key is set."""
+    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
+         patch("lemming.api.BASE_PATH", tmp_path), \
+         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+
+        # Setup minimal environment
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir(parents=True)
+        # Create a source agent for cloning
+        source_dir = agents_dir / "source"
+        source_dir.mkdir()
+        (source_dir / "resume.json").write_text('{"name": "source", "title": "Src", "short_description": "Src", "model": {"key": "gpt"}, "permissions": {"read_outboxes": [], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}')
+        (source_dir / "outbox").mkdir()
+        (source_dir / "memory").mkdir()
+        (source_dir / "logs").mkdir()
+        (source_dir / "workspace").mkdir()
+
+        # 1. Test Unauthenticated Access
+
+        # Create Agent - No Auth
+        resp = client.post("/api/agents", json={
+            "name": "new_agent",
+            "resume": {
+                "name": "new_agent",
+                "title": "New",
+                "short_description": "New agent",
+                "model": {"key": "gpt"},
+                "permissions": {"read_outboxes": [], "tools": []},
+                "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+                "instructions": "test"
+            }
+        })
+        assert resp.status_code == 401
+
+        # Clone Agent - No Auth
+        resp = client.post("/api/agents/clone", json={
+            "source_agent": "source",
+            "target_name": "cloned_agent"
+        })
+        assert resp.status_code == 401
+
+        # 2. Test Authenticated Access
+        headers = {"X-Admin-Key": "secret123"}
+
+        # Create Agent - Auth
+        resp = client.post("/api/agents", json={
+            "name": "auth_agent",
+            "resume": {
+                "name": "auth_agent",
+                "title": "Auth",
+                "short_description": "Auth agent",
+                "model": {"key": "gpt"},
+                "permissions": {"read_outboxes": [], "tools": []},
+                "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+                "instructions": "test"
+            }
+        }, headers=headers)
+        assert resp.status_code == 201
+        assert (agents_dir / "auth_agent").exists()
+
+        # Clone Agent - Auth
+        resp = client.post("/api/agents/clone", json={
+            "source_agent": "source",
+            "target_name": "auth_cloned"
+        }, headers=headers)
+        assert resp.status_code == 201
+        assert (agents_dir / "auth_cloned").exists()
