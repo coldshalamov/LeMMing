@@ -392,7 +392,11 @@ async def get_agent(agent_name: str) -> AgentInfo:
     return _build_agent_info(agent, credits)
 
 
-@app.post("/api/agents", status_code=201, dependencies=[Depends(rate_limiter(limit=5, window=60))])
+@app.post(
+    "/api/agents",
+    status_code=201,
+    dependencies=[Depends(rate_limiter(limit=5, window=60)), Depends(verify_admin_access)],
+)
 async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     try:
         validate_agent_name(request.name)
@@ -449,7 +453,11 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     return {"status": "created", "path": str(target_dir.relative_to(BASE_PATH))}
 
 
-@app.post("/api/agents/clone", status_code=201, dependencies=[Depends(rate_limiter(limit=5, window=60))])
+@app.post(
+    "/api/agents/clone",
+    status_code=201,
+    dependencies=[Depends(rate_limiter(limit=5, window=60)), Depends(verify_admin_access)],
+)
 async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
     try:
         validate_agent_name(request.target_name)
