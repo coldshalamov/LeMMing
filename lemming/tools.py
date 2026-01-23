@@ -366,6 +366,7 @@ class ShellTool(Tool):
                 cwd=workspace_dir,
                 capture_output=True,
                 text=True,
+                stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
                 timeout=30,  # 30 second timeout
             )
 
