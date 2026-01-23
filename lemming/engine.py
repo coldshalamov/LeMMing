@@ -75,9 +75,14 @@ def load_tick(base_path: Path) -> int:
 
 def persist_tick(base_path: Path, tick: int) -> None:
     tick_file = get_tick_file(base_path)
-    tick_file.parent.mkdir(parents=True, exist_ok=True)
-    with tick_file.open("w", encoding="utf-8") as f:
-        json.dump({"current_tick": tick}, f, indent=2)
+    # Optimization: optimistic write to save a syscall (mkdir) on every tick
+    try:
+        with tick_file.open("w", encoding="utf-8") as f:
+            json.dump({"current_tick": tick}, f, indent=2)
+    except FileNotFoundError:
+        tick_file.parent.mkdir(parents=True, exist_ok=True)
+        with tick_file.open("w", encoding="utf-8") as f:
+            json.dump({"current_tick": tick}, f, indent=2)
 
 
 def compute_fire_point(agent: Agent) -> float:
@@ -433,9 +438,15 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
     notes = parsed.get("notes")
     if notes:
         log_dir = get_logs_dir(base_path, agent.name)
-        log_dir.mkdir(parents=True, exist_ok=True)
-        with (log_dir / "activity.log").open("a", encoding="utf-8") as f:
-            f.write(f"[Tick {tick}] {notes}\n")
+        log_file = log_dir / "activity.log"
+        # Optimization: optimistic write to save a syscall (mkdir) when logging notes
+        try:
+            with log_file.open("a", encoding="utf-8") as f:
+                f.write(f"[Tick {tick}] {notes}\n")
+        except FileNotFoundError:
+            log_dir.mkdir(parents=True, exist_ok=True)
+            with log_file.open("a", encoding="utf-8") as f:
+                f.write(f"[Tick {tick}] {notes}\n")
 
     # Log structured agent action
     total_duration_ms = int((time.time() - start_time) * 1000)
