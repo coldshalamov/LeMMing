@@ -148,10 +148,11 @@ export default function Dashboard() {
                 <Settings size={20} />
               </button>
 
-              <Link href="/wizard">
-                <button className="flex items-center gap-2 px-4 py-2 bg-brand-cyan text-black font-bold rounded shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:bg-cyan-300 transition-colors">
-                  <Plus size={16} /> NEW UNIT
-                </button>
+              <Link
+                href="/wizard"
+                className="flex items-center gap-2 px-4 py-2 bg-brand-cyan text-black font-bold rounded shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:bg-cyan-300 transition-colors"
+              >
+                <Plus size={16} aria-hidden="true" /> NEW UNIT
               </Link>
             </div>
           </div>
@@ -233,10 +234,11 @@ export default function Dashboard() {
                   <p className="font-mono text-sm mb-4">
                     SYSTEM_OFFLINE: NO AGENTS DETECTED
                   </p>
-                  <Link href="/wizard">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors">
-                      <Plus size={18} /> INITIALIZE_FIRST_AGENT
-                    </button>
+                  <Link
+                    href="/wizard"
+                    className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors"
+                  >
+                    <Plus size={18} aria-hidden="true" /> INITIALIZE_FIRST_AGENT
                   </Link>
                 </>
               ) : (
