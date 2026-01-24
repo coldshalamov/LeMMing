@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 
 OUTBOX_FILENAME_TEMPLATE = "{tick:08d}_{entry_id}.json"
 
+# Caches for outbox operations to avoid repetitive filesystem scans
+# Key: outbox_dir_path -> (mtime, count)
+_outbox_count_cache: dict[Path, tuple[float, int]] = {}
+# Key: outbox_dir_path -> (mtime, list_of_filenames_sorted_desc)
+_outbox_files_cache: dict[Path, tuple[float, list[str]]] = {}
+
 
 @dataclass
 class OutboxEntry:
@@ -173,56 +179,59 @@ def _scan_outbox_files_optimized(
 ) -> list[tuple[int, str, str]]:
     """Internal optimized version returning (tick, filename, full_path_str)."""
     outbox_dir = get_outbox_dir(base_path, agent_name)
-    # Optimization: removed outbox_dir.exists() check to rely on try/except block below
-    # which saves a stat call.
-
     results = []
+
     try:
-        with os.scandir(outbox_dir) as it:
-            if limit > 0:
-                # Use a generator to avoid creating the full list of files
-                # Optimization: Filter by .json and ensure start with digit (valid tick)
-                # This avoids processing garbage files like 'temp.json' which would sort
-                # incorrectly in string comparison.
-                candidate_files = (
-                    entry.name
-                    for entry in it
-                    if entry.is_file() and entry.name.endswith(".json") and entry.name[0].isdigit()
+        # Optimization: Use st_mtime as cache key. Directory mtime updates when files are added/removed.
+        # This replaces O(N) scan with O(1) cache lookup for repeated calls.
+        mtime = outbox_dir.stat().st_mtime
+
+        cached = _outbox_files_cache.get(outbox_dir)
+        if cached and cached[0] == mtime:
+            filenames = cached[1]
+        else:
+            # Cache miss or stale: scan all files
+            with os.scandir(outbox_dir) as it:
+                filenames = sorted(
+                    (
+                        entry.name
+                        for entry in it
+                        if entry.is_file() and entry.name.endswith(".json") and entry.name[0].isdigit()
+                    ),
+                    reverse=True,
                 )
 
-                # nlargest returns the largest elements, so highest tick (newest).
-                # Optimization: Use string comparison directly on filenames instead of DirEntry objects
-                # with a lambda key. This avoids python function call overhead for every comparison,
-                # providing ~30-40% speedup.
-                # Since ticks are zero-padded (08d) and filenames start with tick,
-                # string sort is equivalent to tick sort for valid files.
-                largest_names = heapq.nlargest(
-                    limit,
-                    candidate_files,
-                )
+            # Simple eviction policy to prevent memory leaks
+            if len(_outbox_files_cache) > 1000:
+                _outbox_files_cache.clear()
 
-                outbox_dir_str = str(outbox_dir)
-                for name in largest_names:
-                    tick = _tick_from_filename_str(name)
-                    # No need to check tick != -1 strictly if we trust nlargest handles it,
-                    # but _tick_from_filename_str returns -1 on error.
-                    if tick != -1:
-                        if since_tick is not None and tick < since_tick:
-                            continue
-                        # Optimization: Use os.path.join with pre-computed dir string
-                        full_path = os.path.join(outbox_dir_str, name)
-                        results.append((tick, name, full_path))
+            _outbox_files_cache[outbox_dir] = (mtime, filenames)
 
-            else:
-                for entry in it:
-                    if entry.is_file() and entry.name.endswith(".json"):
-                        tick = _tick_from_filename_str(entry.name)
-                        if tick != -1:
-                            if since_tick is not None and tick < since_tick:
-                                continue
-                            results.append((tick, entry.name, entry.path))
+        outbox_dir_str = str(outbox_dir)
+
+        # Apply filters to cached list
+        count = 0
+        for name in filenames:
+            tick = _tick_from_filename_str(name)
+            if tick == -1:
+                continue
+
+            if since_tick is not None and tick < since_tick:
+                # Since list is sorted descending, we can stop early if looking for > since_tick
+                # Wait, "since_tick" means we want entries with tick >= since_tick.
+                # If current tick < since_tick, then all subsequent ticks are also smaller.
+                break
+
+            full_path = os.path.join(outbox_dir_str, name)
+            results.append((tick, name, full_path))
+
+            count += 1
+            if limit > 0 and count >= limit:
+                break
+
     except FileNotFoundError:
         pass
+
     return results
 
 
@@ -298,14 +307,26 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
     This avoids reading and parsing the JSON files, which is significantly faster.
     """
     outbox_dir = get_outbox_dir(base_path, agent_name)
-    # Optimization: removed outbox_dir.exists() check to rely on try/except block below
 
     try:
+        # Optimization: Check cache first based on directory mtime
+        mtime = outbox_dir.stat().st_mtime
+
+        cached = _outbox_count_cache.get(outbox_dir)
+        if cached and cached[0] == mtime:
+            return cached[1]
+
         count = 0
         with os.scandir(outbox_dir) as it:
             for entry in it:
                 if entry.name.endswith(".json") and entry.is_file():
                     count += 1
+
+        # Simple eviction policy to prevent memory leaks
+        if len(_outbox_count_cache) > 1000:
+            _outbox_count_cache.clear()
+
+        _outbox_count_cache[outbox_dir] = (mtime, count)
         return count
     except FileNotFoundError:
         return 0
