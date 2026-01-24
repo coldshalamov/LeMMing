@@ -78,7 +78,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-2 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                             aria-label="Close settings"
                         >
                             <X size={20} className="text-gray-400" />
@@ -105,11 +105,12 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             <div className="relative">
                                 <input
                                     id="openai-key"
+                                    autoFocus
                                     type={showPassword.openai ? "text" : "password"}
                                     placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                     value={config.openai_api_key}
                                     onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
-                                    className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none font-mono text-sm"
+                                    className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none focus:ring-1 focus:ring-brand-cyan font-mono text-sm"
                                 />
                                 <button
                                     type="button"
@@ -140,7 +141,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                     value={config.anthropic_api_key}
                                     onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
-                                    className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none font-mono text-sm"
+                                    className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none focus:ring-1 focus:ring-brand-purple font-mono text-sm"
                                 />
                                 <button
                                     type="button"

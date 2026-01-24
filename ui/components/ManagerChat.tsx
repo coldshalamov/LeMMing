@@ -88,7 +88,7 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
         >
             {/* Header */}
             <div
-                className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors group"
+                className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple focus-visible:ring-inset"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 role="button"
                 aria-expanded={!isCollapsed}
@@ -148,7 +148,8 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
                                                     setInputValue(prompt);
                                                     textareaRef.current?.focus();
                                                 }}
-                                                className="text-xs text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-brand-purple/30 transition-colors text-gray-300 flex items-center gap-2 group"
+                                                title={`Use suggestion: ${prompt}`}
+                                                className="text-xs text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-brand-purple/30 focus-visible:border-brand-purple/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-purple transition-colors text-gray-300 flex items-center gap-2 group"
                                             >
                                                 <Sparkles size={12} className="text-brand-purple opacity-50 group-hover:opacity-100 transition-opacity" />
                                                 {prompt}
@@ -211,7 +212,7 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
                                 type="submit"
                                 disabled={!inputValue.trim() || isSending}
                                 aria-label={isSending ? "Sending message..." : "Send message"}
-                                className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-[38px] flex items-center justify-center"
+                                className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-[38px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                             >
                                 {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                             </button>
