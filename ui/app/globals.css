@@ -17,6 +17,10 @@
   --color-brand-lime-dim: rgba(132, 204, 22, 0.1);
   --color-brand-lime-glow: rgba(132, 204, 22, 0.5);
 
+  --color-brand-purple: #a855f7;
+  --color-brand-purple-dim: rgba(168, 85, 247, 0.1);
+  --color-brand-purple-glow: rgba(168, 85, 247, 0.5);
+
   --color-brand-pink: #ec4899;
 
   --font-sans: var(--font-geist-sans);
