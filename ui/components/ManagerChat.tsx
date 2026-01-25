@@ -149,6 +149,7 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
                                                     textareaRef.current?.focus();
                                                 }}
                                                 title={`Use suggestion: ${prompt}`}
+                                                aria-label={`Use suggestion: ${prompt}`}
                                                 className="text-xs text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-brand-purple/30 focus-visible:border-brand-purple/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-purple transition-colors text-gray-300 flex items-center gap-2 group"
                                             >
                                                 <Sparkles size={12} className="text-brand-purple opacity-50 group-hover:opacity-100 transition-opacity" />
