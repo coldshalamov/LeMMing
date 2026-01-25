@@ -72,6 +72,7 @@ app.add_middleware(
 # Simple in-memory rate limiter
 # Map: client_ip -> list of timestamps
 _request_timestamps: dict[str, list[float]] = {}
+MAX_RATE_LIMIT_CLIENTS = 10000
 
 
 async def verify_admin_access(request: Request):
@@ -98,6 +99,14 @@ def rate_limiter(limit: int = 10, window: int = 60):
 
         # Initialize
         if client_ip not in _request_timestamps:
+            # Memory leak protection: prevent unbounded growth
+            if len(_request_timestamps) >= MAX_RATE_LIMIT_CLIENTS:
+                # Evict the oldest inserted client (FIFO) to maintain size limit
+                # This is O(1) and prevents CPU exhaustion from scanning
+                try:
+                    del _request_timestamps[next(iter(_request_timestamps))]
+                except StopIteration:
+                    pass
             _request_timestamps[client_ip] = []
 
         # Filter old timestamps
