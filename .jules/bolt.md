@@ -15,3 +15,7 @@
 ## 2024-05-24 - [Optimistic Write for Messaging]
 **Learning:** `write_outbox_entry` is a critical hot path (called for every message). Checking/creating the directory on every write added significant overhead (~50% of operation time).
 **Action:** Applied the optimistic write pattern (try write -> catch FileNotFoundError -> mkdir -> retry) to `write_outbox_entry` and `FileWriteTool`. Benchmark showed ~2x speedup for writing messages.
+
+## 2024-05-25 - [String Slicing vs Splitting]
+**Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
+**Action:** Use slicing for parsing large text blocks where possible.
