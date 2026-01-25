@@ -115,7 +115,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(prev => ({ ...prev, openai: !prev.openai }))}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                                     aria-label={showPassword.openai ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
                                 >
                                     {showPassword.openai ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -146,7 +146,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(prev => ({ ...prev, anthropic: !prev.anthropic }))}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                                     aria-label={showPassword.anthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
                                 >
                                     {showPassword.anthropic ? <EyeOff size={16} /> : <Eye size={16} />}
