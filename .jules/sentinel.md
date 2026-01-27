@@ -22,3 +22,14 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Scoped Rate Limiting and Variable Shadowing
+**Vulnerability:**
+1. Rate limits were shared across all endpoints for a given client IP because the in-memory limiter used `client_ip` as the only key. This allowed a Denial of Service (DoS) where consuming quota on a low-priority endpoint (e.g., messaging) blocked high-priority admin endpoints.
+2. The `secrets` variable in `lemming/api.py` shadowed the standard library `secrets` module when a secrets file was loaded. This caused 500 errors (`AttributeError`) when attempting to use `secrets.compare_digest` for authentication.
+**Learning:**
+1. Rate limiters must define scope/buckets. A global "requests per IP" bucket is rarely sufficient for APIs with diverse endpoint costs/priorities.
+2. Variable naming matters. Shadowing standard library modules leads to obscure runtime errors that only manifest under specific conditions.
+**Prevention:**
+1. Always include a "scope" or "action" identifier in rate limit keys (e.g., `ip:action`).
+2. Use linters that detect module shadowing, or stick to specific naming conventions for configuration data (e.g., `secrets_config`).
