@@ -159,7 +159,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan rounded"
                         >
                             Cancel
                         </button>

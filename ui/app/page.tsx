@@ -141,7 +141,7 @@ export default function Dashboard() {
             <div className="pointer-events-auto flex items-center gap-3">
               <button
                 onClick={() => setShowSettings(true)}
-                className="p-2 bg-black/40 hover:bg-white/5 text-gray-400 hover:text-white rounded-lg border border-white/5 transition-all"
+                className="p-2 bg-black/40 hover:bg-white/5 text-gray-400 hover:text-white rounded-lg border border-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                 title="Global Settings"
                 aria-label="Global Settings"
               >
@@ -150,7 +150,7 @@ export default function Dashboard() {
 
               <Link
                 href="/wizard"
-                className="flex items-center gap-2 px-4 py-2 bg-brand-cyan text-black font-bold rounded shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:bg-cyan-300 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-brand-cyan text-black font-bold rounded shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:bg-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
                 <Plus size={16} aria-hidden="true" /> NEW UNIT
               </Link>
@@ -189,7 +189,7 @@ export default function Dashboard() {
                 </div>
                 <button
                   onClick={() => setSelectedAgentName(null)}
-                  className="text-white/20 hover:text-white transition-colors"
+                  className="text-white/20 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan rounded"
                   title="Close"
                   aria-label="Close agent details"
                 >
@@ -277,7 +277,7 @@ export default function Dashboard() {
             onClick={handleRunTick}
             disabled={isTicking}
             className={clsx(
-              "w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50",
+              "w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
               isTicking
                 ? "bg-gray-600 text-gray-400"
                 : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)]",
