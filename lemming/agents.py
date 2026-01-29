@@ -11,8 +11,8 @@ from .paths import get_agents_dir, get_resume_json_path
 
 logger = logging.getLogger(__name__)
 
-# Cache for Agent objects: path -> (mtime, Agent)
-_agent_cache: dict[Path, tuple[float, Agent]] = {}
+# Cache for Agent objects: path_str -> (mtime, Agent)
+_agent_cache: dict[str, tuple[float, Agent]] = {}
 
 
 def reset_agents_cache() -> None:
@@ -240,7 +240,8 @@ def discover_agents(base_path: Path) -> list[Agent]:
 
     # Optimization: Use recursive scan with os.scandir to avoid redundant stat calls.
     # scandir yields DirEntry objects which have cached stat() info.
-    stack = [agents_dir]
+    # Optimization: Use strings for stack to avoid Path creation for every directory.
+    stack = [str(agents_dir)]
 
     while stack:
         current_dir = stack.pop()
@@ -267,11 +268,10 @@ def discover_agents(base_path: Path) -> list[Agent]:
                 # Also skip agent_template if it's a subfolder?
                 # The original logic used rel_path.startswith("agent_template").
                 # This logic is simpler: we just don't traverse into agent_template at any level.
-                stack.append(Path(entry.path))
+                stack.append(entry.path)
 
         if resume_entry:
-            resume_path = Path(resume_entry.path)
-            folder_name = resume_path.parent.name
+            resume_path_str = resume_entry.path
 
             # Optimization: check cache using the DirEntry's cached stat
             try:
@@ -282,15 +282,16 @@ def discover_agents(base_path: Path) -> list[Agent]:
                 mtime = stat_result.st_mtime
 
                 # If cached and mtime matches, use cached agent
-                if resume_path in _agent_cache:
-                    cached_mtime, cached_agent = _agent_cache[resume_path]
+                # Optimization: Use string key for cache lookup
+                if resume_path_str in _agent_cache:
+                    cached_mtime, cached_agent = _agent_cache[resume_path_str]
                     if cached_mtime == mtime:
                         if cached_agent.name in seen_names:
                             logger.warning(
                                 "duplicate_agent_name",
                                 extra={
                                     "event": "duplicate_agent_name",
-                                    "path": str(resume_path.parent),
+                                    "path": str(Path(resume_path_str).parent),
                                     "agent": cached_agent.name,
                                 },
                             )
@@ -302,11 +303,15 @@ def discover_agents(base_path: Path) -> list[Agent]:
             except OSError:
                 logger.warning(
                     "resume_stat_failed",
-                    extra={"event": "resume_stat_failed", "path": str(resume_path)},
+                    extra={"event": "resume_stat_failed", "path": resume_path_str},
                 )
                 continue
 
             # Fallback: load from disk
+            # Optimization: Only create Path object if we need to load/parse
+            resume_path = Path(resume_path_str)
+            folder_name = resume_path.parent.name
+
             try:
                 data = _load_resume_json(resume_path)
             except json.JSONDecodeError as exc:
@@ -335,7 +340,7 @@ def discover_agents(base_path: Path) -> list[Agent]:
             try:
                 agent = Agent.from_resume_data(resume_path, data)
                 # Update cache
-                _agent_cache[resume_path] = (mtime, agent)
+                _agent_cache[resume_path_str] = (mtime, agent)
             except Exception as exc:  # pragma: no cover
                 logger.warning(
                     "resume_invalid",
