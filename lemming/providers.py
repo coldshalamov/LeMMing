@@ -136,7 +136,7 @@ class OllamaProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         logger.info(
             "ollama_call",
@@ -211,7 +211,7 @@ class CLIProvider(LLMProvider):
         model_settings: dict[str, str] | None = None,
         timeout: float = 60.0,
         prevent_arg_injection: bool = True,
-    ):
+    ) -> str:
         """
         Execute the CLI command.
 
