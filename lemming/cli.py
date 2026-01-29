@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 HUMAN_AGENT_NAME = "human"
 
 
+def setup_logging(level: str = "INFO") -> None:
+    """Setup logging configuration."""
+    logging.getLogger().setLevel(level)
+
+
 def list_agents_cmd(base_path: Path) -> None:
     agents = discover_agents(base_path)
     if not agents:
