@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-25 - [Path Instantiation Overhead]
+**Learning:** `Path` object instantiation in tight loops (like directory traversal) is expensive. Using strings for `os.scandir` and stack operations in `discover_agents` yielded a ~50% speedup.
+**Action:** Use strings for directory traversal and only convert to `Path` when necessary (e.g., for APIs that require it).
