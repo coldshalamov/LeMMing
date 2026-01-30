@@ -1,5 +1,5 @@
 
-from lemming.tools import FileWriteTool, MemoryWriteTool
+from lemming.tools import FileWriteTool, MemoryWriteTool, FileReadTool
 
 
 def test_file_write_limit(tmp_path):
@@ -82,3 +82,47 @@ def test_memory_write_within_limit(tmp_path):
     mem_path = tmp_path / "agents" / agent_name / "memory" / "small_mem.json"
     assert mem_path.exists()
     assert not result.error
+
+def test_file_read_limit(tmp_path):
+    """Test that FileReadTool enforces read size limits."""
+    tool = FileReadTool()
+    agent_name = "test_agent"
+    workspace = tmp_path / "agents" / agent_name / "workspace"
+    workspace.mkdir(parents=True)
+
+    # 5MB limit. Create 6MB file.
+    large_size = 6 * 1024 * 1024
+    large_file = workspace / "large.txt"
+    with open(large_file, "w") as f:
+        f.seek(large_size - 1)
+        f.write("a")
+
+    result = tool.execute(
+        agent_name=agent_name,
+        base_path=tmp_path,
+        path="large.txt"
+    )
+
+    assert not result.success
+    assert "file too large" in result.error.lower()
+    assert "max read size is 5242880 bytes" in result.error.lower()
+
+def test_file_read_within_limit(tmp_path):
+    """Test that FileReadTool allows reading files within limits."""
+    tool = FileReadTool()
+    agent_name = "test_agent"
+    workspace = tmp_path / "agents" / agent_name / "workspace"
+    workspace.mkdir(parents=True)
+
+    # Small file
+    content = "Hello world"
+    (workspace / "small.txt").write_text(content)
+
+    result = tool.execute(
+        agent_name=agent_name,
+        base_path=tmp_path,
+        path="small.txt"
+    )
+
+    assert result.success
+    assert result.output == content

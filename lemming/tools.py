@@ -302,8 +302,7 @@ class ShellTool(Tool):
 
     name = "shell"
     description = (
-        "Execute a shell command in the agent's workspace directory. "
-        "Allowed: grep, ls, cat, echo, head, tail, jq."
+        "Execute a shell command in the agent's workspace directory. " "Allowed: grep, ls, cat, echo, head, tail, jq."
     )
 
     ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
@@ -335,7 +334,7 @@ class ShellTool(Tool):
 
         # Check arguments for traversal/absolute paths
         for arg in args[1:]:
-             # Check for directory traversal
+            # Check for directory traversal
             if ".." in arg:
                 return ToolResult(False, "", "Security violation: directory traversal detected in arguments")
 
@@ -343,7 +342,7 @@ class ShellTool(Tool):
             # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
             # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
             if Path(arg).is_absolute():
-                 return ToolResult(False, "", "Security violation: absolute path detected in arguments")
+                return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
         if agent_path:
@@ -375,7 +374,7 @@ class ShellTool(Tool):
             else:
                 return ToolResult(False, result.stdout, result.stderr)
         except FileNotFoundError:
-             return ToolResult(False, "", f"Command '{executable}' not found in system")
+            return ToolResult(False, "", f"Command '{executable}' not found in system")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out after 30 seconds")
         except Exception as e:
@@ -387,6 +386,7 @@ class FileReadTool(Tool):
 
     name = "file_read"
     description = "Read the content of a file in the agent's workspace or shared directory."
+    MAX_READ_SIZE = 5 * 1024 * 1024  # 5MB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_str = kwargs.get("path")
@@ -419,6 +419,15 @@ class FileReadTool(Tool):
             return ToolResult(False, "", f"'{path_str}' is not a file")
 
         try:
+            # Check file size first to avoid reading large files into memory
+            file_size = target_path.stat().st_size
+            if file_size > self.MAX_READ_SIZE:
+                return ToolResult(
+                    False,
+                    "",
+                    f"File too large ({file_size} bytes). Max read size is {self.MAX_READ_SIZE} bytes.",
+                )
+
             content = target_path.read_text(encoding="utf-8")
             return ToolResult(True, content)
         except Exception as e:
@@ -451,8 +460,11 @@ class FileListTool(Tool):
             base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+        if not (
+            target_path.is_relative_to(workspace_dir.resolve())
+            or target_path.is_relative_to((base_path / "shared").resolve())
+        ):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
             return ToolResult(False, "", f"Directory '{path_str}' not found")
