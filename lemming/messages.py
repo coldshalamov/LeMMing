@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 OUTBOX_FILENAME_TEMPLATE = "{tick:08d}_{entry_id}.json"
 
 # Caches for outbox operations to avoid repetitive filesystem scans
-# Key: outbox_dir_path -> (mtime, count)
-_outbox_count_cache: dict[Path, tuple[float, int]] = {}
-# Key: outbox_dir_path -> (mtime, list_of_filenames_sorted_desc)
-_outbox_files_cache: dict[Path, tuple[float, list[str]]] = {}
+# Key: outbox_dir_path_str -> (mtime, count)
+_outbox_count_cache: dict[str, tuple[float, int]] = {}
+# Key: outbox_dir_path_str -> (mtime, list_of_filenames_sorted_desc)
+_outbox_files_cache: dict[str, tuple[float, list[str]]] = {}
 
 
 @dataclass
@@ -88,10 +88,9 @@ class OutboxEntry:
     def from_dict(cls, data: dict[str, Any]) -> OutboxEntry:
         # Backward compatibility: older entries used ``timestamp``.
         if "created_at" not in data and "timestamp" in data:
-            data = dict(data)
+            # Optimization: modify in-place if possible (caller usually passes new dict from json.load)
             data["created_at"] = data.pop("timestamp")
         if "recipients" not in data:
-            data = dict(data)
             data["recipients"] = None
         return cls(**data)
 
@@ -176,8 +175,8 @@ def scan_outbox_files(
 
 def _scan_outbox_files_optimized(
     base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
-) -> list[tuple[int, str, str]]:
-    """Internal optimized version returning (tick, filename, full_path_str)."""
+) -> list[tuple[int, str, Path]]:
+    """Internal optimized version returning (tick, filename, outbox_dir_path)."""
     outbox_dir = get_outbox_dir(base_path, agent_name)
     results = []
 
@@ -186,7 +185,10 @@ def _scan_outbox_files_optimized(
         # This replaces O(N) scan with O(1) cache lookup for repeated calls.
         mtime = outbox_dir.stat().st_mtime
 
-        cached = _outbox_files_cache.get(outbox_dir)
+        # Optimization: Use str(outbox_dir) as key to avoid Path hashing overhead
+        outbox_dir_str = str(outbox_dir)
+
+        cached = _outbox_files_cache.get(outbox_dir_str)
         if cached and cached[0] == mtime:
             filenames = cached[1]
         else:
@@ -205,9 +207,7 @@ def _scan_outbox_files_optimized(
             if len(_outbox_files_cache) > 1000:
                 _outbox_files_cache.clear()
 
-            _outbox_files_cache[outbox_dir] = (mtime, filenames)
-
-        outbox_dir_str = str(outbox_dir)
+            _outbox_files_cache[outbox_dir_str] = (mtime, filenames)
 
         # Apply filters to cached list
         count = 0
@@ -222,8 +222,9 @@ def _scan_outbox_files_optimized(
                 # If current tick < since_tick, then all subsequent ticks are also smaller.
                 break
 
-            full_path = os.path.join(outbox_dir_str, name)
-            results.append((tick, name, full_path))
+            # Optimization: pass parent dir object instead of full path string to avoid os.path.join overhead
+            # The receiver will construct full path only for the entries it actually loads.
+            results.append((tick, name, outbox_dir))
 
             count += 1
             if limit > 0 and count >= limit:
@@ -312,7 +313,10 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
         # Optimization: Check cache first based on directory mtime
         mtime = outbox_dir.stat().st_mtime
 
-        cached = _outbox_count_cache.get(outbox_dir)
+        # Optimization: Use str(outbox_dir) as key to avoid Path hashing overhead
+        outbox_dir_str = str(outbox_dir)
+
+        cached = _outbox_count_cache.get(outbox_dir_str)
         if cached and cached[0] == mtime:
             return cached[1]
 
@@ -326,7 +330,7 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
         if len(_outbox_count_cache) > 1000:
             _outbox_count_cache.clear()
 
-        _outbox_count_cache[outbox_dir] = (mtime, count)
+        _outbox_count_cache[outbox_dir_str] = (mtime, count)
         return count
     except FileNotFoundError:
         return 0
@@ -350,7 +354,7 @@ def read_multi_agent_outbox_entries(
         iterables.append(_scan_outbox_files_optimized(base_path, agent_name, since_tick=since_tick, limit=limit))
 
     # 2. Merge sorted streams to find global top candidates
-    # _scan_outbox_files_optimized returns (tick, filename, full_path) sorted descending by tick.
+    # _scan_outbox_files_optimized returns (tick, filename, outbox_dir_path) sorted descending by tick.
     # Optimization: (tick, filename, path) tuple comparison is sufficient
     # and equivalent to (tick, filename) since filename implies tick and is unique per agent.
     merged = heapq.merge(*iterables, reverse=True)
@@ -360,8 +364,8 @@ def read_multi_agent_outbox_entries(
 
     # 4. Load only the necessary files
     entries: list[OutboxEntry] = []
-    for _, _, path_str in to_load:
-        entry = _load_entry(Path(path_str))
+    for _, filename, dir_path in to_load:
+        entry = _load_entry(dir_path / filename)
         if entry is None:
             continue
         entries.append(entry)
