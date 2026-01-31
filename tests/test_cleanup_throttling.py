@@ -1,23 +1,23 @@
-import pytest
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import patch
+
 from lemming.engine import run_tick
+
 
 def test_cleanup_throttling():
     base_path = Path("/tmp/mock")
 
-    with patch("lemming.engine.get_org_config") as mock_config, \
-         patch("lemming.engine.cleanup_old_outbox_entries") as mock_cleanup, \
-         patch("lemming.engine.discover_agents") as mock_discover, \
-         patch("lemming.engine.get_credits"), \
-         patch("lemming.engine.log_engine_event"):
+    with (
+        patch("lemming.engine.get_org_config") as mock_config,
+        patch("lemming.engine.cleanup_old_outbox_entries") as mock_cleanup,
+        patch("lemming.engine.discover_agents") as mock_discover,
+        patch("lemming.engine.get_credits"),
+        patch("lemming.engine.log_engine_event"),
+    ):
 
         # Configure mocks
-        mock_config.return_value = {
-            "outbox_cleanup_interval": 5,
-            "max_outbox_age_ticks": 100
-        }
-        mock_discover.return_value = [] # No agents
+        mock_config.return_value = {"outbox_cleanup_interval": 5, "max_outbox_age_ticks": 100}
+        mock_discover.return_value = []  # No agents
 
         # Run ticks 1 to 10
         # Interval is 5.
