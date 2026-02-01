@@ -387,6 +387,7 @@ class FileReadTool(Tool):
 
     name = "file_read"
     description = "Read the content of a file in the agent's workspace or shared directory."
+    MAX_READ_SIZE = 5 * 1024 * 1024  # 5MB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_str = kwargs.get("path")
@@ -419,6 +420,15 @@ class FileReadTool(Tool):
             return ToolResult(False, "", f"'{path_str}' is not a file")
 
         try:
+            # Check file size before reading to prevent DoS
+            file_size = target_path.stat().st_size
+            if file_size > self.MAX_READ_SIZE:
+                return ToolResult(
+                    False,
+                    "",
+                    f"File too large ({file_size} bytes). Max size is {self.MAX_READ_SIZE} bytes.",
+                )
+
             content = target_path.read_text(encoding="utf-8")
             return ToolResult(True, content)
         except Exception as e:
