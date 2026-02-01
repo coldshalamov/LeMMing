@@ -70,3 +70,17 @@ no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
+
+[[tool.mypy.overrides]]
+module = [
+    "fastapi.*",
+    "uvicorn.*",
+    "pydantic.*",
+    "pytest.*",
+    "click.*",
+    "anthropic.*",
+    "openai.*",
+    "jsonschema.*",
+    "requests.*",
+]
+ignore_missing_imports = true
