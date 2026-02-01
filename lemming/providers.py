@@ -144,7 +144,7 @@ class OllamaProvider(LLMProvider):
         self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any
     ) -> str:  # noqa: E501
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         logger.info(
             "ollama_call",
