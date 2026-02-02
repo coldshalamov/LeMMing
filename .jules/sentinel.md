@@ -27,3 +27,8 @@
 **Vulnerability:** The `FileReadTool` allowed reading files of arbitrary size into memory. A malicious or buggy agent could trigger an OOM (Out Of Memory) crash by reading a massive file (e.g., `/dev/zero` or a large log).
 **Learning:** Trusted internal tools are often missing the defensive bounds checks applied to external APIs. Even "trusted" agents can cause DoS.
 **Prevention:** Enforce hard limits on all I/O operations. Use `os.stat()` to check file size *before* reading content into memory.
+
+## 2024-05-30 - CI Infrastructure Flakes
+**Observation:** GitHub Actions occasionally fails with "The job was not acquired by Runner of type hosted even after multiple attempts".
+**Learning:** This is an infrastructure issue, not a code failure. It requires a retry/re-run of the workflow.
+**Prevention:** N/A (External dependency).
