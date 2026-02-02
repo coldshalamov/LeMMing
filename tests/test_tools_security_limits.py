@@ -1,5 +1,34 @@
 
-from lemming.tools import FileWriteTool, MemoryWriteTool
+from lemming.tools import FileReadTool, FileWriteTool, MemoryWriteTool
+
+
+def test_file_read_limit(tmp_path):
+    tool = FileReadTool()
+
+    # Setup agent workspace
+    agent_name = "test_agent"
+    workspace = tmp_path / "agents" / agent_name / "workspace"
+    workspace.mkdir(parents=True)
+
+    # Create a large file (6MB), limit should be 5MB
+    large_file = workspace / "large_log.txt"
+    # Create sparse file or just write actual bytes.
+    # Writing 6MB is fast enough.
+    size_mb = 6
+    content = "a" * (size_mb * 1024 * 1024)
+    large_file.write_text(content)
+
+    # Attempt to read
+    result = tool.execute(
+        agent_name=agent_name,
+        base_path=tmp_path,
+        path="large_log.txt"
+    )
+
+    # Expect failure due to size limit
+    assert not result.success, "File read should have failed due to size limit"
+    assert "too large" in result.error.lower(), f"Unexpected error message: {result.error}"
+    assert "max size is" in result.error.lower()
 
 
 def test_file_write_limit(tmp_path):
