@@ -32,3 +32,7 @@
 **Observation:** GitHub Actions occasionally fails with "The job was not acquired by Runner of type hosted even after multiple attempts".
 **Learning:** This is an infrastructure issue, not a code failure. It requires a retry/re-run of the workflow.
 **Prevention:** N/A (External dependency).
+
+## 2024-05-30 - Persistent CI Runner Flakes
+**Observation:** CI builds continue to fail with "The job was not acquired by Runner of type hosted" despite retries.
+**Action:** Pushing another commit to trigger a fresh workflow run, hoping for a healthy runner.
