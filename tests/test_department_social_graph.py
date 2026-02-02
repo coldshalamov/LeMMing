@@ -1,9 +1,9 @@
-
 import json
-import pytest
 from unittest.mock import MagicMock, patch
-from lemming.department import analyze_social_graph
+
 from lemming.agents import Agent, AgentPermissions
+from lemming.department import analyze_social_graph
+
 
 def test_analyze_social_graph_optimization(tmp_path):
     # Setup structure
@@ -38,7 +38,7 @@ def test_analyze_social_graph_optimization(tmp_path):
         "tags": [],
         "created_at": "2023-01-01T00:00:00Z",
         "recipients": ["agent2"],
-        "to": ["agent2"]
+        "to": ["agent2"],
     }
     with open(agent1_dir / "outbox" / "1000_1.json", "w") as f:
         json.dump(msg1, f)
@@ -53,7 +53,7 @@ def test_analyze_social_graph_optimization(tmp_path):
         "tags": [],
         "created_at": "2023-01-01T00:00:00Z",
         "recipients": ["agent2"],
-        "to": ["agent2"]
+        "to": ["agent2"],
     }
     with open(agent1_dir / "outbox" / "0100_2.json", "w") as f:
         json.dump(msg2, f)
@@ -67,7 +67,7 @@ def test_analyze_social_graph_optimization(tmp_path):
         "payload": {"text": "hello"},
         "tags": [],
         "created_at": "2023-01-01T00:00:00Z",
-        "recipients": ["agent2"]
+        "recipients": ["agent2"],
         # No "to"
     }
     with open(agent1_dir / "outbox" / "1001_3.json", "w") as f:
