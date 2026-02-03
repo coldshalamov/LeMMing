@@ -387,6 +387,7 @@ class FileReadTool(Tool):
 
     name = "file_read"
     description = "Read the content of a file in the agent's workspace or shared directory."
+    MAX_READ_SIZE = 5 * 1024 * 1024  # 5MB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_str = kwargs.get("path")
@@ -418,6 +419,18 @@ class FileReadTool(Tool):
         if not target_path.is_file():
             return ToolResult(False, "", f"'{path_str}' is not a file")
 
+        # Check file size before reading to prevent DoS
+        try:
+            file_size = target_path.stat().st_size
+            if file_size > self.MAX_READ_SIZE:
+                return ToolResult(
+                    False,
+                    "",
+                    f"File too large ({file_size} bytes). Max size is {self.MAX_READ_SIZE} bytes.",
+                )
+        except OSError as e:
+            return ToolResult(False, "", f"Failed to check file size: {e}")
+
         try:
             content = target_path.read_text(encoding="utf-8")
             return ToolResult(True, content)
@@ -445,14 +458,15 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+        is_in_workspace = target_path.is_relative_to(workspace_dir.resolve())
+        is_in_shared = target_path.is_relative_to((base_path / "shared").resolve())
+
+        if not (is_in_workspace or is_in_shared):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
             return ToolResult(False, "", f"Directory '{path_str}' not found")
