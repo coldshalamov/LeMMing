@@ -6,7 +6,7 @@ import json
 from collections.abc import Iterable
 from importlib import resources
 from pathlib import Path
-from typing import Any, Iterable, cast
+from typing import Any, cast
 
 from jsonschema import Draft7Validator
 
