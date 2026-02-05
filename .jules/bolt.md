@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Batch Credit Saving]
+**Learning:** `save_credits` (JSON dump + write) was called O(N) times per tick (once per agent). In file-based architectures, repeated serialization of the same data structure is costly.
+**Action:** Batched credit saving to occur once at the end of `run_tick`, reducing disk I/O from O(N) to O(1) and mitigating double-charging risks during partial tick crashes.
