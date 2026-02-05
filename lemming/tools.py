@@ -303,8 +303,7 @@ class ShellTool(Tool):
 
     name = "shell"
     description = (
-        "Execute a shell command in the agent's workspace directory. "
-        "Allowed: grep, ls, cat, echo, head, tail, jq."
+        "Execute a shell command in the agent's workspace directory. " "Allowed: grep, ls, cat, echo, head, tail, jq."
     )
 
     ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
@@ -337,7 +336,7 @@ class ShellTool(Tool):
 
         # Check arguments for traversal/absolute paths
         for arg in args[1:]:
-             # Check for directory traversal
+            # Check for directory traversal
             if ".." in arg:
                 return ToolResult(False, "", "Security violation: directory traversal detected in arguments")
 
@@ -345,7 +344,7 @@ class ShellTool(Tool):
             # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
             # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
             if Path(arg).is_absolute():
-                 return ToolResult(False, "", "Security violation: absolute path detected in arguments")
+                return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
         if agent_path:
@@ -384,9 +383,7 @@ class ShellTool(Tool):
                             break
                         total += len(chunk)
                         if total > self.MAX_OUTPUT_SIZE:
-                            error_msg.append(
-                                f"Command output exceeded limit of {self.MAX_OUTPUT_SIZE} bytes."
-                            )
+                            error_msg.append(f"Command output exceeded limit of {self.MAX_OUTPUT_SIZE} bytes.")
                             process.kill()
                             break
                         output_data.append(chunk)
@@ -486,14 +483,15 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+        is_in_workspace = target_path.is_relative_to(workspace_dir.resolve())
+        is_in_shared = target_path.is_relative_to((base_path / "shared").resolve())
+
+        if not (is_in_workspace or is_in_shared):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
             return ToolResult(False, "", f"Directory '{path_str}' not found")
