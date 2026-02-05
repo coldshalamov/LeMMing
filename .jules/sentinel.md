@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-30 - Unbounded Output Capture DoS
+**Vulnerability:** `ShellTool` used `subprocess.run(capture_output=True)` which reads all stdout/stderr into memory. Malicious or accidental commands (e.g., `cat /dev/zero`) could cause OOM crashes.
+**Learning:** `subprocess.run`'s convenience functions are unsafe for untrusted commands that might generate infinite output. Streaming processing is required.
+**Prevention:** Use `subprocess.Popen` with a background thread reading output in chunks, enforcing a strict size limit and killing the process if exceeded.

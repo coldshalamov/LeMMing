@@ -10,6 +10,7 @@ import json
 import shlex
 import shutil
 import subprocess
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -307,6 +308,7 @@ class ShellTool(Tool):
     )
 
     ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
+    MAX_OUTPUT_SIZE = 50 * 1024  # 50KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         command = kwargs.get("command")
@@ -359,25 +361,64 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
-            # shell=False ensures we execute exactly what we parsed
-            result = subprocess.run(
+            process = subprocess.Popen(
                 args,
                 shell=False,
                 cwd=workspace_dir,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # Merge stderr into stdout for combined limit
                 text=True,
-                stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
-                timeout=30,  # 30 second timeout
+                stdin=subprocess.DEVNULL,
             )
 
-            if result.returncode == 0:
-                return ToolResult(True, result.stdout)
+            output_data = []
+            error_msg = []
+
+            def read_output():
+                total = 0
+                try:
+                    # Read in chunks
+                    while True:
+                        chunk = process.stdout.read(4096)
+                        if not chunk:
+                            break
+                        total += len(chunk)
+                        if total > self.MAX_OUTPUT_SIZE:
+                            error_msg.append(
+                                f"Command output exceeded limit of {self.MAX_OUTPUT_SIZE} bytes."
+                            )
+                            process.kill()
+                            break
+                        output_data.append(chunk)
+                except Exception:
+                    pass
+
+            # Use thread to read stdout while waiting
+            t = threading.Thread(target=read_output)
+            t.start()
+
+            try:
+                # Wait for process to finish or timeout
+                # 30 seconds matches original timeout
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                t.join(timeout=1)
+                return ToolResult(False, "".join(output_data), "Command timed out after 30 seconds")
+
+            t.join()
+
+            if error_msg:
+                return ToolResult(False, "".join(output_data), error_msg[0])
+
+            if process.returncode == 0:
+                return ToolResult(True, "".join(output_data))
             else:
-                return ToolResult(False, result.stdout, result.stderr)
+                # Return combined output + error message in failure case
+                return ToolResult(False, "".join(output_data), "Command failed")
+
         except FileNotFoundError:
-             return ToolResult(False, "", f"Command '{executable}' not found in system")
-        except subprocess.TimeoutExpired:
-            return ToolResult(False, "", "Command timed out after 30 seconds")
+            return ToolResult(False, "", f"Command '{executable}' not found in system")
         except Exception as e:
             return ToolResult(False, "", f"Failed to execute command: {e}")
 
