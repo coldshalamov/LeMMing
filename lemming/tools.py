@@ -378,6 +378,8 @@ class ShellTool(Tool):
                 try:
                     # Read in chunks
                     while True:
+                        if process.stdout is None:
+                            break
                         chunk = process.stdout.read(4096)
                         if not chunk:
                             break
