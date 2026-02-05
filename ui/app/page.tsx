@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   useAgents,
   useOrgGraph,
@@ -49,6 +49,13 @@ export default function Dashboard() {
   }, [status?.tick, visualTick]);
 
   const selectedAgent = agents?.find((a) => a.name === selectedAgentName);
+
+  const recentMessages = useMemo(() => {
+    if (!selectedAgent || !messages) return [];
+    return messages
+      .filter((m) => m.agent === selectedAgent.name)
+      .slice(0, 3);
+  }, [messages, selectedAgent]);
 
   const handleRunTick = async () => {
     if (isTicking) return;
@@ -210,18 +217,22 @@ export default function Dashboard() {
                   <h4 className="text-[10px] font-mono text-white/40 uppercase mb-2">
                     Recent Activity
                   </h4>
-                  <div className="text-xs font-mono text-gray-400 space-y-1">
-                    {messages
-                      ?.filter((m) => m.agent === selectedAgent.name)
-                      .slice(0, 3)
-                      .map((m, i) => (
-                        <div
-                          key={i}
-                          className="opacity-70 truncate border-l-2 border-white/10 pl-2"
-                        >
-                          {m.payload.text || JSON.stringify(m.payload)}
-                        </div>
-                      )) || <div className="italic opacity-30">No recent activity</div>}
+                  <div className="text-xs font-mono text-gray-400">
+                    {recentMessages.length > 0 ? (
+                      <ul className="space-y-1">
+                        {recentMessages.map((m, i) => (
+                          <li
+                            key={i}
+                            className="opacity-70 truncate border-l-2 border-white/10 pl-2"
+                            title={m.payload.text || JSON.stringify(m.payload)}
+                          >
+                            {m.payload.text || JSON.stringify(m.payload)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="italic opacity-30">No recent activity</div>
+                    )}
                   </div>
                 </div>
               </div>
