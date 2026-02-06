@@ -12,6 +12,7 @@ interface GlobalSettingsModalProps {
 export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
     const [config, setConfig] = useState({ openai_api_key: "", anthropic_api_key: "" });
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isExisting, setIsExisting] = useState({ openai: false, anthropic: false });
     const [showPassword, setShowPassword] = useState({ openai: false, anthropic: false });
 
@@ -37,12 +38,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
     const handleSave = async () => {
         setStatus("loading");
+        setErrorMessage(null);
         try {
             await updateEngineConfig(config);
             setStatus("success");
             setTimeout(onClose, 1500);
-        } catch {
+        } catch (err: unknown) {
             setStatus("error");
+            const msg = err instanceof Error ? err.message : "Failed to update configuration";
+            setErrorMessage(msg);
         }
     };
 
@@ -86,6 +90,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     </div>
 
                     <div className="p-6 space-y-6">
+                        {status === "error" && (
+                            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3 text-red-400 text-xs leading-relaxed" role="alert">
+                                <AlertTriangle size={16} className="shrink-0" />
+                                <p>{errorMessage}</p>
+                            </div>
+                        )}
+
                         <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex gap-3 text-yellow-500 text-xs leading-relaxed">
                             <AlertTriangle size={16} className="shrink-0" />
                             <p>API keys are stored locally in <code className="bg-black/40 px-1 rounded">secrets.json</code> and loaded into the engine environment. Never share this file.</p>
@@ -172,7 +183,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
-                            ) : "SAVE CONFIG"}
+                            ) : status === "error" ? "RETRY" : "SAVE CONFIG"}
                         </button>
                     </div>
                 </motion.div>
