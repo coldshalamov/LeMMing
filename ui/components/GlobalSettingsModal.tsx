@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
 interface GlobalSettingsModalProps {
@@ -12,6 +13,7 @@ interface GlobalSettingsModalProps {
 export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
     const [config, setConfig] = useState({ openai_api_key: "", anthropic_api_key: "" });
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isExisting, setIsExisting] = useState({ openai: false, anthropic: false });
     const [showPassword, setShowPassword] = useState({ openai: false, anthropic: false });
 
@@ -37,12 +39,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
     const handleSave = async () => {
         setStatus("loading");
+        setErrorMessage(null);
         try {
             await updateEngineConfig(config);
             setStatus("success");
             setTimeout(onClose, 1500);
-        } catch {
+        } catch (error) {
             setStatus("error");
+            setErrorMessage("Failed to save configuration. Please check your connection and try again.");
+            console.error(error);
         }
     };
 
@@ -153,6 +158,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 </button>
                             </div>
                         </div>
+
+                        {status === "error" && errorMessage && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3 text-red-400 text-sm items-start" role="alert">
+                                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                                <p>{errorMessage}</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer */}
@@ -166,13 +178,24 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         <button
                             onClick={handleSave}
                             disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            className={clsx(
+                                "px-6 py-2 font-bold rounded flex items-center gap-2 transition-colors disabled:opacity-50",
+                                status === "error"
+                                    ? "bg-red-500 hover:bg-red-600 text-white"
+                                    : "bg-brand-cyan hover:bg-cyan-300 text-black"
+                            )}
                         >
-                            {status === "loading" ? "SAVING..." : status === "success" ? (
+                            {status === "loading" ? (
+                                "SAVING..."
+                            ) : status === "success" ? (
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
-                            ) : "SAVE CONFIG"}
+                            ) : status === "error" ? (
+                                "RETRY"
+                            ) : (
+                                "SAVE CONFIG"
+                            )}
                         </button>
                     </div>
                 </motion.div>
