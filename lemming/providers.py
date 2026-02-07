@@ -160,7 +160,7 @@ class OllamaProvider(LLMProvider):
         **kwargs: Any,
     ) -> str:
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         logger.info(
             "ollama_call",
