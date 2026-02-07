@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import logging
-import time
-import os
-import subprocess
-import shlex
 import json
+import logging
+import os
+import shlex
+import subprocess
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
@@ -20,7 +20,13 @@ class LLMProvider(ABC):
     """Abstract base class for LLM providers."""
 
     @abstractmethod
-    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+    def call(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
         """
         Call the LLM with the given messages.
 
@@ -47,7 +53,13 @@ class OpenAIProvider(LLMProvider):
         except ImportError:
             raise ImportError("OpenAI package not installed. Install with: pip install openai")
 
-    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+    def call(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
         """Call OpenAI API."""
         logger.info(
             "openai_call",
@@ -88,7 +100,13 @@ class AnthropicProvider(LLMProvider):
         except ImportError:
             raise ImportError("Anthropic package not installed. Install with: pip install -e '.[llm]'")
 
-    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+    def call(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
         """Call Anthropic Claude API."""
         logger.info(
             "anthropic_call",
@@ -134,7 +152,13 @@ class OllamaProvider(LLMProvider):
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
 
-    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+    def call(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
         """Call Ollama API."""
         import requests
 
@@ -182,33 +206,48 @@ class OllamaProvider(LLMProvider):
 class CLIProvider(LLMProvider):
     """CLI execution provider for wrapping local tools."""
 
-    def __init__(self, command: list[str] | str, cwd: str | None = None, env: dict[str, str] | None = None, timeout: float = 60.0, prevent_arg_injection: bool = True):
+    def __init__(
+        self,
+        command: list[str] | str,
+        cwd: str | None = None,
+        env: dict[str, str] | None = None,
+        timeout: float = 60.0,
+        prevent_arg_injection: bool = True,
+    ):
         self.command = command
         self.cwd = Path(cwd) if cwd else None
         self.env = env
         self.timeout = timeout
         self.prevent_arg_injection = prevent_arg_injection
 
-    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+    def call(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
         """
         Execute the CLI command.
-        
+
         The last message content is treated as the input/prompt for the CLI tool.
         """
         # Get the latest prompt
         prompt = messages[-1]["content"] if messages else ""
-        
+
         # Security check: Prevent Argument Injection
         if self.prevent_arg_injection and prompt.startswith("-"):
             # We block any prompt starting with "-" to prevent it from being interpreted as a flag
             # by the underlying tool (e.g. -n, --help, -c, etc.)
-            raise ValueError(f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
-                             "Disable 'prevent_arg_injection' in provider config if this is intended.")
+            raise ValueError(
+                f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
+                "Disable 'prevent_arg_injection' in provider config if this is intended."
+            )
 
         # Prepare command
         cmd_args = self.command if isinstance(self.command, list) else shlex.split(self.command)
-        
-        # Determine how to pass input. 
+
+        # Determine how to pass input.
         # Default strategy: Append prompt as the last argument if it's not empty
         # A more advanced version might support stdin or templating.
         if prompt:
@@ -223,12 +262,7 @@ class CLIProvider(LLMProvider):
                 run_env.update(self.env)
 
             result = subprocess.run(
-                cmd_args,
-                cwd=self.cwd,
-                env=run_env,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout
+                cmd_args, cwd=self.cwd, env=run_env, capture_output=True, text=True, timeout=self.timeout
             )
 
             output = result.stdout
@@ -236,7 +270,7 @@ class CLIProvider(LLMProvider):
                 logger.warning(f"CLI stderr: {result.stderr}")
                 # We append stderr to output for debugging purposes if command failed or was chatty
                 if result.returncode != 0:
-                     output += f"\n[STDERR]: {result.stderr}"
+                    output += f"\n[STDERR]: {result.stderr}"
 
             return self._wrap_output(output)
 
@@ -255,20 +289,14 @@ class CLIProvider(LLMProvider):
             # This is optimistic.
             parsed = json.loads(raw_output)
             if isinstance(parsed, dict) and ("outbox_entries" in parsed or "notes" in parsed):
-                 return raw_output
+                return raw_output
         except json.JSONDecodeError:
             pass
 
         # Wrap raw text into a standard message
         wrapped = {
-            "outbox_entries": [
-                {
-                    "kind": "message",
-                    "payload": {"text": raw_output},
-                    "tags": ["cli_output"]
-                }
-            ],
-            "notes": "Generated by CLIProvider"
+            "outbox_entries": [{"kind": "message", "payload": {"text": raw_output}, "tags": ["cli_output"]}],
+            "notes": "Generated by CLIProvider",
         }
         return json.dumps(wrapped)
 
