@@ -19,7 +19,13 @@ from .messages import (
     write_outbox_entry,
 )
 from .models import call_llm
-from .org import deduct_credits, get_agent_credits, get_credits, get_org_config
+from .org import (
+    deduct_credits,
+    get_agent_credits,
+    get_credits,
+    get_org_config,
+    save_credits,
+)
 from .paths import get_config_dir, get_logs_dir, get_tick_file
 from .tools import ToolRegistry, ToolResult
 
@@ -459,7 +465,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         save_memory(base_path, agent.name, key, update.get("value"), operation=op, tick=tick)
 
     # Deduct credits
-    deduct_credits(agent.name, cost_per_action, base_path)
+    deduct_credits(agent.name, cost_per_action, base_path, persist=False)
 
     # Log notes to text file (for backward compatibility)
     notes = parsed.get("notes")
@@ -519,18 +525,22 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         agents=[a.name for a in firing_agents],
     )
 
-    for agent in firing_agents:
-        fire_point = compute_fire_point(agent)
-        logger.info(
-            "agent_running",
-            extra={
-                "event": "agent_running",
-                "agent": agent.name,
-                "tick": tick,
-                "fire_point": round(fire_point, 3),
-            },
-        )
-        results[agent.name] = run_agent(base_path, agent, tick)
+    try:
+        for agent in firing_agents:
+            fire_point = compute_fire_point(agent)
+            logger.info(
+                "agent_running",
+                extra={
+                    "event": "agent_running",
+                    "agent": agent.name,
+                    "tick": tick,
+                    "fire_point": round(fire_point, 3),
+                },
+            )
+            results[agent.name] = run_agent(base_path, agent, tick)
+    finally:
+        if firing_agents:
+            save_credits(base_path)
 
     # Cleanup old outbox entries
     max_age_ticks = config.get("max_outbox_age_ticks", 100)
