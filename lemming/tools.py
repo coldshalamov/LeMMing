@@ -345,6 +345,27 @@ class ShellTool(Tool):
             if Path(arg).is_absolute():
                  return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
+            # Check for absolute paths inside flags (e.g. -f/etc/passwd or --file=/etc/passwd)
+            if arg.startswith("-"):
+                if "=" in arg:
+                    # Handle long options like --file=/etc/passwd
+                    _, value = arg.split("=", 1)
+                    # Also check for traversal in the value part
+                    if ".." in value:
+                        return ToolResult(False, "", "Security violation: directory traversal detected in flag value")
+                    if Path(value).is_absolute():
+                        return ToolResult(False, "", "Security violation: absolute path in flag value")
+                elif "/" in arg:
+                    # Handle short options or stuck flags like -f/etc/passwd.
+                    # If an argument starts with - and contains /, it's ambiguous and risky.
+                    # We block it to prevent bypassing the absolute path check.
+                    # Exception: legitimate relative paths in flags are rare without space separation.
+                    return ToolResult(
+                        False,
+                        "",
+                        "Security violation: potential absolute path in stuck flag. Use space to separate flag and argument.",
+                    )
+
         # Get agent workspace directory
         if agent_path:
             agent_dir = agent_path

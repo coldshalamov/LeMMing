@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Absolute Path Bypass in ShellTool Flags
+**Vulnerability:** The `ShellTool` validated arguments against absolute paths using `Path(arg).is_absolute()`, but failed to check flags containing paths (e.g., `-f/etc/passwd` or `--file=/etc/passwd`). This allowed reading arbitrary files by disguising absolute paths as flags.
+**Learning:** Argument parsing libraries and `pathlib` treat strings starting with `-` as relative paths, bypassing simple absolute path checks. Security checks must parse or sanitize flags explicitly.
+**Prevention:** In shell wrappers, inspect arguments starting with `-`. If they contain `=` (long option) or `/` (stuck flag), validate the value part for absolute paths or directory traversal.
