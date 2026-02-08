@@ -5,3 +5,7 @@
 ## 2024-05-23 - Missing Design Tokens & Focus Visible
 **Learning:** Checking for missing design tokens (like `brand-purple`) in the CSS configuration is critical. Missing tokens can lead to silent failures in focus states (e.g., `focus:ring-brand-purple` doing nothing). Also, programmatic `focus()` in Playwright doesn't always trigger `:focus-visible`; simulated keyboard navigation (Tab) is more reliable.
 **Action:** Added missing `brand-purple` to globals.css and used `page.keyboard.press("Shift+Tab")` for verification.
+
+## 2024-05-24 - Error Feedback in Modal Actions
+**Learning:** Silent failures in modals (e.g., button reverting to initial state without explanation) confuse users. Users need explicit feedback when an action fails, especially for network requests.
+**Action:** Added an error alert with `role="alert"` and a "RETRY" button state to `GlobalSettingsModal` to clearly communicate save failures.
