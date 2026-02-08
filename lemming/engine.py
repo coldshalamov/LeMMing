@@ -19,7 +19,13 @@ from .messages import (
     write_outbox_entry,
 )
 from .models import call_llm
-from .org import deduct_credits, get_agent_credits, get_credits, get_org_config
+from .org import (
+    deduct_credits,
+    get_agent_credits,
+    get_credits,
+    get_org_config,
+    save_credits,
+)
 from .paths import get_config_dir, get_logs_dir, get_tick_file
 from .tools import ToolRegistry, ToolResult
 
@@ -124,14 +130,14 @@ def get_firing_agents(agents: list[Agent], tick: int) -> list[Agent]:
 
 def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, str]]:
     messages: list[dict[str, str]] = []
-    
+
     # If the model is a CLI-based model, we might want a simpler prompt
     # We can detect this by checking the model key or passing provider info
     is_cli = agent.model.key.startswith("cli-")
 
     if not is_cli:
         messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
-    
+
     messages.append({"role": "system", "content": f"YOUR ROLE: {agent.title}\n\n{agent.instructions}"})
 
     memory_context = get_memory_context(base_path, agent.name)
@@ -144,7 +150,7 @@ def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, st
         agent.permissions.read_outboxes,
         limit=30,
     )
-    
+
     if is_cli:
         # For CLI agents, we only want the actual text of the latest messages
         if incoming:
@@ -459,7 +465,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         save_memory(base_path, agent.name, key, update.get("value"), operation=op, tick=tick)
 
     # Deduct credits
-    deduct_credits(agent.name, cost_per_action, base_path)
+    deduct_credits(agent.name, cost_per_action, base_path, persist=False)
 
     # Log notes to text file (for backward compatibility)
     notes = parsed.get("notes")
@@ -519,18 +525,22 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         agents=[a.name for a in firing_agents],
     )
 
-    for agent in firing_agents:
-        fire_point = compute_fire_point(agent)
-        logger.info(
-            "agent_running",
-            extra={
-                "event": "agent_running",
-                "agent": agent.name,
-                "tick": tick,
-                "fire_point": round(fire_point, 3),
-            },
-        )
-        results[agent.name] = run_agent(base_path, agent, tick)
+    try:
+        for agent in firing_agents:
+            fire_point = compute_fire_point(agent)
+            logger.info(
+                "agent_running",
+                extra={
+                    "event": "agent_running",
+                    "agent": agent.name,
+                    "tick": tick,
+                    "fire_point": round(fire_point, 3),
+                },
+            )
+            results[agent.name] = run_agent(base_path, agent, tick)
+    finally:
+        if firing_agents:
+            save_credits(base_path)
 
     # Cleanup old outbox entries
     max_age_ticks = config.get("max_outbox_age_ticks", 100)
