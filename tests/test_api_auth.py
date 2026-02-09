@@ -181,6 +181,7 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
 
+
 def test_read_endpoints_auth_configured(client: TestClient, tmp_path):
     """Verify read endpoints are protected when admin key is set."""
     with (
@@ -214,6 +215,7 @@ def test_read_endpoints_auth_configured(client: TestClient, tmp_path):
         assert client.get("/api/messages", headers=headers).status_code == 200
         assert client.get("/api/config", headers=headers).status_code == 200
         assert client.get("/api/credits", headers=headers).status_code == 200
+
 
 def test_websocket_auth(client: TestClient, tmp_path):
     """Verify WebSocket endpoint is protected."""
