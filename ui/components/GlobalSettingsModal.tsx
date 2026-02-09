@@ -12,6 +12,7 @@ interface GlobalSettingsModalProps {
 export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
     const [config, setConfig] = useState({ openai_api_key: "", anthropic_api_key: "" });
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isExisting, setIsExisting] = useState({ openai: false, anthropic: false });
     const [showPassword, setShowPassword] = useState({ openai: false, anthropic: false });
 
@@ -37,12 +38,18 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
     const handleSave = async () => {
         setStatus("loading");
+        setErrorMessage(null);
         try {
             await updateEngineConfig(config);
             setStatus("success");
             setTimeout(onClose, 1500);
-        } catch {
+        } catch (error) {
             setStatus("error");
+            if (error instanceof Error) {
+                setErrorMessage(error.message);
+            } else {
+                setErrorMessage("Failed to save configuration. Please try again.");
+            }
         }
     };
 
@@ -109,7 +116,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.openai ? "text" : "password"}
                                     placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                     value={config.openai_api_key}
-                                    onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, openai_api_key: e.target.value });
+                                        if (status === 'error') {
+                                            setStatus('idle');
+                                            setErrorMessage(null);
+                                        }
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none focus:ring-1 focus:ring-brand-cyan font-mono text-sm"
                                 />
                                 <button
@@ -140,7 +153,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.anthropic ? "text" : "password"}
                                     placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                     value={config.anthropic_api_key}
-                                    onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, anthropic_api_key: e.target.value });
+                                        if (status === 'error') {
+                                            setStatus('idle');
+                                            setErrorMessage(null);
+                                        }
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none focus:ring-1 focus:ring-brand-purple font-mono text-sm"
                                 />
                                 <button
@@ -156,24 +175,32 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
-                        >
-                            {status === "loading" ? "SAVING..." : status === "success" ? (
-                                <>
-                                    <Check size={16} /> SAVED
-                                </>
-                            ) : "SAVE CONFIG"}
-                        </button>
+                    <div className="p-6 border-t border-white/5 flex flex-col gap-4 bg-black/10">
+                        {errorMessage && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3 text-red-400 text-xs leading-relaxed" role="alert">
+                                <AlertTriangle size={16} className="shrink-0" />
+                                <p>{errorMessage}</p>
+                            </div>
+                        )}
+                        <div className="flex items-center justify-end gap-3">
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                                className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            >
+                                {status === "loading" ? "SAVING..." : status === "success" ? (
+                                    <>
+                                        <Check size={16} /> SAVED
+                                    </>
+                                ) : status === "error" ? "RETRY" : "SAVE CONFIG"}
+                            </button>
+                        </div>
                     </div>
                 </motion.div>
             </motion.div>
