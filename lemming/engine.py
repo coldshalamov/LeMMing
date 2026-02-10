@@ -19,7 +19,13 @@ from .messages import (
     write_outbox_entry,
 )
 from .models import call_llm
-from .org import deduct_credits, get_agent_credits, get_credits, get_org_config
+from .org import (
+    deduct_credits,
+    get_agent_credits,
+    get_credits,
+    get_org_config,
+    save_credits,
+)
 from .paths import get_config_dir, get_logs_dir, get_tick_file
 from .tools import ToolRegistry, ToolResult
 
@@ -342,7 +348,9 @@ def _execute_tools(base_path: Path, agent: Agent, tool_calls: list[dict]) -> lis
     return results
 
 
-def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
+def run_agent(
+    base_path: Path, agent: Agent, tick: int, persist_credits: bool = True
+) -> dict[str, Any]:
     start_time = time.time()
 
     credits_info = get_agent_credits(agent.name, base_path)
@@ -459,7 +467,9 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         save_memory(base_path, agent.name, key, update.get("value"), operation=op, tick=tick)
 
     # Deduct credits
-    deduct_credits(agent.name, cost_per_action, base_path)
+    deduct_credits(
+        agent.name, cost_per_action, base_path, persist=persist_credits
+    )
 
     # Log notes to text file (for backward compatibility)
     notes = parsed.get("notes")
@@ -519,18 +529,28 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         agents=[a.name for a in firing_agents],
     )
 
-    for agent in firing_agents:
-        fire_point = compute_fire_point(agent)
-        logger.info(
-            "agent_running",
-            extra={
-                "event": "agent_running",
-                "agent": agent.name,
-                "tick": tick,
-                "fire_point": round(fire_point, 3),
-            },
-        )
-        results[agent.name] = run_agent(base_path, agent, tick)
+    # Optimization: run agents in a try/finally block to ensure credits are saved
+    # even if an agent crashes the engine. We batch credit persistence to reduce I/O.
+    try:
+        for agent in firing_agents:
+            fire_point = compute_fire_point(agent)
+            logger.info(
+                "agent_running",
+                extra={
+                    "event": "agent_running",
+                    "agent": agent.name,
+                    "tick": tick,
+                    "fire_point": round(fire_point, 3),
+                },
+            )
+            # Pass persist_credits=False to batch disk writes
+            results[agent.name] = run_agent(
+                base_path, agent, tick, persist_credits=False
+            )
+    finally:
+        # Ensure credits are persisted at the end of the tick (or on crash)
+        if firing_agents:
+            save_credits(base_path)
 
     # Cleanup old outbox entries
     max_age_ticks = config.get("max_outbox_age_ticks", 100)
