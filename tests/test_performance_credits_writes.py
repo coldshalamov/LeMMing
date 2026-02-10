@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -22,10 +21,11 @@ def create_mock_agents(n=5):
             schedule=AgentSchedule(run_every_n_ticks=1, phase_offset=0),
             resume_path=Path(f"/tmp/agents/agent_{i}/resume.json"),
             instructions="Test",
-            credits=AgentCredits(max_credits=100.0, soft_cap=50.0)
+            credits=AgentCredits(max_credits=100.0, soft_cap=50.0),
         )
         agents.append(agent)
     return agents
+
 
 def test_optimized_credit_writes(tmp_path):
     # Setup mocks
@@ -46,15 +46,17 @@ def test_optimized_credit_writes(tmp_path):
     # Create a shared mock for save_credits
     mock_save_credits = MagicMock()
 
-    with patch("lemming.engine.discover_agents", return_value=agents), \
-         patch("lemming.engine.call_llm", return_value=mock_llm_response), \
-         patch("lemming.engine.get_org_config", return_value={}), \
-         patch("lemming.engine.cleanup_old_outbox_entries", return_value=0), \
-         patch("lemming.engine.write_outbox_entry"), \
-         patch("lemming.engine.log_agent_action"), \
-         patch("lemming.engine.log_engine_event"), \
-         patch("lemming.org.save_credits", mock_save_credits), \
-         patch("lemming.engine.save_credits", mock_save_credits):
+    with (
+        patch("lemming.engine.discover_agents", return_value=agents),
+        patch("lemming.engine.call_llm", return_value=mock_llm_response),
+        patch("lemming.engine.get_org_config", return_value={}),
+        patch("lemming.engine.cleanup_old_outbox_entries", return_value=0),
+        patch("lemming.engine.write_outbox_entry"),
+        patch("lemming.engine.log_agent_action"),
+        patch("lemming.engine.log_engine_event"),
+        patch("lemming.org.save_credits", mock_save_credits),
+        patch("lemming.engine.save_credits", mock_save_credits),
+    ):
 
         org.reset_caches()
 
@@ -65,6 +67,7 @@ def test_optimized_credit_writes(tmp_path):
 
         # We expect exactly 1 call (batched at the end of tick)
         assert mock_save_credits.call_count == 1
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
