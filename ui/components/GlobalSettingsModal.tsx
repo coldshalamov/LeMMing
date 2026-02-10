@@ -91,6 +91,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             <p>API keys are stored locally in <code className="bg-black/40 px-1 rounded">secrets.json</code> and loaded into the engine environment. Never share this file.</p>
                         </div>
 
+                        {status === "error" && (
+                            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3 text-red-500 text-xs leading-relaxed" role="alert">
+                                <AlertTriangle size={16} className="shrink-0" />
+                                <p>Failed to save configuration. Please check your connection and try again.</p>
+                            </div>
+                        )}
+
                         {/* OpenAI Key */}
                         <div className="space-y-2">
                             <label htmlFor="openai-key" className="flex items-center justify-between">
@@ -109,7 +116,10 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.openai ? "text" : "password"}
                                     placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                     value={config.openai_api_key}
-                                    onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, openai_api_key: e.target.value });
+                                        if (status === "error") setStatus("idle");
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none focus:ring-1 focus:ring-brand-cyan font-mono text-sm"
                                 />
                                 <button
@@ -140,7 +150,10 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.anthropic ? "text" : "password"}
                                     placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                     value={config.anthropic_api_key}
-                                    onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, anthropic_api_key: e.target.value });
+                                        if (status === "error") setStatus("idle");
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none focus:ring-1 focus:ring-brand-purple font-mono text-sm"
                                 />
                                 <button
@@ -172,7 +185,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
-                            ) : "SAVE CONFIG"}
+                            ) : status === "error" ? "RETRY" : "SAVE CONFIG"}
                         </button>
                     </div>
                 </motion.div>
