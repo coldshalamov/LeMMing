@@ -198,7 +198,7 @@ class CLIProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Adapter for LLMProvider interface."""
-        return self.execute(messages, **kwargs)
+        return str(self.execute(messages, **kwargs))
 
     def execute(
         self,
