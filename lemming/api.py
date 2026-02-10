@@ -10,7 +10,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi import (
+    status as http_status,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +31,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -672,8 +682,26 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     return {"status": "updated"}
 
 
+async def verify_websocket_access(
+    websocket: WebSocket, key: str | None = Query(None, description="Admin key for authentication")
+) -> None:
+    """Verify admin access for WebSockets."""
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    if not admin_key:
+        return
+
+    # Check header first, then query param
+    request_key = websocket.headers.get("X-Admin-Key") or key
+
+    if not request_key or not secrets.compare_digest(request_key, admin_key):
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing admin key",
+        )
+
+
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket) -> None:
+async def websocket_endpoint(websocket: WebSocket, _=Depends(verify_websocket_access)) -> None:
     await websocket.accept()
     try:
         while True:
