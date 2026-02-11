@@ -33,9 +33,7 @@ def department_group() -> None:
 @department_group.command(name="list")
 def list_departments() -> None:
     """List all discovered departments."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    logging.basicConfig(level=logging.INFO)
 
     base_path = Path.cwd()
     departments = discover_departments(base_path)
@@ -62,9 +60,12 @@ def list_departments() -> None:
 @click.option("--readme", "-r", default="", help="README content")
 def create_department(name: str, description: str, author: str, readme: str) -> None:
     """Create a new department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     base_path = Path.cwd()
     dept = DepartmentMetadata(
@@ -89,9 +90,12 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
 @click.argument("name")
 def show_department(name: str) -> None:
     """Show details of a specific department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     base_path = Path.cwd()
     dept_file = get_department_file(base_path, name)
