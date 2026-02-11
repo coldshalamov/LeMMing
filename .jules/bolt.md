@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-28 - [Batching Credit Persistence]
+**Learning:** In the file-based architecture, writing `credits.json` for every agent execution in a loop creates an N+1 write bottleneck. Since credits are cached in memory, persistence can be safely deferred until the end of the tick.
+**Action:** Use batching (pass `persist=False` to individual operations, save once at end) for any looped file updates where in-memory state is shared.
