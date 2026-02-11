@@ -5,3 +5,7 @@
 ## 2024-05-23 - Missing Design Tokens & Focus Visible
 **Learning:** Checking for missing design tokens (like `brand-purple`) in the CSS configuration is critical. Missing tokens can lead to silent failures in focus states (e.g., `focus:ring-brand-purple` doing nothing). Also, programmatic `focus()` in Playwright doesn't always trigger `:focus-visible`; simulated keyboard navigation (Tab) is more reliable.
 **Action:** Added missing `brand-purple` to globals.css and used `page.keyboard.press("Shift+Tab")` for verification.
+
+## 2024-05-24 - API Error Visibility
+**Learning:** Users need explicit feedback when configuration saves fail. Relying on button text reversion is insufficient and confusing.
+**Action:** Implemented a pattern of using `AlertTriangle` banner with "RETRY" button text, clearing error state on input modification.
