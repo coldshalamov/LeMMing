@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import logging
-import time
-import os
-import subprocess
-import shlex
 import json
+import logging
+import os
+import shlex
+import subprocess
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
