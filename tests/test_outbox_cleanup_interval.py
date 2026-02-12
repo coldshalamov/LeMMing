@@ -1,12 +1,10 @@
 import json
-import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-
-import pytest
+from unittest.mock import patch
 
 from lemming.engine import run_tick
 from lemming.messages import OutboxEntry, write_outbox_entry
+
 
 def setup_org(tmp_path: Path):
     config_dir = tmp_path / "lemming" / "config"
@@ -14,8 +12,7 @@ def setup_org(tmp_path: Path):
 
     # Configure max_outbox_age_ticks to 10
     (config_dir / "org_config.json").write_text(
-        json.dumps({"base_turn_seconds": 1, "max_turns": None, "max_outbox_age_ticks": 10}),
-        encoding="utf-8"
+        json.dumps({"base_turn_seconds": 1, "max_turns": None, "max_outbox_age_ticks": 10}), encoding="utf-8"
     )
     # Dummy models
     (config_dir / "models.json").write_text(
@@ -36,12 +33,13 @@ def setup_org(tmp_path: Path):
         "short_description": "Test agent",
         "model": {"key": "test-model"},
         "permissions": {"read_outboxes": [], "tools": []},
-        "schedule": {"run_every_n_ticks": 100, "phase_offset": 0}, # Don't run often
+        "schedule": {"run_every_n_ticks": 100, "phase_offset": 0},  # Don't run often
         "instructions": "Test agent instructions",
     }
     (agent_dir / "resume.json").write_text(json.dumps(resume), encoding="utf-8")
     (agent_dir / "outbox").mkdir()
     return tmp_path
+
 
 @patch("lemming.engine.call_llm")
 def test_outbox_cleanup_throttling(mock_llm, tmp_path: Path):
