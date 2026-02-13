@@ -41,7 +41,8 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
             await updateEngineConfig(config);
             setStatus("success");
             setTimeout(onClose, 1500);
-        } catch {
+        } catch (e) {
+            console.error(e);
             setStatus("error");
         }
     };
@@ -109,7 +110,10 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.openai ? "text" : "password"}
                                     placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                     value={config.openai_api_key}
-                                    onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, openai_api_key: e.target.value });
+                                        if (status === "error") setStatus("idle");
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none focus:ring-1 focus:ring-brand-cyan font-mono text-sm"
                                 />
                                 <button
@@ -140,7 +144,10 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.anthropic ? "text" : "password"}
                                     placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                     value={config.anthropic_api_key}
-                                    onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, anthropic_api_key: e.target.value });
+                                        if (status === "error") setStatus("idle");
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none focus:ring-1 focus:ring-brand-purple font-mono text-sm"
                                 />
                                 <button
@@ -154,6 +161,18 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             </div>
                         </div>
                     </div>
+
+                    {status === "error" && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mx-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-400 text-sm"
+                            role="alert"
+                        >
+                            <AlertTriangle size={16} />
+                            <span>Failed to save configuration. Please check your connection and try again.</span>
+                        </motion.div>
+                    )}
 
                     {/* Footer */}
                     <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
@@ -172,7 +191,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
-                            ) : "SAVE CONFIG"}
+                            ) : status === "error" ? "RETRY" : "SAVE CONFIG"}
                         </button>
                     </div>
                 </motion.div>
