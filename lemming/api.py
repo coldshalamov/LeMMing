@@ -15,10 +15,12 @@ from fastapi import (
     FastAPI,
     HTTPException,
     Request,
-    status as http_status,
     WebSocket,
     WebSocketDisconnect,
     WebSocketException,
+)
+from fastapi import (
+    status as http_status,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -29,7 +31,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -693,9 +694,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(
-    websocket: WebSocket, _=Depends(verify_websocket_access)
-) -> None:
+async def websocket_endpoint(websocket: WebSocket, _=Depends(verify_websocket_access)) -> None:
     await websocket.accept()
     try:
         while True:
