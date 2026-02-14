@@ -27,3 +27,8 @@
 **Vulnerability:** The `/ws` endpoint used standard HTTP dependencies. While FastAPI supports `Depends` on WebSockets, standard `HTTPException(401)` does not close the WebSocket connection with a policy violation code (1008), leaving the connection open in some cases or failing silently without proper protocol closure.
 **Learning:** WebSocket auth requires different exception handling than HTTP. Standard HTTP auth dependencies are not drop-in replacements for WebSocket security.
 **Prevention:** Create dedicated `verify_websocket_access` dependencies that raise `WebSocketException(code=status.WS_1008_POLICY_VIOLATION)` on failure.
+
+## 2024-05-30 - WebSocket Auth and Linting
+**Vulnerability:** The `/ws` endpoint was secured, but the CI pipeline failed due to linting errors (unused variables, line lengths) introduced or revealed by the changes.
+**Learning:** Security fixes must also adhere to strict code style guidelines enforced by CI. `ruff` and `black` checks are mandatory.
+**Prevention:** Always run `make lint-fix` and `make format` before submitting, and manually verify that auto-fixes don't introduce new issues or leave residual style violations (like long strings).
