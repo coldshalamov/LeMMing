@@ -37,3 +37,8 @@
 **Vulnerability:** CI failed due to conflicting formatting. Ruff fixes (like import sorting) and manual fixes for lint errors (like line lengths) can leave code in a state that Black considers unformatted.
 **Learning:** Manual edits to fix lint errors must always be followed by `make format` (Black) to ensure style consistency. Relying on `ruff check --fix` alone is insufficient if the project enforces Black.
 **Prevention:** In the pre-commit workflow, always run `make format` *after* any code changes, including those from `ruff --fix`.
+
+## 2024-06-01 - Type Stubs and Shadowing
+**Vulnerability:** CI failed due to missing type stubs (`jsonschema`, `requests`) and variable shadowing (`secrets` local var vs module).
+**Learning:** Type checking (mypy) catches subtle issues like shadowing standard library modules. Always rename local variables if they conflict with imports. Install or ignore missing stubs explicitly.
+**Prevention:** Run `mypy` locally before submitting. When using `secrets` module, avoid naming variables `secrets`.

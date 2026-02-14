@@ -134,9 +134,15 @@ class OllamaProvider(LLMProvider):
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
 
-    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+    def call(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         logger.info(
             "ollama_call",
