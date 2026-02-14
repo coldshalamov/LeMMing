@@ -25,6 +25,9 @@ from .tools import ToolRegistry, ToolResult
 
 logger = logging.getLogger(__name__)
 
+# Optimization: Run cleanup every N ticks to reduce filesystem I/O
+OUTBOX_CLEANUP_INTERVAL = 10
+
 SYSTEM_PREAMBLE = """You are a LeMMing agent operating in a multi-agent organization.
 You communicate by writing entries to your outbox, which other agents can read.
 You receive information by reading entries from other agents' outboxes.
@@ -533,14 +536,15 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         results[agent.name] = run_agent(base_path, agent, tick)
 
     # Cleanup old outbox entries
-    max_age_ticks = config.get("max_outbox_age_ticks", 100)
-    removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
-    if removed:
-        logger.info(
-            "outbox_cleanup",
-            extra={"event": "outbox_cleanup", "tick": tick, "entries_removed": removed},
-        )
-        log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
+    if tick % OUTBOX_CLEANUP_INTERVAL == 0:
+        max_age_ticks = config.get("max_outbox_age_ticks", 100)
+        removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
+        if removed:
+            logger.info(
+                "outbox_cleanup",
+                extra={"event": "outbox_cleanup", "tick": tick, "entries_removed": removed},
+            )
+            log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
 
     tick_duration_ms = int((time.time() - tick_start) * 1000)
     log_engine_event(
