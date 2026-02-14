@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Throttling Maintenance Tasks]
+**Learning:** Maintenance tasks like `cleanup_old_outbox_entries` scan the entire filesystem hierarchy. Running them on every tick in the main loop adds O(N) overhead where N is file count, slowing down the engine significantly as data grows.
+**Action:** Throttle maintenance tasks using `tick % INTERVAL == 0` to amortize the cost over multiple ticks.
