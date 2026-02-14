@@ -44,7 +44,7 @@ def test_cleanup_is_throttled(
     mock_get_org_config,
     mock_discover_agents,
     mock_get_credits,
-    mock_log_engine_event
+    mock_log_engine_event,
 ):
     # Run for 20 ticks
     for tick in range(1, 21):
