@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - WebSocket Auth Bypass with HTTP Dependencies
+**Vulnerability:** The `/ws` endpoint used standard HTTP dependencies. While FastAPI supports `Depends` on WebSockets, standard `HTTPException(401)` does not close the WebSocket connection with a policy violation code (1008), leaving the connection open in some cases or failing silently without proper protocol closure.
+**Learning:** WebSocket auth requires different exception handling than HTTP. Standard HTTP auth dependencies are not drop-in replacements for WebSocket security.
+**Prevention:** Create dedicated `verify_websocket_access` dependencies that raise `WebSocketException(code=status.WS_1008_POLICY_VIOLATION)` on failure.
