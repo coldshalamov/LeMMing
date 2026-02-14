@@ -1,4 +1,3 @@
-
 import os
 import unittest
 from unittest.mock import patch
@@ -16,7 +15,7 @@ class TestWebSocketAuth(unittest.TestCase):
     def test_websocket_no_auth_required(self):
         # Ensure no key is set
         with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": ""}):
-             with self.client.websocket_connect("/ws") as websocket:
+            with self.client.websocket_connect("/ws") as websocket:
                 data = websocket.receive_json()
                 self.assertIn("status", data)
 
@@ -26,7 +25,7 @@ class TestWebSocketAuth(unittest.TestCase):
             # Attempt to connect without key. Should raise WebSocketDisconnect (403/1008)
             # If it succeeds (vulnerability), no exception is raised, and test fails.
             with self.assertRaises(WebSocketDisconnect):
-                 with self.client.websocket_connect("/ws") as websocket:
+                with self.client.websocket_connect("/ws") as websocket:
                     websocket.receive_json()
 
     def test_websocket_auth_success_query_param(self):

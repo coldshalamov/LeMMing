@@ -32,3 +32,8 @@
 **Vulnerability:** The `/ws` endpoint was secured, but the CI pipeline failed due to linting errors (unused variables, line lengths) introduced or revealed by the changes.
 **Learning:** Security fixes must also adhere to strict code style guidelines enforced by CI. `ruff` and `black` checks are mandatory.
 **Prevention:** Always run `make lint-fix` and `make format` before submitting, and manually verify that auto-fixes don't introduce new issues or leave residual style violations (like long strings).
+
+## 2024-05-31 - Black vs Ruff Formatting
+**Vulnerability:** CI failed due to conflicting formatting. Ruff fixes (like import sorting) and manual fixes for lint errors (like line lengths) can leave code in a state that Black considers unformatted.
+**Learning:** Manual edits to fix lint errors must always be followed by `make format` (Black) to ensure style consistency. Relying on `ruff check --fix` alone is insufficient if the project enforces Black.
+**Prevention:** In the pre-commit workflow, always run `make format` *after* any code changes, including those from `ruff --fix`.
