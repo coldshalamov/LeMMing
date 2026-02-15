@@ -1,9 +1,11 @@
 import os
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 from lemming import api
+
 
 @pytest.fixture
 def client() -> TestClient:
@@ -78,6 +80,6 @@ def test_websocket_auth_configured_failure(client: TestClient, tmp_path):
 
         # No auth
         # Depending on client impl, could be WebSocketDisconnect or HTTP 403
-        with pytest.raises(Exception) as excinfo:
-            with client.websocket_connect("/ws") as websocket:
+        with pytest.raises(Exception):
+            with client.websocket_connect("/ws"):
                 pass
