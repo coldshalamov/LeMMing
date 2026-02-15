@@ -196,6 +196,12 @@ class CLIProvider(LLMProvider):
         self.timeout = timeout
         self.prevent_arg_injection = prevent_arg_injection
 
+    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+        """Call the CLI provider via the standard LLMProvider interface."""
+        return str(
+            self.execute(messages, timeout=self.timeout, prevent_arg_injection=self.prevent_arg_injection)
+        )
+
     def execute(
         self,
         messages: list[dict[str, str]],
