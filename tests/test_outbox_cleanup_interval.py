@@ -7,6 +7,7 @@ from lemming.engine import OUTBOX_CLEANUP_INTERVAL, run_tick
 # Set up logging to avoid noise during tests
 logging.basicConfig(level=logging.INFO)
 
+
 def test_cleanup_frequency(tmp_path: Path):
     """Verify that cleanup_old_outbox_entries is throttled to run only at specific intervals
     defined by OUTBOX_CLEANUP_INTERVAL.
@@ -20,8 +21,8 @@ def test_cleanup_frequency(tmp_path: Path):
     config_dir.mkdir(parents=True)
 
     # Create required config files
-    (config_dir / "org_config.json").write_text('{}')
-    (config_dir / "credits.json").write_text('{}')
+    (config_dir / "org_config.json").write_text("{}")
+    (config_dir / "credits.json").write_text("{}")
     (config_dir / "tick.json").write_text('{"current_tick": 1}')
 
     with patch("lemming.engine.cleanup_old_outbox_entries") as mock_cleanup:
