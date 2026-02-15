@@ -102,8 +102,12 @@ export default function WizardPage() {
   const stepIdx = currentStep;
   const StepIcon = STEPS[stepIdx].icon;
 
-  const handleNext = () =>
+  const isSlugValid = /^[a-zA-Z0-9_-]+$/.test(formData.name);
+
+  const handleNext = () => {
+    if (stepIdx === 0 && (!formData.name || !isSlugValid)) return;
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+  };
 
   // Improved Back handler: Goes to dashboard if on Step 0
   const handleBack = () => {
@@ -267,13 +271,25 @@ export default function WizardPage() {
                         id="agent-slug"
                         type="text"
                         required
+                        aria-invalid={!isSlugValid && formData.name.length > 0}
+                        aria-describedby={!isSlugValid && formData.name.length > 0 ? "slug-error" : undefined}
                         value={formData.name}
                         onChange={(e) =>
                           setFormData({ ...formData, name: e.target.value })
                         }
-                        className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none font-mono"
+                        className={clsx(
+                          "w-full bg-neo-surface border p-3 rounded text-white focus:outline-none font-mono",
+                          !isSlugValid && formData.name.length > 0
+                            ? "border-red-500 focus:border-red-500"
+                            : "border-neo-border focus:border-brand-cyan",
+                        )}
                         placeholder="e.g. backend_dev"
                       />
+                      {!isSlugValid && formData.name.length > 0 && (
+                        <p id="slug-error" className="text-[10px] text-red-400 mt-1" role="alert">
+                          Alphanumeric, underscores, and hyphens only.
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -755,7 +771,13 @@ export default function WizardPage() {
                   {stepIdx < STEPS.length - 1 ? (
                     <button
                       onClick={handleNext}
-                      className="px-6 py-2 rounded bg-brand-cyan text-black font-bold hover:bg-cyan-300 flex items-center gap-2"
+                      disabled={stepIdx === 0 && (!formData.name || !isSlugValid)}
+                      className={clsx(
+                        "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
+                        stepIdx === 0 && (!formData.name || !isSlugValid)
+                          ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                          : "bg-brand-cyan text-black hover:bg-cyan-300",
+                      )}
                       title={`Continue to ${STEPS[stepIdx + 1]?.label}`}
                       aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
                     >
