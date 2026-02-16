@@ -12,6 +12,7 @@ from lemming import api
 def client() -> TestClient:
     return TestClient(api.app)
 
+
 def test_ws_auth_required_fail(client: TestClient):
     """Verify WebSocket connection is rejected when admin key is set and no/wrong key is provided."""
     with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}):
@@ -24,17 +25,18 @@ def test_ws_auth_required_fail(client: TestClient):
 
         # With wrong header
         try:
-             with client.websocket_connect("/ws", headers={"X-Admin-Key": "wrong"}) as _:
+            with client.websocket_connect("/ws", headers={"X-Admin-Key": "wrong"}) as _:
                 pytest.fail("WebSocket connection should have been rejected (wrong key)")
         except (WebSocketDisconnect, Exception):
-             pass
+            pass
 
         # With wrong query param
         try:
-             with client.websocket_connect("/ws?key=wrong") as _:
+            with client.websocket_connect("/ws?key=wrong") as _:
                 pytest.fail("WebSocket connection should have been rejected (wrong key)")
         except (WebSocketDisconnect, Exception):
-             pass
+            pass
+
 
 def test_ws_auth_success(client: TestClient):
     """Verify WebSocket connection is accepted when admin key is set and correct key is provided."""

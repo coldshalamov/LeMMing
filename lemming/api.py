@@ -687,9 +687,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(
-    websocket: WebSocket, authorized: None = Depends(verify_websocket_access)
-) -> None:
+async def websocket_endpoint(websocket: WebSocket, authorized: None = Depends(verify_websocket_access)) -> None:
     await websocket.accept()
     try:
         while True:
