@@ -82,7 +82,7 @@ class AnthropicProvider(LLMProvider):
 
     def __init__(self):
         try:
-            from anthropic import Anthropic  # type: ignore[import-not-found]
+            from anthropic import Anthropic
 
             self.client = Anthropic()
         except ImportError:
