@@ -82,7 +82,7 @@ class AnthropicProvider(LLMProvider):
 
     def __init__(self):
         try:
-            from anthropic import Anthropic
+            from anthropic import Anthropic  # type: ignore[import-not-found]
 
             self.client = Anthropic()
         except ImportError:
@@ -136,7 +136,7 @@ class OllamaProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         logger.info(
             "ollama_call",
