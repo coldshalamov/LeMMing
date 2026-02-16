@@ -86,6 +86,18 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     </div>
 
                     <div className="p-6 space-y-6">
+                        {status === "error" && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-2 text-red-400 text-xs items-center"
+                                role="alert"
+                            >
+                                <AlertTriangle size={16} />
+                                <span>Failed to save configuration. Please try again.</span>
+                            </motion.div>
+                        )}
+
                         <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex gap-3 text-yellow-500 text-xs leading-relaxed">
                             <AlertTriangle size={16} className="shrink-0" />
                             <p>API keys are stored locally in <code className="bg-black/40 px-1 rounded">secrets.json</code> and loaded into the engine environment. Never share this file.</p>
@@ -99,17 +111,21 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     OpenAI API Key
                                 </span>
                                 {isExisting.openai && (
-                                    <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
+                                    <span id="openai-existing" className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
                                 )}
                             </label>
                             <div className="relative">
                                 <input
                                     id="openai-key"
+                                    aria-describedby={isExisting.openai ? "openai-existing" : undefined}
                                     autoFocus
                                     type={showPassword.openai ? "text" : "password"}
                                     placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                     value={config.openai_api_key}
-                                    onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, openai_api_key: e.target.value });
+                                        if (status === "error") setStatus("idle");
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none focus:ring-1 focus:ring-brand-cyan font-mono text-sm"
                                 />
                                 <button
@@ -131,16 +147,20 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     Anthropic API Key
                                 </span>
                                 {isExisting.anthropic && (
-                                    <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
+                                    <span id="anthropic-existing" className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
                                 )}
                             </label>
                             <div className="relative">
                                 <input
                                     id="anthropic-key"
+                                    aria-describedby={isExisting.anthropic ? "anthropic-existing" : undefined}
                                     type={showPassword.anthropic ? "text" : "password"}
                                     placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                     value={config.anthropic_api_key}
-                                    onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
+                                    onChange={e => {
+                                        setConfig({ ...config, anthropic_api_key: e.target.value });
+                                        if (status === "error") setStatus("idle");
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none focus:ring-1 focus:ring-brand-purple font-mono text-sm"
                                 />
                                 <button
@@ -172,7 +192,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
-                            ) : "SAVE CONFIG"}
+                            ) : status === "error" ? "RETRY" : "SAVE CONFIG"}
                         </button>
                     </div>
                 </motion.div>
