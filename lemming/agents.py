@@ -264,9 +264,20 @@ def discover_agents(base_path: Path) -> list[Agent]:
                     continue
                 if entry.name == "agent_template":
                     continue
-                # Also skip agent_template if it's a subfolder?
-                # The original logic used rel_path.startswith("agent_template").
-                # This logic is simpler: we just don't traverse into agent_template at any level.
+
+                # Optimization: If this directory is an agent (has resume.json),
+                # do not traverse into standard agent subdirectories.
+                # This avoids scanning huge directories like 'outbox' or 'workspace'
+                # on every tick, which can contain thousands of files.
+                if resume_entry and entry.name in {
+                    "outbox",
+                    "memory",
+                    "logs",
+                    "workspace",
+                    "__pycache__",
+                }:
+                    continue
+
                 stack.append(Path(entry.path))
 
         if resume_entry:
