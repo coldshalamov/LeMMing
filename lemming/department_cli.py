@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+import tempfile
 from pathlib import Path
 
 import click
@@ -19,6 +20,7 @@ from .department import (
     save_social_graph,
     validate_department,
 )
+from .logging_config import setup_logging
 from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
@@ -33,9 +35,7 @@ def department_group() -> None:
 @department_group.command(name="list")
 def list_departments() -> None:
     """List all discovered departments."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     departments = discover_departments(base_path)
@@ -62,9 +62,7 @@ def list_departments() -> None:
 @click.option("--readme", "-r", default="", help="README content")
 def create_department(name: str, description: str, author: str, readme: str) -> None:
     """Create a new department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     dept = DepartmentMetadata(
@@ -89,9 +87,7 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
 @click.argument("name")
 def show_department(name: str) -> None:
     """Show details of a specific department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     dept_file = get_department_file(base_path, name)
@@ -132,9 +128,7 @@ def show_department(name: str) -> None:
 @click.option("--output", "-o", default="organization.json", help="Output file path")
 def export_structure(output: str) -> None:
     """Export complete organization structure to JSON."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     org_structure = export_org_structure(base_path)
@@ -158,9 +152,7 @@ def package_department(name: str, output: str | None) -> None:
     Creates a zip file containing the department metadata and all agent folders
     that belong to this department.
     """
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     output_dir = Path(output) if output else (base_path / "departments")
@@ -179,8 +171,6 @@ def package_department(name: str, output: str | None) -> None:
         raise click.Abort()
 
     # Create temporary directory for packaging
-    import tempfile
-
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         package_dir = temp_path / name
@@ -233,9 +223,7 @@ This is a LeMMing department bundle containing {len(agents)} agent(s).
 @click.option("--merge", "-m", is_flag=True, help="Merge with existing organization")
 def import_department(bundle_path: str, merge: bool) -> None:
     """Import a department bundle into the current organization."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     bundle_file = Path(bundle_path)
@@ -247,8 +235,6 @@ def import_department(bundle_path: str, merge: bool) -> None:
     if bundle_file.suffix != ".zip":
         click.echo("Bundle must be a .zip file")
         raise click.Abort()
-
-    import tempfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -309,9 +295,7 @@ def import_department(bundle_path: str, merge: bool) -> None:
 @click.option("--output", "-o", default="social_graph.json", help="Output file path")
 def analyze_social(output: str) -> None:
     """Analyze and export the social graph of the organization."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
 
