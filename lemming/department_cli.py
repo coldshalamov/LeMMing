@@ -6,7 +6,6 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -17,7 +16,6 @@ from .department import (
     get_department_agents,
     get_department_file,
     save_department,
-    save_org_structure,
     save_social_graph,
     validate_department,
 )
@@ -240,7 +238,6 @@ def import_department(bundle_path: str, merge: bool) -> None:
         raise click.Abort()
 
     import tempfile
-    import zipfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -294,7 +291,7 @@ def import_department(bundle_path: str, merge: bool) -> None:
                 shutil.copytree(agent_dir, agent_dst)
                 click.echo(f"✓ Imported agent: {agent_dir.name}")
 
-        click.echo(f"\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
+        click.echo("\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
 
 
 @department_group.command(name="analyze")
