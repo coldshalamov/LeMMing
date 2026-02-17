@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Directory Traversal Optimization]
+**Learning:** `os.scandir` is fast but recursive scanning of large data directories (like `outbox` with 10k+ files) in hot paths (`discover_agents` called every tick) creates significant overhead (~130ms vs ~0.1ms).
+**Action:** Explicitly skip known non-agent subdirectories (`outbox`, `memory`, `logs`, `workspace`) during agent discovery to make performance independent of data volume.
