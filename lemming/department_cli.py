@@ -33,11 +33,10 @@ def department_group() -> None:
 @department_group.command(name="list")
 def list_departments() -> None:
     """List all discovered departments."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(level="INFO", base_path=base_path)
     departments = discover_departments(base_path)
 
     if not departments:
@@ -62,11 +61,10 @@ def list_departments() -> None:
 @click.option("--readme", "-r", default="", help="README content")
 def create_department(name: str, description: str, author: str, readme: str) -> None:
     """Create a new department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(level="INFO", base_path=base_path)
     dept = DepartmentMetadata(
         name=name,
         description=description,
@@ -89,11 +87,10 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
 @click.argument("name")
 def show_department(name: str) -> None:
     """Show details of a specific department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(level="INFO", base_path=base_path)
     dept_file = get_department_file(base_path, name)
 
     if not dept_file.exists():
@@ -132,11 +129,10 @@ def show_department(name: str) -> None:
 @click.option("--output", "-o", default="organization.json", help="Output file path")
 def export_structure(output: str) -> None:
     """Export complete organization structure to JSON."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(level="INFO", base_path=base_path)
     org_structure = export_org_structure(base_path)
 
     output_path = Path(output)
@@ -158,11 +154,10 @@ def package_department(name: str, output: str | None) -> None:
     Creates a zip file containing the department metadata and all agent folders
     that belong to this department.
     """
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(level="INFO", base_path=base_path)
     output_dir = Path(output) if output else (base_path / "departments")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -233,11 +228,10 @@ This is a LeMMing department bundle containing {len(agents)} agent(s).
 @click.option("--merge", "-m", is_flag=True, help="Merge with existing organization")
 def import_department(bundle_path: str, merge: bool) -> None:
     """Import a department bundle into the current organization."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(level="INFO", base_path=base_path)
     bundle_file = Path(bundle_path)
 
     if not bundle_file.exists():
@@ -309,11 +303,10 @@ def import_department(bundle_path: str, merge: bool) -> None:
 @click.option("--output", "-o", default="social_graph.json", help="Output file path")
 def analyze_social(output: str) -> None:
     """Analyze and export the social graph of the organization."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(level="INFO", base_path=base_path)
 
     # Load current tick
     from .engine import load_tick
