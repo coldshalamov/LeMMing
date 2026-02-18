@@ -57,6 +57,7 @@ type WizardState = {
   model: { key: string; temperature: number; max_tokens: number };
   schedule: { run_every_n_ticks: number; phase_offset: number };
   permissions: { read_outboxes: string[]; tools: string[] };
+  read_outboxes_input: string;
   credits: { max_credits: number; soft_cap: number };
   instructions: string;
 };
@@ -79,6 +80,7 @@ export default function WizardPage() {
     },
     schedule: { run_every_n_ticks: 1, phase_offset: 0 },
     permissions: { read_outboxes: [], tools: [] },
+    read_outboxes_input: "",
     credits: { max_credits: 1000, soft_cap: 500 },
     instructions: DEFAULT_INSTRUCTIONS,
   });
@@ -582,19 +584,21 @@ export default function WizardPage() {
                         type="text"
                         placeholder="Enter agent names separated by commas (e.g., manager, researcher)"
                         className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none text-sm"
-                        value={formData.permissions.read_outboxes.join(", ")}
-                        onChange={(e) =>
+                        value={formData.read_outboxes_input}
+                        onChange={(e) => {
+                          const raw = e.target.value;
                           setFormData({
                             ...formData,
+                            read_outboxes_input: raw,
                             permissions: {
                               ...formData.permissions,
-                              read_outboxes: e.target.value
+                              read_outboxes: raw
                                 .split(",")
                                 .map((s) => s.trim())
                                 .filter(Boolean),
                             },
-                          })
-                        }
+                          });
+                        }}
                       />
                     </div>
                   </div>
