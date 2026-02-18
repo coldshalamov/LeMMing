@@ -1,9 +1,7 @@
-
+import json
 import subprocess
 import sys
-import json
-import os
-from pathlib import Path
+
 
 def test_secrets_shadowing_fix(tmp_path):
     """
@@ -49,11 +47,7 @@ except Exception as e:
         f.write(script_content)
 
     # Run the script using the current python executable
-    result = subprocess.run(
-        [sys.executable, str(script_path), str(tmp_path)],
-        capture_output=True,
-        text=True
-    )
+    result = subprocess.run([sys.executable, str(script_path), str(tmp_path)], capture_output=True, text=True)
 
     if result.returncode != 0:
         # If it failed, check output for the specific error
