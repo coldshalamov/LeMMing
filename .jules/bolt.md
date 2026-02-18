@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Outbox Cleanup Throttling]
+**Learning:** The outbox cleanup process (`cleanup_old_outbox_entries`) was running on every tick, scanning all agent directories. This is an unnecessary I/O burden as outbox entries expire slowly (default 100 ticks).
+**Action:** Implemented a throttling mechanism using `OUTBOX_CLEANUP_INTERVAL = 10` to run cleanup only once every 10 ticks, reducing I/O overhead by ~90% for this maintenance task.
