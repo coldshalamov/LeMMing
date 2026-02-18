@@ -19,3 +19,11 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Outbox Cleanup Throttling]
+**Learning:** The outbox cleanup process (`cleanup_old_outbox_entries`) was running on every tick, scanning all agent directories. This is an unnecessary I/O burden as outbox entries expire slowly (default 100 ticks).
+**Action:** Implemented a throttling mechanism using `OUTBOX_CLEANUP_INTERVAL = 10` to run cleanup only once every 10 ticks, reducing I/O overhead by ~90% for this maintenance task.
+
+## 2024-05-26 - [CI and Linting]
+**Learning:** The CI pipeline runs rigorous linting (Ruff) that fails on pre-existing errors (unused variables, line lengths, import sorting). My PR failed because I didn't fix these pre-existing issues.
+**Action:** When touching any file, check for and resolve *all* linting errors in that file, even pre-existing ones. Run `make lint` before submitting to catch these issues locally.

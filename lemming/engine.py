@@ -25,6 +25,9 @@ from .tools import ToolRegistry, ToolResult
 
 logger = logging.getLogger(__name__)
 
+# How often (in ticks) to run outbox cleanup
+OUTBOX_CLEANUP_INTERVAL = 10
+
 SYSTEM_PREAMBLE = """You are a LeMMing agent operating in a multi-agent organization.
 You communicate by writing entries to your outbox, which other agents can read.
 You receive information by reading entries from other agents' outboxes.
@@ -124,14 +127,14 @@ def get_firing_agents(agents: list[Agent], tick: int) -> list[Agent]:
 
 def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, str]]:
     messages: list[dict[str, str]] = []
-    
+
     # If the model is a CLI-based model, we might want a simpler prompt
     # We can detect this by checking the model key or passing provider info
     is_cli = agent.model.key.startswith("cli-")
 
     if not is_cli:
         messages.append({"role": "system", "content": SYSTEM_PREAMBLE})
-    
+
     messages.append({"role": "system", "content": f"YOUR ROLE: {agent.title}\n\n{agent.instructions}"})
 
     memory_context = get_memory_context(base_path, agent.name)
@@ -144,7 +147,7 @@ def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, st
         agent.permissions.read_outboxes,
         limit=30,
     )
-    
+
     if is_cli:
         # For CLI agents, we only want the actual text of the latest messages
         if incoming:
@@ -533,14 +536,15 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         results[agent.name] = run_agent(base_path, agent, tick)
 
     # Cleanup old outbox entries
-    max_age_ticks = config.get("max_outbox_age_ticks", 100)
-    removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
-    if removed:
-        logger.info(
-            "outbox_cleanup",
-            extra={"event": "outbox_cleanup", "tick": tick, "entries_removed": removed},
-        )
-        log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
+    if tick % OUTBOX_CLEANUP_INTERVAL == 0:
+        max_age_ticks = config.get("max_outbox_age_ticks", 100)
+        removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
+        if removed:
+            logger.info(
+                "outbox_cleanup",
+                extra={"event": "outbox_cleanup", "tick": tick, "entries_removed": removed},
+            )
+            log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
 
     tick_duration_ms = int((time.time() - tick_start) * 1000)
     log_engine_event(
