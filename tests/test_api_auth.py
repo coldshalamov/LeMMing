@@ -146,9 +146,7 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         assert resp.status_code == 401
 
         # Clone Agent - No Auth
-        resp = client.post(
-            "/api/agents/clone", json={"source_agent": "source", "target_name": "cloned_agent"}
-        )
+        resp = client.post("/api/agents/clone", json={"source_agent": "source", "target_name": "cloned_agent"})
         assert resp.status_code == 401
 
         # 2. Test Authenticated Access

@@ -27,3 +27,7 @@
 ## 2024-05-26 - [CI and Linting]
 **Learning:** The CI pipeline runs rigorous linting (Ruff) that fails on pre-existing errors (unused variables, line lengths, import sorting). My PR failed because I didn't fix these pre-existing issues.
 **Action:** When touching any file, check for and resolve *all* linting errors in that file, even pre-existing ones. Run `make lint` before submitting to catch these issues locally.
+
+## 2024-05-26 - [CI Formatting]
+**Learning:** CI failures can occur even with passing lint checks if `black` formatting is not applied. `ruff check` does not cover formatting rules.
+**Action:** Always run `make format` and `make format-check` before submitting, especially when modifying multiple files to fix lint errors.

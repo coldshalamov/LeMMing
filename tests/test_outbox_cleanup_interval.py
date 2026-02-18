@@ -8,12 +8,14 @@ def test_outbox_cleanup_interval(tmp_path):
     base_path.mkdir()
 
     # Mocking necessary components to avoid side effects
-    with patch("lemming.engine.get_org_config") as mock_config, \
-         patch("lemming.engine.cleanup_old_outbox_entries") as mock_cleanup, \
-         patch("lemming.engine.discover_agents") as mock_discover, \
-         patch("lemming.engine.get_credits"), \
-         patch("lemming.engine.get_firing_agents") as mock_firing, \
-         patch("lemming.engine.log_engine_event"):
+    with (
+        patch("lemming.engine.get_org_config") as mock_config,
+        patch("lemming.engine.cleanup_old_outbox_entries") as mock_cleanup,
+        patch("lemming.engine.discover_agents") as mock_discover,
+        patch("lemming.engine.get_credits"),
+        patch("lemming.engine.get_firing_agents") as mock_firing,
+        patch("lemming.engine.log_engine_event"),
+    ):
 
         mock_config.return_value = {"max_outbox_age_ticks": 100}
         mock_discover.return_value = []
