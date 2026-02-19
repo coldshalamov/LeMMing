@@ -264,6 +264,11 @@ def discover_agents(base_path: Path) -> list[Agent]:
                     continue
                 if entry.name == "agent_template":
                     continue
+                # Optimization: Skip known high-traffic directories to avoid scanning thousands of files.
+                # These directories are part of agent state and should not contain other agents.
+                if entry.name in {"outbox", "memory", "logs", "workspace", "__pycache__"}:
+                    continue
+
                 # Also skip agent_template if it's a subfolder?
                 # The original logic used rel_path.startswith("agent_template").
                 # This logic is simpler: we just don't traverse into agent_template at any level.
