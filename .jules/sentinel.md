@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2026-02-19 - Missing WebSocket Authentication
+**Vulnerability:** The `/ws` endpoint was bypassing `verify_admin_access` because WebSocket routes in FastAPI require separate dependency injection handling or manual verification in the endpoint logic.
+**Learning:** Standard HTTP middleware and dependencies often don't apply automatically to WebSocket upgrades.
+**Prevention:** Use `dependencies=[Depends(verify_websocket_access)]` in the `@app.websocket` decorator or inspect headers/query params manually within the WebSocket handler.

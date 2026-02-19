@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status as http_status, WebSocket, WebSocketDisconnect, WebSocketException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -90,6 +90,32 @@ async def verify_admin_access(request: Request):
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin key",
         )
+
+
+async def verify_websocket_access(
+    websocket: WebSocket,
+    key: str | None = Query(None),
+) -> None:
+    """Verify WebSocket access if admin key is configured.
+
+    Checks:
+    1. Query parameter 'key'
+    2. Header 'X-Admin-Key'
+    """
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    if not admin_key:
+        return
+
+    # Check query param
+    if key and secrets.compare_digest(key, admin_key):
+        return
+
+    # Check header
+    header_key = websocket.headers.get("X-Admin-Key")
+    if header_key and secrets.compare_digest(header_key, admin_key):
+        return
+
+    raise WebSocketException(code=http_status.WS_1008_POLICY_VIOLATION)
 
 
 def rate_limiter(limit: int = 10, window: int = 60):
@@ -672,7 +698,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     return {"status": "updated"}
 
 
-@app.websocket("/ws")
+@app.websocket("/ws", dependencies=[Depends(verify_websocket_access)])
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     try:
