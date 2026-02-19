@@ -104,13 +104,13 @@ def test_ws_auth_configured_failure(client: TestClient, tmp_path):
 
         # No key
         with pytest.raises(WebSocketDisconnect) as exc:
-            with client.websocket_connect("/ws") as websocket:
+            with client.websocket_connect("/ws"):
                 pass
         # 1008 is Policy Violation
         assert exc.value.code == 1008
 
         # Wrong key
         with pytest.raises(WebSocketDisconnect) as exc:
-            with client.websocket_connect("/ws?key=wrong") as websocket:
+            with client.websocket_connect("/ws?key=wrong"):
                 pass
         assert exc.value.code == 1008
