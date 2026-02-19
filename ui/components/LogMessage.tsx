@@ -95,27 +95,44 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className="flex items-start gap-2 cursor-pointer group"
-        onClick={() => canExpand && setExpanded(!expanded)}
-        role="button"
-        aria-expanded={expanded}
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (canExpand && (e.key === "Enter" || e.key === " ")) {
-            e.preventDefault();
-            setExpanded(!expanded);
-          }
-        }}
+        className={clsx(
+          "flex items-start gap-2 group outline-none focus-visible:ring-1 focus-visible:ring-brand-cyan/50 rounded-sm",
+          canExpand ? "cursor-pointer" : "cursor-default",
+        )}
+        onClick={canExpand ? () => setExpanded(!expanded) : undefined}
+        role={canExpand ? "button" : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        aria-label={
+          canExpand
+            ? expanded
+              ? "Collapse details"
+              : "Expand details"
+            : undefined
+        }
+        tabIndex={canExpand ? 0 : undefined}
+        onKeyDown={
+          canExpand
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpanded(!expanded);
+                }
+              }
+            : undefined
+        }
       >
         <div
           className={clsx(
             "mt-0.5 transition-opacity",
             canExpand ? "opacity-50 group-hover:opacity-100" : "opacity-0",
           )}
+          aria-hidden="true"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </div>
-        <div className="mt-0.5 opacity-70 shrink-0">{icon}</div>
+        <div className="mt-0.5 opacity-70 shrink-0" aria-hidden="true">
+          {icon}
+        </div>
         <div className={contentClass}>{primaryContent}</div>
       </div>
 
