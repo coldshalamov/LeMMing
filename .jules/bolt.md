@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-27 - [Batching Credit Updates]
+**Learning:** `deduct_credits` was calling `save_credits` (full file write) for every agent in a tick, causing O(N) I/O operations.
+**Action:** Added `persist=False` to `deduct_credits` and batched the save at the end of the tick. Always look for high-frequency operations inside loops that trigger I/O.

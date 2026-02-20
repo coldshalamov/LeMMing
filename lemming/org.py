@@ -132,7 +132,7 @@ def get_agent_credits(agent: str, base_path: Path | None = None) -> dict[str, An
     )
 
 
-def deduct_credits(agent: str, amount: float, base_path: Path | None = None) -> None:
+def deduct_credits(agent: str, amount: float, base_path: Path | None = None, persist: bool = True) -> None:
     credits = get_credits(base_path)
     if agent not in credits:
         credits[agent] = {
@@ -144,7 +144,8 @@ def deduct_credits(agent: str, amount: float, base_path: Path | None = None) -> 
         }
     credits_left = credits[agent].get("credits_left", 0.0) - amount
     credits[agent]["credits_left"] = round(credits_left, 4)
-    save_credits(base_path)
+    if persist:
+        save_credits(base_path)
 
 
 def save_credits(base_path: Path | None = None) -> None:
