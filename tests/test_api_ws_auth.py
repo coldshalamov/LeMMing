@@ -1,8 +1,10 @@
 
 import pytest
-from starlette.websockets import WebSocketDisconnect
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
+
 from lemming.api import app
+
 
 def test_websocket_auth(monkeypatch):
     # Set the admin key
