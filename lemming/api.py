@@ -15,10 +15,12 @@ from fastapi import (
     FastAPI,
     HTTPException,
     Request,
-    status as http_status,
     WebSocket,
     WebSocketDisconnect,
     WebSocketException,
+)
+from fastapi import (
+    status as http_status,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -29,7 +31,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -244,9 +245,7 @@ class ToolInfo(BaseModel):
     description: str
 
 
-@app.post(
-    "/api/messages", dependencies=[Depends(rate_limiter(limit=10, window=60)), Depends(verify_admin_access)]
-)
+@app.post("/api/messages", dependencies=[Depends(rate_limiter(limit=10, window=60)), Depends(verify_admin_access)])
 async def send_message(request: SendMessageRequest) -> dict[str, str]:
     """Send a message from 'human' to a target agent."""
     tick = load_tick(BASE_PATH)
