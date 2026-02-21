@@ -184,7 +184,7 @@ class CLIProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call the CLI provider via LLM interface (alias for execute)."""
-        return self.execute(messages, config=kwargs)
+        return str(self.execute(messages, config=kwargs))
 
     def __init__(
         self,
@@ -252,7 +252,7 @@ class CLIProvider(LLMProvider):
                 if result.returncode != 0:
                     output += f"\n[STDERR]: {result.stderr}"
 
-            return self._wrap_output(output)
+            return str(self._wrap_output(output))
 
         except subprocess.TimeoutExpired:
             return self._wrap_output("Error: Command received timeout.")
