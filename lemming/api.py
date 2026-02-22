@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect, WebSocketException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            secrets_data = json.load(f)
+            for k, v in secrets_data.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -90,6 +90,21 @@ async def verify_admin_access(request: Request):
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin key",
         )
+
+
+async def verify_websocket_access(websocket: WebSocket):
+    """Verify admin access for WebSockets."""
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    if not admin_key:
+        return
+
+    # Check header first, then query param
+    request_key = websocket.headers.get("X-Admin-Key")
+    if not request_key:
+        request_key = websocket.query_params.get("key")
+
+    if not request_key or not secrets.compare_digest(request_key, admin_key):
+        raise WebSocketException(code=http_status.WS_1008_POLICY_VIOLATION)
 
 
 def rate_limiter(limit: int = 10, window: int = 60):
@@ -673,7 +688,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket) -> None:
+async def websocket_endpoint(websocket: WebSocket, authorized: None = Depends(verify_websocket_access)) -> None:
     await websocket.accept()
     try:
         while True:
