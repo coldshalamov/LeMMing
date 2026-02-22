@@ -1,14 +1,17 @@
-
 import os
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocketDisconnect
-from unittest.mock import patch
+
 from lemming import api
+
 
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(api.app)
+
 
 def test_websocket_access_without_auth(client: TestClient, tmp_path):
     """Verify WebSocket is rejected without auth when admin key is set."""
@@ -16,10 +19,11 @@ def test_websocket_access_without_auth(client: TestClient, tmp_path):
         with patch("lemming.api.BASE_PATH", tmp_path):
             # Attempt to connect without headers should fail
             with pytest.raises(WebSocketDisconnect) as exc:
-                 with client.websocket_connect("/ws") as websocket:
+                with client.websocket_connect("/ws"):
                     pass
             # 1008 Policy Violation
             assert exc.value.code == 1008
+
 
 def test_websocket_access_with_auth(client: TestClient, tmp_path):
     """Verify WebSocket is accepted with correct auth."""
