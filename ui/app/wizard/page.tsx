@@ -102,6 +102,18 @@ export default function WizardPage() {
   const stepIdx = currentStep;
   const StepIcon = STEPS[stepIdx].icon;
 
+  const isValidStep = useMemo(() => {
+    if (stepIdx === 0) {
+      // Step 0: Identity
+      const isSlugValid = /^[a-zA-Z0-9_-]+$/.test(formData.name);
+      const isTitleValid = formData.title.trim().length > 0;
+      const isDescValid = formData.short_description.trim().length > 0;
+      return isSlugValid && isTitleValid && isDescValid;
+    }
+    // Other steps have defaults or are optional
+    return true;
+  }, [stepIdx, formData.name, formData.title, formData.short_description]);
+
   const handleNext = () =>
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
 
@@ -274,6 +286,9 @@ export default function WizardPage() {
                         className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none font-mono"
                         placeholder="e.g. backend_dev"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Alphanumeric characters, underscores, and hyphens only.
+                      </p>
                     </div>
 
                     <div>
@@ -755,9 +770,20 @@ export default function WizardPage() {
                   {stepIdx < STEPS.length - 1 ? (
                     <button
                       onClick={handleNext}
-                      className="px-6 py-2 rounded bg-brand-cyan text-black font-bold hover:bg-cyan-300 flex items-center gap-2"
-                      title={`Continue to ${STEPS[stepIdx + 1]?.label}`}
+                      disabled={!isValidStep}
+                      className={clsx(
+                        "px-6 py-2 rounded bg-brand-cyan text-black font-bold flex items-center gap-2 transition-all",
+                        isValidStep
+                          ? "hover:bg-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                          : "opacity-50 cursor-not-allowed grayscale",
+                      )}
+                      title={
+                        isValidStep
+                          ? `Continue to ${STEPS[stepIdx + 1]?.label}`
+                          : "Please fill in all required fields correctly"
+                      }
                       aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
+                      aria-disabled={!isValidStep}
                     >
                       Next <ArrowRight size={16} />
                     </button>
