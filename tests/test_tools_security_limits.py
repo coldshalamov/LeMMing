@@ -1,4 +1,3 @@
-
 from lemming.tools import FileReadTool, FileWriteTool, MemoryWriteTool
 
 
@@ -14,16 +13,12 @@ def test_file_write_limit(tmp_path):
     # Limit is 100KB = 102400 bytes
     large_content = "a" * (102400 + 1)
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=tmp_path,
-        path="large_file.txt",
-        content=large_content
-    )
+    result = tool.execute(agent_name=agent_name, base_path=tmp_path, path="large_file.txt", content=large_content)
 
     assert not result.success
     assert "content too large" in result.error.lower()
     assert not (workspace / "large_file.txt").exists()
+
 
 def test_file_write_within_limit(tmp_path):
     tool = FileWriteTool()
@@ -31,17 +26,13 @@ def test_file_write_within_limit(tmp_path):
     workspace = tmp_path / "agents" / agent_name / "workspace"
     workspace.mkdir(parents=True)
 
-    content = "a" * 102400 # Exact limit
+    content = "a" * 102400  # Exact limit
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=tmp_path,
-        path="ok_file.txt",
-        content=content
-    )
+    result = tool.execute(agent_name=agent_name, base_path=tmp_path, path="ok_file.txt", content=content)
 
     assert result.success
     assert (workspace / "ok_file.txt").exists()
+
 
 def test_memory_write_limit(tmp_path):
     tool = MemoryWriteTool()
@@ -51,12 +42,7 @@ def test_memory_write_limit(tmp_path):
     # Create a large object
     large_value = {"data": "a" * 52000}
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=tmp_path,
-        key="large_mem",
-        value=large_value
-    )
+    result = tool.execute(agent_name=agent_name, base_path=tmp_path, key="large_mem", value=large_value)
 
     assert not result.success
     assert "memory value too large" in result.error.lower()
@@ -65,18 +51,14 @@ def test_memory_write_limit(tmp_path):
     mem_path = tmp_path / "agents" / agent_name / "memory" / "large_mem.json"
     assert not mem_path.exists()
 
+
 def test_memory_write_within_limit(tmp_path):
     tool = MemoryWriteTool()
     agent_name = "test_agent"
 
     value = {"data": "small"}
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=tmp_path,
-        key="small_mem",
-        value=value
-    )
+    result = tool.execute(agent_name=agent_name, base_path=tmp_path, key="small_mem", value=value)
 
     assert result.success
     mem_path = tmp_path / "agents" / agent_name / "memory" / "small_mem.json"
@@ -95,11 +77,7 @@ def test_file_read_limit(tmp_path):
     large_file = workspace / "large_file.txt"
     large_file.write_text(large_content, encoding="utf-8")
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=tmp_path,
-        path="large_file.txt"
-    )
+    result = tool.execute(agent_name=agent_name, base_path=tmp_path, path="large_file.txt")
 
     assert result.success is False
     assert "file too large" in result.error.lower()
@@ -115,11 +93,7 @@ def test_file_read_within_limit(tmp_path):
     ok_file = workspace / "ok_file.txt"
     ok_file.write_text(content, encoding="utf-8")
 
-    result = tool.execute(
-        agent_name=agent_name,
-        base_path=tmp_path,
-        path="ok_file.txt"
-    )
+    result = tool.execute(agent_name=agent_name, base_path=tmp_path, path="ok_file.txt")
 
     assert result.success is True
     assert result.output == content
