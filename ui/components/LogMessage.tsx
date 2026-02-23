@@ -15,7 +15,7 @@ import clsx from "clsx";
 
 interface LogMessageProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: Record<string, any>;
+  payload: Record<string, any> | string;
   kind: string;
 }
 
@@ -28,9 +28,9 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
     typeof payload === "string"
       ? payload
       : payload.text || payload.message || payload.content;
-  const thought = payload.thought;
-  const tool = payload.tool;
-  const toolArgs = payload.args;
+  const thought = typeof payload === "object" ? payload.thought : undefined;
+  const tool = typeof payload === "object" ? payload.tool : undefined;
+  const toolArgs = typeof payload === "object" ? payload.args : undefined;
 
   // Determine icon and color
   let icon = <Terminal size={12} />;
@@ -95,11 +95,23 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className="flex items-start gap-2 cursor-pointer group"
+        className={clsx(
+          "flex items-start gap-2 group outline-none rounded transition-colors",
+          canExpand
+            ? "cursor-pointer hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-brand-cyan"
+            : "cursor-default",
+        )}
         onClick={() => canExpand && setExpanded(!expanded)}
-        role="button"
-        aria-expanded={expanded}
-        tabIndex={0}
+        role={canExpand ? "button" : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        aria-label={
+          canExpand
+            ? expanded
+              ? "Collapse log details"
+              : "Expand log details"
+            : undefined
+        }
+        tabIndex={canExpand ? 0 : undefined}
         onKeyDown={(e) => {
           if (canExpand && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
@@ -112,6 +124,7 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
             "mt-0.5 transition-opacity",
             canExpand ? "opacity-50 group-hover:opacity-100" : "opacity-0",
           )}
+          aria-hidden="true"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </div>

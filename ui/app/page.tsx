@@ -12,6 +12,7 @@ import {
 import { AgentCard } from "@/components/AgentCard";
 import { OrgGraphView } from "@/components/OrgGraph";
 import { ManagerChat } from "@/components/ManagerChat";
+import { LogMessage } from "@/components/LogMessage";
 import { GlobalSettingsModal } from "@/components/GlobalSettingsModal";
 import {
   Activity,
@@ -210,17 +211,12 @@ export default function Dashboard() {
                   <h4 className="text-[10px] font-mono text-white/40 uppercase mb-2">
                     Recent Activity
                   </h4>
-                  <div className="text-xs font-mono text-gray-400 space-y-1">
+                  <div className="text-xs font-mono text-gray-400 space-y-2">
                     {messages
                       ?.filter((m) => m.agent === selectedAgent.name)
                       .slice(0, 3)
                       .map((m, i) => (
-                        <div
-                          key={i}
-                          className="opacity-70 truncate border-l-2 border-white/10 pl-2"
-                        >
-                          {m.payload.text || JSON.stringify(m.payload)}
-                        </div>
+                        <LogMessage key={i} payload={m.payload} kind={m.kind} />
                       )) || <div className="italic opacity-30">No recent activity</div>}
                   </div>
                 </div>
