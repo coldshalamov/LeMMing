@@ -15,6 +15,23 @@ logger = logging.getLogger(__name__)
 _agent_cache: dict[Path, tuple[float, Agent]] = {}
 
 
+# Optimization: Directories to skip during agent discovery
+# These directories contain high-volume data (logs, outbox) or dependencies
+# that should never contain agents, avoiding costly recursion.
+SKIP_DIRS = {
+    "outbox",
+    "memory",
+    "logs",
+    "workspace",
+    "node_modules",
+    "venv",
+    "__pycache__",
+    ".git",
+    ".idea",
+    ".vscode",
+}
+
+
 def reset_agents_cache() -> None:
     global _agent_cache
     _agent_cache.clear()
@@ -264,6 +281,9 @@ def discover_agents(base_path: Path) -> list[Agent]:
                     continue
                 if entry.name == "agent_template":
                     continue
+                if entry.name in SKIP_DIRS:
+                    continue
+
                 # Also skip agent_template if it's a subfolder?
                 # The original logic used rel_path.startswith("agent_template").
                 # This logic is simpler: we just don't traverse into agent_template at any level.
