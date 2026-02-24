@@ -256,18 +256,32 @@ def discover_agents(base_path: Path) -> list[Agent]:
         # Check for resume.json in this directory
         resume_entry = next((e for e in entries if e.name == "resume.json" and e.is_file()), None)
 
-        # Process subdirectories
-        for entry in entries:
-            if entry.is_dir():
-                # Skip hidden directories and agent_template
-                if entry.name.startswith("."):
-                    continue
-                if entry.name == "agent_template":
-                    continue
-                # Also skip agent_template if it's a subfolder?
-                # The original logic used rel_path.startswith("agent_template").
-                # This logic is simpler: we just don't traverse into agent_template at any level.
-                stack.append(Path(entry.path))
+        # Process subdirectories only if this is NOT an agent root.
+        # We assume agents cannot be nested inside other agents.
+        if not resume_entry:
+            for entry in entries:
+                if entry.is_dir():
+                    # Skip hidden directories and agent_template
+                    if entry.name.startswith("."):
+                        continue
+                    if entry.name == "agent_template":
+                        continue
+                    # Optimization: Skip known high-volume or irrelevant directories
+                    if entry.name in {
+                        "outbox",
+                        "memory",
+                        "logs",
+                        "workspace",
+                        "__pycache__",
+                        "venv",
+                        "node_modules",
+                    }:
+                        continue
+
+                    # Also skip agent_template if it's a subfolder?
+                    # The original logic used rel_path.startswith("agent_template").
+                    # This logic is simpler: we just don't traverse into agent_template at any level.
+                    stack.append(Path(entry.path))
 
         if resume_entry:
             resume_path = Path(resume_entry.path)
