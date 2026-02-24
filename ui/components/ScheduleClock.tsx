@@ -1,7 +1,7 @@
 // Interactive Clock Component for Agent Scheduling
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import clsx from "clsx";
 
 interface ScheduleClockProps {
@@ -12,6 +12,17 @@ interface ScheduleClockProps {
 
 export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProps) {
     const [hoveredPosition, setHoveredPosition] = useState<number | null>(null);
+    const shouldFocusRef = useRef(false);
+    const clockId = useId();
+
+    // Focus the new element if changed via keyboard
+    useEffect(() => {
+        if (shouldFocusRef.current) {
+            shouldFocusRef.current = false;
+            const el = document.getElementById(`${clockId}-pos-${offset}`);
+            el?.focus();
+        }
+    }, [offset, clockId]);
 
     // Calculate activation points based on frequency
     const getActivationPoints = (): number[] => {
@@ -71,15 +82,25 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
                         return (
                             <g
                                 key={pos.index}
-                                role="button"
-                                tabIndex={0}
-                                aria-label={`Set start offset to position ${pos.index === 0 ? 12 : pos.index}`}
-                                aria-pressed={isFirst}
+                                id={`${clockId}-pos-${pos.index}`}
+                                role="radio"
+                                tabIndex={isFirst ? 0 : -1}
+                                aria-checked={isFirst}
+                                aria-label={`Start offset: ${pos.index === 0 ? 12 : pos.index}`}
                                 onClick={() => onChange(pos.index)}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" || e.key === " ") {
                                         e.preventDefault();
                                         onChange(pos.index);
+                                    }
+                                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                        e.preventDefault();
+                                        let diff = 0;
+                                        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') diff = 1;
+                                        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') diff = -1;
+
+                                        shouldFocusRef.current = true;
+                                        onChange((pos.index + diff + 12) % 12);
                                     }
                                 }}
                                 onMouseEnter={() => setHoveredPosition(pos.index)}
