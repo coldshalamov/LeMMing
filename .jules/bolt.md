@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2025-02-12 - [Directory Traversal Pruning]
+**Learning:** `discover_agents` was traversing deeply into agent subdirectories (memory, outbox) which contain thousands of files. Since agents are flat, finding `resume.json` allows stopping recursion immediately.
+**Action:** Always prune directory traversal for known structures or when the target is found at a specific level to avoid O(N) where N is total files.
