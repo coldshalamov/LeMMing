@@ -119,9 +119,11 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
     return entry_path
 
 
-def _load_entry(entry_path: Path) -> OutboxEntry | None:
+def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with entry_path.open("r", encoding="utf-8") as f:
+        # Optimization: use open() directly to handle both Path and str,
+        # avoiding Path object creation overhead when passing strings.
+        with open(entry_path, encoding="utf-8") as f:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
@@ -251,21 +253,26 @@ def read_outbox_entries(
     # Use heapq.nlargest to avoid sorting all files when we only need the top K.
     try:
         with os.scandir(outbox_dir) as it:
-            # Helper generator to filter non-json files
-            candidate_files = (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json"))
+            # Helper generator to filter non-json files. Yield (name, path) to avoid Path creation.
+            candidate_files = (
+                (entry.name, entry.path) for entry in it if entry.is_file() and entry.name.endswith(".json")
+            )
 
             # If since_tick is provided, we can pre-filter files that are definitely too old
             # IF the filename tick parsing is reliable. It is.
             if since_tick is not None:
-                candidate_files = (name for name in candidate_files if _tick_from_filename_str(name) >= since_tick)
+                candidate_files = (
+                    (name, path) for name, path in candidate_files if _tick_from_filename_str(name) >= since_tick
+                )
 
-            filenames = heapq.nlargest(limit, candidate_files, key=None)
+            # Sort by name (which implies tick) descending. name is first element of tuple.
+            files_with_paths = heapq.nlargest(limit, candidate_files, key=lambda x: x[0])
     except FileNotFoundError:
         return []
 
     min_collected_tick = float("inf")
 
-    for name in filenames:
+    for name, full_path in files_with_paths:
         # Optimization: Parse tick from filename string directly to avoid Path creation.
         # _tick_from_filename_str returns -1 on error.
         tick_val_int = _tick_from_filename_str(name)
@@ -283,8 +290,8 @@ def read_outbox_entries(
             if tick_val is not None and min_collected_tick > tick_val:
                 break
 
-        entry_path = outbox_dir / name
-        entry = _load_entry(entry_path)
+        # Pass full_path string to _load_entry to avoid Path object creation
+        entry = _load_entry(full_path)
         if entry is None:
             continue
 
@@ -361,7 +368,9 @@ def read_multi_agent_outbox_entries(
     # 4. Load only the necessary files
     entries: list[OutboxEntry] = []
     for _, _, path_str in to_load:
-        entry = _load_entry(Path(path_str))
+        # Optimization: path_str is already a string, pass it directly to _load_entry
+        # to avoid Path object creation overhead.
+        entry = _load_entry(path_str)
         if entry is None:
             continue
         entries.append(entry)
