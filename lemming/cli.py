@@ -18,7 +18,7 @@ from .department import (
 )
 from .engine import load_tick, run_forever, run_once
 from .memory import get_memory_summary
-from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
+from .messages import OutboxEntry, read_multi_agent_outbox_entries, read_outbox_entries, write_outbox_entry
 from .org import derive_org_graph, get_agent_credits, get_credits, save_derived_org_graph
 from .paths import get_logs_dir
 
@@ -199,16 +199,9 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
     else:
         # Show all recent messages from all agents
         agents = discover_agents(base_path)
-        entries = []
-        for ag in agents:
-            if ag.name == HUMAN_AGENT_NAME:
-                continue
-            agent_entries = read_outbox_entries(base_path, ag.name, limit=limit)
-            entries.extend(agent_entries)
-
-        # Sort by tick and created_at, most recent first
-        entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
-        entries = entries[:limit]
+        # Optimization: Use read_multi_agent_outbox_entries for O(limit) file reads instead of O(agents * limit)
+        agent_names = [ag.name for ag in agents if ag.name != HUMAN_AGENT_NAME]
+        entries = read_multi_agent_outbox_entries(base_path, agent_names, limit=limit)
         print("\n📥 Recent messages from all agents:")
 
     if not entries:
