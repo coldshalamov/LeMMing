@@ -448,11 +448,14 @@ class FileListTool(Tool):
             (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            workspace_dir.resolve()
+            # base_search = workspace_dir.resolve() # Unused
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+        if not (
+            target_path.is_relative_to(workspace_dir.resolve())
+            or target_path.is_relative_to((base_path / "shared").resolve())
+        ):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
             return ToolResult(False, "", f"Directory '{path_str}' not found")
