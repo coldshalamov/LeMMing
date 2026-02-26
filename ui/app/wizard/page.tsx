@@ -224,12 +224,20 @@ export default function WizardPage() {
         <div className="flex-1 p-12 overflow-y-auto">
           <div className="max-w-2xl mx-auto">
             <AnimatePresence mode="wait">
-              <motion.div
+              <motion.form
                 key={currentStep}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-8"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (stepIdx < STEPS.length - 1) {
+                    handleNext();
+                  } else {
+                    handleDeploy();
+                  }
+                }}
               >
                 <div className="flex items-center gap-4 mb-8">
                   <div
@@ -739,6 +747,7 @@ export default function WizardPage() {
                 {/* Footer Controls */}
                 <div className="flex justify-between pt-8 border-t border-white/5">
                   <button
+                    type="button"
                     onClick={handleBack}
                     className="px-6 py-2 rounded border border-neo-border text-gray-400 hover:text-white flex items-center gap-2"
                     title={stepIdx === 0 ? "Cancel wizard" : `Go back to ${STEPS[stepIdx - 1]?.label}`}
@@ -754,7 +763,7 @@ export default function WizardPage() {
 
                   {stepIdx < STEPS.length - 1 ? (
                     <button
-                      onClick={handleNext}
+                      type="submit"
                       className="px-6 py-2 rounded bg-brand-cyan text-black font-bold hover:bg-cyan-300 flex items-center gap-2"
                       title={`Continue to ${STEPS[stepIdx + 1]?.label}`}
                       aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
@@ -763,7 +772,7 @@ export default function WizardPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={handleDeploy}
+                      type="submit"
                       disabled={isDeploying}
                       className={clsx(
                         "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)]",
@@ -781,7 +790,7 @@ export default function WizardPage() {
                     </button>
                   )}
                 </div>
-              </motion.div>
+              </motion.form>
             </AnimatePresence>
           </div>
         </div>
