@@ -20,8 +20,6 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 RUN mkdir -p /app/agents /app/logs
 
 # Environment variables
-ENV OPENAI_API_KEY=""
-ENV ANTHROPIC_API_KEY=""
 ENV PYTHONUNBUFFERED=1
 
 # Expose API port
