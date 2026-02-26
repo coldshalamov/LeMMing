@@ -13,8 +13,9 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
-    save_org_structure,
+    save_department,
     save_social_graph,
+    validate_department,
 )
 from .engine import load_tick, run_forever, run_once
 from .memory import get_memory_summary
@@ -240,7 +241,7 @@ def department_list_cmd(base_path: Path) -> None:
 
 def department_create_cmd(base_path: Path, name: str, description: str, author: str = "") -> None:
     """Create a new department."""
-    from .department import DepartmentMetadata, save_department, validate_department
+    from .department import DepartmentMetadata
 
     dept = DepartmentMetadata(
         name=name,
@@ -466,7 +467,7 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
     # Department management commands
-    dept_parser = subparsers.add_parser("department-list", help="List all departments")
+    subparsers.add_parser("department-list", help="List all departments")
 
     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
     dept_create_parser.add_argument("name", help="Department name")
