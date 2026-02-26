@@ -253,9 +253,24 @@ def import_department(bundle_path: str, merge: bool) -> None:
     import tempfile
     import zipfile
 
+    def secure_extract_zip(zip_path: Path, extract_to: Path) -> None:
+        """Securely extract a zip file, preventing Zip Slip vulnerabilities."""
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            extract_to_resolved = extract_to.resolve()
+            for member in zf.namelist():
+                # Resolve the target path
+                target_path = (extract_to_resolved / member).resolve()
+
+                # Verify that the target path is within the extraction directory
+                if not target_path.is_relative_to(extract_to_resolved):
+                    raise click.ClickException(f"Security violation: Zip member '{member}' attempts to escape extraction directory.")
+
+                # Extract the member
+                zf.extract(member, extract_to)
+
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
-        shutil.unpack_archive(bundle_file, temp_path)
+        secure_extract_zip(bundle_file, temp_path)
 
         # Find the department directory (should be root or first subdirectory)
         dept_dirs = [d for d in temp_path.iterdir() if d.is_dir()]
