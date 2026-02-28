@@ -1,7 +1,3 @@
-## 2024-05-22 - Semantic HTML in Next.js Links
-**Learning:** Nested <button> inside <Link> creates invalid HTML (<a><button></a>) which confuses screen readers. Always apply button styles directly to the Link component.
-**Action:** Refactored main dashboard actions to use styled Links instead of nested buttons.
-
-## 2024-05-23 - Missing Design Tokens & Focus Visible
-**Learning:** Checking for missing design tokens (like `brand-purple`) in the CSS configuration is critical. Missing tokens can lead to silent failures in focus states (e.g., `focus:ring-brand-purple` doing nothing). Also, programmatic `focus()` in Playwright doesn't always trigger `:focus-visible`; simulated keyboard navigation (Tab) is more reliable.
-**Action:** Added missing `brand-purple` to globals.css and used `page.keyboard.press("Shift+Tab")` for verification.
+## 2024-03-24 - Wizard Step Validation
+**Learning:** Preventing premature progression in multi-step React forms is critical for UX. Without validation, users proceed to later steps empty-handed and must backtrack. Using a boolean variable mapped dynamically to a disabled Next button (with distinct "cursor-not-allowed" styling) effectively communicates state without disruptive alerts. Furthermore, adding the `required` and `aria-required="true"` attributes to the `input` and `textarea` elements is crucial so that screen readers correctly inform users of required fields dynamically.
+**Action:** When building multi-step wizards or forms, explicitly disable advancement controls if requisite data is missing in the current step and apply proper ARIA requirements on corresponding input elements.
