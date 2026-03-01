@@ -387,6 +387,7 @@ class FileReadTool(Tool):
 
     name = "file_read"
     description = "Read the content of a file in the agent's workspace or shared directory."
+    MAX_READ_SIZE = 100 * 1024  # 100KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         path_str = kwargs.get("path")
@@ -418,6 +419,15 @@ class FileReadTool(Tool):
         if not target_path.is_file():
             return ToolResult(False, "", f"'{path_str}' is not a file")
 
+        # Security check: prevent memory exhaustion from large files
+        try:
+            size = target_path.stat().st_size
+            if size > self.MAX_READ_SIZE:
+                msg = f"File too large ({size} bytes). Max read size is {self.MAX_READ_SIZE} bytes."
+                return ToolResult(False, "", msg)
+        except Exception as e:
+            return ToolResult(False, "", f"Failed to check file size: {e}")
+
         try:
             content = target_path.read_text(encoding="utf-8")
             return ToolResult(True, content)
@@ -445,13 +455,13 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
+        is_workspace = target_path.is_relative_to(workspace_dir.resolve())
+        is_shared = target_path.is_relative_to((base_path / "shared").resolve())
+        if not (is_workspace or is_shared):
              return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
