@@ -765,6 +765,8 @@ export default function WizardPage() {
                     <button
                       onClick={handleDeploy}
                       disabled={isDeploying}
+                      title="Deploy new agent"
+                      aria-label="Deploy new agent"
                       className={clsx(
                         "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)]",
                         isDeploying
