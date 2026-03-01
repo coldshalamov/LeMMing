@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Batched File I/O for State Updates]
+**Learning:** Persisting state on every action (e.g., deducting credits) causes unnecessary duplicate file writes within a single tick cycle, which can be a bottleneck in multi-agent executions.
+**Action:** Expose a `persist` flag for hot-path state mutations (like `deduct_credits`) to defer file writes, and batch the persistence to happen once per tick cycle.
