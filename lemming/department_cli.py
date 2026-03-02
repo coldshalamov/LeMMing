@@ -50,9 +50,10 @@ def list_departments() -> None:
     """List all discovered departments."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     departments = discover_departments(base_path)
 
     if not departments:
@@ -79,9 +80,10 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
     """Create a new department."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     dept = DepartmentMetadata(
         name=name,
         description=description,
@@ -106,9 +108,10 @@ def show_department(name: str) -> None:
     """Show details of a specific department."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     dept_file = get_department_file(base_path, name)
 
     if not dept_file.exists():
@@ -149,9 +152,10 @@ def export_structure(output: str) -> None:
     """Export complete organization structure to JSON."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     org_structure = export_org_structure(base_path)
 
     output_path = Path(output)
@@ -175,9 +179,10 @@ def package_department(name: str, output: str | None) -> None:
     """
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     output_dir = Path(output) if output else (base_path / "departments")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -250,9 +255,10 @@ def import_department(bundle_path: str, merge: bool) -> None:
     """Import a department bundle into the current organization."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     bundle_file = Path(bundle_path)
 
     if not bundle_file.exists():
@@ -326,9 +332,10 @@ def analyze_social(output: str) -> None:
     """Analyze and export the social graph of the organization."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
 
     # Load current tick
     from .engine import load_tick
