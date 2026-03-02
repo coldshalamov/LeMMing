@@ -4,15 +4,16 @@ import asyncio
 import json
 import logging
 import os
-import secrets
+import secrets as secrets_module
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect  # type: ignore
+from fastapi import status as http_status
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, field_validator  # type: ignore
 
 from .agents import discover_agents, load_agent, validate_resume_data
 from .engine import load_tick, run_once
@@ -20,7 +21,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -85,7 +85,7 @@ async def verify_admin_access(request: Request):
     # If key is configured, enforce it
     request_key = request.headers.get("X-Admin-Key")
     # Use constant-time comparison to prevent timing attacks
-    if not request_key or not secrets.compare_digest(request_key, admin_key):
+    if not request_key or not secrets_module.compare_digest(request_key, admin_key):
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin key",
