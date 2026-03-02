@@ -6,7 +6,6 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -17,13 +16,28 @@ from .department import (
     get_department_agents,
     get_department_file,
     save_department,
-    save_org_structure,
     save_social_graph,
     validate_department,
 )
 from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
+
+
+def secure_extract_zip(zip_path: Path, target_dir: Path) -> None:
+    """Securely extract a ZIP file preventing Zip Slip vulnerabilities."""
+    import zipfile
+
+    target_dir_resolved = target_dir.resolve()
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for member in zf.namelist():
+            member_path = (target_dir_resolved / member).resolve()
+            if not member_path.is_relative_to(target_dir_resolved):
+                raise ValueError(
+                    f"Zip slip vulnerability detected: {member} attempts to "
+                    "path traverse out of target directory."
+                )
+        zf.extractall(target_dir_resolved)
 
 
 @click.group(name="department")
@@ -251,11 +265,10 @@ def import_department(bundle_path: str, merge: bool) -> None:
         raise click.Abort()
 
     import tempfile
-    import zipfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
-        shutil.unpack_archive(bundle_file, temp_path)
+        secure_extract_zip(bundle_file, temp_path)
 
         # Find the department directory (should be root or first subdirectory)
         dept_dirs = [d for d in temp_path.iterdir() if d.is_dir()]
@@ -305,7 +318,7 @@ def import_department(bundle_path: str, merge: bool) -> None:
                 shutil.copytree(agent_dir, agent_dst)
                 click.echo(f"✓ Imported agent: {agent_dir.name}")
 
-    click.echo(f"\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
+    click.echo("\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
 
 
 @department_group.command(name="analyze")
