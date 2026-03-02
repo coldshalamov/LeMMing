@@ -117,11 +117,9 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         source_dir = agents_dir / "source"
         source_dir.mkdir()
         (source_dir / "resume.json").write_text(
-
-                '{"name": "source", "title": "Src", "short_description": "Src", '
-                '"model": {"key": "gpt"}, "permissions": {"read_outboxes": [], "tools": []}, '
-                '"schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}'
-
+            '{"name": "source", "title": "Src", "short_description": "Src", '
+            '"model": {"key": "gpt"}, "permissions": {"read_outboxes": [], "tools": []}, '
+            '"schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}'
         )
         (source_dir / "outbox").mkdir()
         (source_dir / "memory").mkdir()
