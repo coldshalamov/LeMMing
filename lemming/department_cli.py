@@ -34,8 +34,7 @@ def secure_extract_zip(zip_path: Path, target_dir: Path) -> None:
             member_path = (target_dir_resolved / member).resolve()
             if not member_path.is_relative_to(target_dir_resolved):
                 raise ValueError(
-                    f"Zip slip vulnerability detected: {member} attempts to "
-                    "path traverse out of target directory."
+                    f"Zip slip vulnerability detected: {member} attempts to " "path traverse out of target directory."
                 )
         zf.extractall(target_dir_resolved)
 
