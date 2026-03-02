@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Batched I/O in Hot Paths]
+**Learning:** In a multi-agent tick cycle, writing to shared configuration files (like credits.json) for each agent execution creates an O(N) disk I/O bottleneck.
+**Action:** Pass a `persist=False` flag to hot-path update functions (like `deduct_credits`) and batch the save operation at the end of the batch/tick cycle.
