@@ -314,7 +314,6 @@ def analyze_social(output: str) -> None:
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
 
-
     # Load current tick
     from .engine import load_tick
 
