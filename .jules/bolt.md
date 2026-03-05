@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-03-05 - Optimize file reading in hot loop
+**Learning:** Instantiating `pathlib.Path` objects inside loops where many files are read is surprisingly expensive. In functions like `read_outbox_entries`, passing string paths to `open()` is much faster.
+**Action:** When scanning and reading large numbers of files (e.g. from `os.scandir`), pass the string path directly to `open()` instead of wrapping it in `Path` first.
