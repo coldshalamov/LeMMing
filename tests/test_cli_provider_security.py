@@ -24,6 +24,7 @@ def test_cli_provider_arg_injection():
         # Ensure subprocess was NOT called
         mock_run.assert_not_called()
 
+
 def test_cli_provider_allow_arg_injection_with_config():
     """Verify that CLIProvider ALLOWS flags if prevent_arg_injection is False."""
     provider = CLIProvider(command=["echo"], prevent_arg_injection=False)
