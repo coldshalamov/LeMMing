@@ -102,7 +102,20 @@ export default function WizardPage() {
   const stepIdx = currentStep;
   const StepIcon = STEPS[stepIdx].icon;
 
+
+  const canProceedToNextStep = useMemo(() => {
+    if (stepIdx === 0) {
+      return (
+        formData.name.trim().length > 0 &&
+        formData.title.trim().length > 0 &&
+        formData.short_description.trim().length > 0
+      );
+    }
+    return true;
+  }, [stepIdx, formData.name, formData.title, formData.short_description]);
+
   const handleNext = () =>
+
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
 
   // Improved Back handler: Goes to dashboard if on Step 0
@@ -261,7 +274,7 @@ export default function WizardPage() {
                         htmlFor="agent-slug"
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
-                        AGENT_SLUG (Folder Name)
+                        AGENT_SLUG (Folder Name) <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="agent-slug"
@@ -281,7 +294,7 @@ export default function WizardPage() {
                         htmlFor="agent-title"
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
-                        TITLE
+                        TITLE <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="agent-title"
@@ -302,7 +315,7 @@ export default function WizardPage() {
                           htmlFor="agent-desc"
                           className="block text-xs font-mono text-gray-400"
                         >
-                          DESCRIPTION
+                          DESCRIPTION <span className="text-red-500">*</span>
                         </label>
                         <span
                           id="agent-desc-count"
@@ -755,8 +768,14 @@ export default function WizardPage() {
                   {stepIdx < STEPS.length - 1 ? (
                     <button
                       onClick={handleNext}
-                      className="px-6 py-2 rounded bg-brand-cyan text-black font-bold hover:bg-cyan-300 flex items-center gap-2"
-                      title={`Continue to ${STEPS[stepIdx + 1]?.label}`}
+                      disabled={!canProceedToNextStep}
+                      className={clsx(
+                        "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
+                        canProceedToNextStep
+                          ? "bg-brand-cyan text-black hover:bg-cyan-300"
+                          : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                      )}
+                      title={!canProceedToNextStep && stepIdx === 0 ? "Please fill out required fields (Name, Title, Description)" : `Continue to ${STEPS[stepIdx + 1]?.label}`}
                       aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
                     >
                       Next <ArrowRight size={16} />
