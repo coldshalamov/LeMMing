@@ -771,6 +771,8 @@ export default function WizardPage() {
                           ? "bg-gray-500 cursor-wait"
                           : "bg-brand-lime text-black hover:bg-lime-400",
                       )}
+                      title="Deploy Agent"
+                      aria-label="Deploy Agent"
                     >
                       {isDeploying ? (
                         <Loader2 size={16} className="animate-spin" />
