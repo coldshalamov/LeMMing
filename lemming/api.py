@@ -10,10 +10,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect  # type: ignore
 from fastapi import status as http_status
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, field_validator  # type: ignore
 
 from .agents import discover_agents, load_agent, validate_resume_data
 from .engine import load_tick, run_once
@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            secrets_data = json.load(f)
+            for k, v in secrets_data.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
