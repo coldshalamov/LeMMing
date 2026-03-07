@@ -142,6 +142,17 @@ export default function WizardPage() {
     }
   };
 
+  const canProceedToNextStep = useMemo(() => {
+    if (stepIdx === 0) {
+      return (
+        formData.name.trim() !== "" &&
+        formData.title.trim() !== "" &&
+        formData.short_description.trim() !== ""
+      );
+    }
+    return true;
+  }, [stepIdx, formData.name, formData.title, formData.short_description]);
+
   const previewAgent: AgentInfo = useMemo(
     () => ({
       name: formData.name || "new_agent",
@@ -755,9 +766,23 @@ export default function WizardPage() {
                   {stepIdx < STEPS.length - 1 ? (
                     <button
                       onClick={handleNext}
-                      className="px-6 py-2 rounded bg-brand-cyan text-black font-bold hover:bg-cyan-300 flex items-center gap-2"
-                      title={`Continue to ${STEPS[stepIdx + 1]?.label}`}
-                      aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
+                      disabled={!canProceedToNextStep}
+                      className={clsx(
+                        "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
+                        canProceedToNextStep
+                          ? "bg-brand-cyan text-black hover:bg-cyan-300"
+                          : "bg-gray-700 text-gray-400 cursor-not-allowed",
+                      )}
+                      title={
+                        !canProceedToNextStep
+                          ? "Please fill out all required fields"
+                          : `Continue to ${STEPS[stepIdx + 1]?.label}`
+                      }
+                      aria-label={
+                        !canProceedToNextStep
+                          ? "Cannot continue, please fill out all required fields"
+                          : `Continue to ${STEPS[stepIdx + 1]?.label} step`
+                      }
                     >
                       Next <ArrowRight size={16} />
                     </button>
@@ -771,6 +796,8 @@ export default function WizardPage() {
                           ? "bg-gray-500 cursor-wait"
                           : "bg-brand-lime text-black hover:bg-lime-400",
                       )}
+                      title="Deploy Agent"
+                      aria-label={isDeploying ? "Deploying agent..." : "Deploy Agent"}
                     >
                       {isDeploying ? (
                         <Loader2 size={16} className="animate-spin" />
