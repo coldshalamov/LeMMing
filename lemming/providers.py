@@ -41,7 +41,7 @@ class OpenAIProvider(LLMProvider):
 
     def __init__(self):
         try:
-            from openai import OpenAI  # type: ignore
+            from openai import OpenAI
 
             self.client = OpenAI()
         except ImportError:
@@ -82,7 +82,7 @@ class AnthropicProvider(LLMProvider):
 
     def __init__(self):
         try:
-            from anthropic import Anthropic  # type: ignore
+            from anthropic import Anthropic
 
             self.client = Anthropic()
         except ImportError:

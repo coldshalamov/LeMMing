@@ -10,10 +10,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect  # type: ignore
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi import status as http_status
-from fastapi.middleware.cors import CORSMiddleware  # type: ignore
-from pydantic import BaseModel, ConfigDict, Field, field_validator  # type: ignore
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import discover_agents, load_agent, validate_resume_data
 from .engine import load_tick, run_once
