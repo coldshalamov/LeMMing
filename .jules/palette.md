@@ -1,3 +1,6 @@
 ## 2024-03-07 - Add Validation State to Wizard Next Button
 **Learning:** In non-form React workflows (like the step-based wizard in `ui/app/wizard/page.tsx`), native HTML `required` attributes on input fields do not automatically prevent progression if navigation is driven by a generic `onClick` handler.
 **Action:** Always implement explicit component-level validation state (e.g., a `canProceed` boolean via `useMemo`) for multi-step processes. Use this state to visually disable progression buttons and provide explanatory feedback via `title` and `aria-label` to ensure both usability and accessibility.
+## 2024-03-07 - Add Validation State to Wizard Next Button
+**Learning:** In non-form React workflows (like the step-based wizard in `ui/app/wizard/page.tsx`), native HTML `required` attributes on input fields do not automatically prevent progression if navigation is driven by a generic `onClick` handler.
+**Action:** Always implement explicit component-level validation state (e.g., a `canProceed` boolean via `useMemo`) for multi-step processes. Use this state to visually disable progression buttons and provide explanatory feedback via `title` and `aria-label` to ensure both usability and accessibility.
