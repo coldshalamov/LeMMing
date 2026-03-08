@@ -102,8 +102,18 @@ export default function WizardPage() {
   const stepIdx = currentStep;
   const StepIcon = STEPS[stepIdx].icon;
 
-  const handleNext = () =>
-    setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+  const canProceedToNextStep =
+    stepIdx === 0
+      ? formData.name.trim() !== "" &&
+        formData.title.trim() !== "" &&
+        formData.short_description.trim() !== ""
+      : true;
+
+  const handleNext = () => {
+    if (canProceedToNextStep) {
+      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+    }
+  };
 
   // Improved Back handler: Goes to dashboard if on Step 0
   const handleBack = () => {
@@ -755,9 +765,19 @@ export default function WizardPage() {
                   {stepIdx < STEPS.length - 1 ? (
                     <button
                       onClick={handleNext}
-                      className="px-6 py-2 rounded bg-brand-cyan text-black font-bold hover:bg-cyan-300 flex items-center gap-2"
-                      title={`Continue to ${STEPS[stepIdx + 1]?.label}`}
+                      className={clsx(
+                        "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
+                        canProceedToNextStep
+                          ? "bg-brand-cyan text-black hover:bg-cyan-300"
+                          : "bg-white/10 text-white/30 cursor-not-allowed"
+                      )}
+                      title={
+                        canProceedToNextStep
+                          ? `Continue to ${STEPS[stepIdx + 1]?.label}`
+                          : "Please fill out all required fields"
+                      }
                       aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
+                      aria-disabled={!canProceedToNextStep}
                     >
                       Next <ArrowRight size={16} />
                     </button>
