@@ -19,3 +19,7 @@
 ## 2024-05-25 - [String Slicing vs Splitting]
 **Learning:** Splitting large strings (like LLM responses) by newline using `split("\n")` creates excessive temporary objects. Using `find()` and slicing is ~16x faster for stripping markdown fences.
 **Action:** Use slicing for parsing large text blocks where possible.
+
+## 2024-05-26 - [Pathlib vs Open String paths]
+**Learning:** `pathlib.Path` instantiation has overhead that is noticeably slower in hot loops than plain strings with `os.path.join`. We can gain a performance improvement by bypassing `Path` instantiation in internal paths when we just need to pass it to Python's built-in `open()`.
+**Action:** When working in hot loops for file I/O operations like loading cached outbox entries, use `open()` with string paths instead of `Path` objects.

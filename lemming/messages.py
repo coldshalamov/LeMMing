@@ -119,9 +119,9 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
     return entry_path
 
 
-def _load_entry(entry_path: Path) -> OutboxEntry | None:
+def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with entry_path.open("r", encoding="utf-8") as f:
+        with open(entry_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
@@ -245,6 +245,7 @@ def read_outbox_entries(
         return []
 
     entries: list[OutboxEntry] = []
+    outbox_dir_str = str(outbox_dir)
 
     # Sort files by tick descending.
     # Optimization: Use os.scandir to avoid creating Path objects for all files.
@@ -283,7 +284,7 @@ def read_outbox_entries(
             if tick_val is not None and min_collected_tick > tick_val:
                 break
 
-        entry_path = outbox_dir / name
+        entry_path = os.path.join(outbox_dir_str, name)
         entry = _load_entry(entry_path)
         if entry is None:
             continue
@@ -361,7 +362,7 @@ def read_multi_agent_outbox_entries(
     # 4. Load only the necessary files
     entries: list[OutboxEntry] = []
     for _, _, path_str in to_load:
-        entry = _load_entry(Path(path_str))
+        entry = _load_entry(path_str)
         if entry is None:
             continue
         entries.append(entry)
