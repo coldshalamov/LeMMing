@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +21,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            local_secrets = json.load(f)
+            for k, v in local_secrets.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -222,7 +222,10 @@ class ToolInfo(BaseModel):
     description: str
 
 
-@app.post("/api/messages", dependencies=[Depends(rate_limiter(limit=10, window=60))])
+@app.post(
+    "/api/messages",
+    dependencies=[Depends(rate_limiter(limit=10, window=60)), Depends(verify_admin_access)],
+)
 async def send_message(request: SendMessageRequest) -> dict[str, str]:
     """Send a message from 'human' to a target agent."""
     tick = load_tick(BASE_PATH)
@@ -384,13 +387,13 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
     return entries
 
 
-@app.get("/api/agents", response_model=list[AgentInfo])
+@app.get("/api/agents", response_model=list[AgentInfo], dependencies=[Depends(verify_admin_access)])
 async def list_agents() -> list[AgentInfo]:
     agents, credits = _load_agents_with_credits(BASE_PATH)
     return [_build_agent_info(agent, credits) for agent in agents]
 
 
-@app.get("/api/agents/{agent_name}", response_model=AgentInfo)
+@app.get("/api/agents/{agent_name}", response_model=AgentInfo, dependencies=[Depends(verify_admin_access)])
 async def get_agent(agent_name: str) -> AgentInfo:
     try:
         agent = load_agent(BASE_PATH, agent_name)
@@ -522,7 +525,11 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
     return {"status": "cloned", "path": str(target_dir.relative_to(BASE_PATH))}
 
 
-@app.get("/api/agents/{agent_name}/logs", response_model=list[LogEntry])
+@app.get(
+    "/api/agents/{agent_name}/logs",
+    response_model=list[LogEntry],
+    dependencies=[Depends(verify_admin_access)],
+)
 async def get_agent_logs(agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
     if limit > MAX_LIMIT:
         raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
@@ -531,7 +538,7 @@ async def get_agent_logs(agent_name: str, limit: int = 100) -> list[dict[str, An
     return _read_agent_logs(BASE_PATH, agent_name, limit=limit)
 
 
-@app.get("/api/org-graph")
+@app.get("/api/org-graph", dependencies=[Depends(verify_admin_access)])
 async def get_org_graph() -> dict[str, Any]:
     # Avoid mutating credits on read-only operations.
     agents = discover_agents(BASE_PATH)
@@ -545,33 +552,33 @@ async def get_org_graph() -> dict[str, Any]:
     }
 
 
-@app.get("/api/tools", response_model=list[ToolInfo])
+@app.get("/api/tools", response_model=list[ToolInfo], dependencies=[Depends(verify_admin_access)])
 async def list_tools() -> list[ToolInfo]:
     return [ToolInfo(**item) for item in ToolRegistry.list_tool_info()]
 
 
-@app.get("/api/models", response_model=list[str])
+@app.get("/api/models", response_model=list[str], dependencies=[Depends(verify_admin_access)])
 async def list_models() -> list[str]:
     registry = ModelRegistry(config_dir=get_config_dir(BASE_PATH))
     return registry.list_keys()
 
 
-@app.get("/api/credits")
+@app.get("/api/credits", dependencies=[Depends(verify_admin_access)])
 async def get_credits_endpoint() -> dict[str, Any]:
     return get_credits(BASE_PATH)
 
 
-@app.get("/api/agents/{agent_name}/credits")
+@app.get("/api/agents/{agent_name}/credits", dependencies=[Depends(verify_admin_access)])
 async def get_agent_credit(agent_name: str) -> dict[str, Any]:
     return get_agent_credits(agent_name, BASE_PATH)
 
 
-@app.get("/api/config")
+@app.get("/api/config", dependencies=[Depends(verify_admin_access)])
 async def get_config() -> dict[str, Any]:
     return get_org_config(BASE_PATH)
 
 
-@app.get("/api/status")
+@app.get("/api/status", dependencies=[Depends(verify_admin_access)])
 async def status() -> dict[str, Any]:
     agents, credits = _load_agents_with_credits(BASE_PATH)
     tick = load_tick(BASE_PATH)
@@ -586,7 +593,7 @@ async def status() -> dict[str, Any]:
     }
 
 
-@app.get("/api/messages", response_model=list[OutboxEntryModel])
+@app.get("/api/messages", response_model=list[OutboxEntryModel], dependencies=[Depends(verify_admin_access)])
 async def list_messages(
     agent: str | None = None, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntryModel]:
@@ -674,6 +681,15 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    if admin_key:
+        key = websocket.query_params.get("key")
+        if not key:
+            key = websocket.headers.get("X-Admin-Key")
+        if not key or not secrets.compare_digest(key, admin_key):
+            await websocket.close(code=http_status.WS_1008_POLICY_VIOLATION)
+            return
+
     await websocket.accept()
     try:
         while True:
