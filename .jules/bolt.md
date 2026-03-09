@@ -23,3 +23,7 @@
 ## 2024-05-26 - [Pathlib vs Open String paths]
 **Learning:** `pathlib.Path` instantiation has overhead that is noticeably slower in hot loops than plain strings with `os.path.join`. We can gain a performance improvement by bypassing `Path` instantiation in internal paths when we just need to pass it to Python's built-in `open()`.
 **Action:** When working in hot loops for file I/O operations like loading cached outbox entries, use `open()` with string paths instead of `Path` objects.
+
+## 2024-05-28 - [Batched File Writing]
+**Learning:** In hot paths where multiple operations mutate a shared file across agents (e.g. tracking `credits.json` inside a loop), writing to the file after every operation causes N unneeded filesystem writes and high overhead.
+**Action:** Expose a `persist=False` flag to the inner updater, mutate state in memory, and perform a single batched `save()` outside the loop at the tick boundary.
