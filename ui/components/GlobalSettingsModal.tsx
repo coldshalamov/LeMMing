@@ -80,6 +80,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             onClick={onClose}
                             className="p-2 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                             aria-label="Close settings"
+                            title="Close settings"
                         >
                             <X size={20} className="text-gray-400" />
                         </button>
@@ -90,6 +91,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             <AlertTriangle size={16} className="shrink-0" />
                             <p>API keys are stored locally in <code className="bg-black/40 px-1 rounded">secrets.json</code> and loaded into the engine environment. Never share this file.</p>
                         </div>
+
+                        {status === "error" && (
+                            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3 text-red-400 text-xs leading-relaxed animate-in fade-in slide-in-from-top-2">
+                                <AlertTriangle size={16} className="shrink-0" />
+                                <p>Failed to save configuration. Please check the server logs for details.</p>
+                            </div>
+                        )}
 
                         {/* OpenAI Key */}
                         <div className="space-y-2">
@@ -117,6 +125,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     onClick={() => setShowPassword(prev => ({ ...prev, openai: !prev.openai }))}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                                     aria-label={showPassword.openai ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
+                                    title={showPassword.openai ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
                                 >
                                     {showPassword.openai ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -148,6 +157,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     onClick={() => setShowPassword(prev => ({ ...prev, anthropic: !prev.anthropic }))}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                                     aria-label={showPassword.anthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
+                                    title={showPassword.anthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
                                 >
                                     {showPassword.anthropic ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
