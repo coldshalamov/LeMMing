@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Unbounded File Reads (DoS)
+**Vulnerability:** The `FileReadTool` read entire files into memory without a size limit. This allowed an agent (or attacker) to exhaust server memory by reading a large file (e.g., via `/dev/zero` or a generated large file).
+**Learning:** Python's `path.read_text()` is convenient but dangerous for untrusted inputs as it loads the full content.
+**Prevention:** Always use `open()` with a chunked read or explicit size limit (e.g., `f.read(MAX_SIZE)`) when reading files based on user input.
