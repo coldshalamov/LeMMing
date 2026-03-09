@@ -92,13 +92,14 @@ async def verify_admin_access(request: Request):
         )
 
 
-def rate_limiter(limit: int = 10, window: int = 60):
+def rate_limiter(limit: int = 10, window: int = 60, scope: str = "global"):
     async def dependency(request: Request):
         client_ip = request.client.host if request.client else "unknown"
+        key = f"{client_ip}:{scope}"
         now = time.time()
 
         # Initialize
-        if client_ip not in _request_timestamps:
+        if key not in _request_timestamps:
             # Memory leak protection: prevent unbounded growth
             if len(_request_timestamps) >= MAX_RATE_LIMIT_CLIENTS:
                 # Evict the oldest inserted client (FIFO) to maintain size limit
@@ -107,16 +108,16 @@ def rate_limiter(limit: int = 10, window: int = 60):
                     del _request_timestamps[next(iter(_request_timestamps))]
                 except StopIteration:
                     pass
-            _request_timestamps[client_ip] = []
+            _request_timestamps[key] = []
 
         # Filter old timestamps
-        _request_timestamps[client_ip] = [t for t in _request_timestamps[client_ip] if now - t < window]
+        _request_timestamps[key] = [t for t in _request_timestamps[key] if now - t < window]
 
-        if len(_request_timestamps[client_ip]) >= limit:
-            logger.warning(f"Rate limit exceeded for {client_ip}")
+        if len(_request_timestamps[key]) >= limit:
+            logger.warning(f"Rate limit exceeded for {key}")
             raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-        _request_timestamps[client_ip].append(now)
+        _request_timestamps[key].append(now)
 
     return dependency
 
@@ -222,7 +223,7 @@ class ToolInfo(BaseModel):
     description: str
 
 
-@app.post("/api/messages", dependencies=[Depends(rate_limiter(limit=10, window=60))])
+@app.post("/api/messages", dependencies=[Depends(rate_limiter(limit=10, window=60, scope="messages"))])
 async def send_message(request: SendMessageRequest) -> dict[str, str]:
     """Send a message from 'human' to a target agent."""
     tick = load_tick(BASE_PATH)
@@ -404,7 +405,7 @@ async def get_agent(agent_name: str) -> AgentInfo:
 @app.post(
     "/api/agents",
     status_code=201,
-    dependencies=[Depends(rate_limiter(limit=5, window=60)), Depends(verify_admin_access)],
+    dependencies=[Depends(rate_limiter(limit=5, window=60, scope="agents_create")), Depends(verify_admin_access)],
 )
 async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
     try:
@@ -465,7 +466,7 @@ async def create_agent(request: CreateAgentRequest) -> dict[str, str]:
 @app.post(
     "/api/agents/clone",
     status_code=201,
-    dependencies=[Depends(rate_limiter(limit=5, window=60)), Depends(verify_admin_access)],
+    dependencies=[Depends(rate_limiter(limit=5, window=60, scope="agents_clone")), Depends(verify_admin_access)],
 )
 async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
     try:
@@ -612,7 +613,7 @@ async def list_messages(
 
 @app.post(
     "/api/engine/tick",
-    dependencies=[Depends(rate_limiter(limit=10, window=60)), Depends(verify_admin_access)],
+    dependencies=[Depends(rate_limiter(limit=10, window=60, scope="engine_tick")), Depends(verify_admin_access)],
 )
 async def trigger_tick() -> dict[str, Any]:
     """Manually trigger one engine tick."""
@@ -646,7 +647,7 @@ async def get_engine_config() -> dict[str, Any]:
 
 @app.post(
     "/api/engine/config",
-    dependencies=[Depends(rate_limiter(limit=5, window=60)), Depends(verify_admin_access)],
+    dependencies=[Depends(rate_limiter(limit=5, window=60, scope="engine_config")), Depends(verify_admin_access)],
 )
 async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     """Update engine secrets and persist to secrets.json."""
