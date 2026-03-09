@@ -19,7 +19,7 @@ from .messages import (
     write_outbox_entry,
 )
 from .models import call_llm
-from .org import deduct_credits, get_agent_credits, get_credits, get_org_config
+from .org import deduct_credits, get_agent_credits, get_credits, get_org_config, save_credits
 from .paths import get_config_dir, get_logs_dir, get_tick_file
 from .tools import ToolRegistry, ToolResult
 
@@ -459,7 +459,7 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         save_memory(base_path, agent.name, key, update.get("value"), operation=op, tick=tick)
 
     # Deduct credits
-    deduct_credits(agent.name, cost_per_action, base_path)
+    deduct_credits(agent.name, cost_per_action, base_path, persist=False)
 
     # Log notes to text file (for backward compatibility)
     notes = parsed.get("notes")
@@ -531,6 +531,9 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
             },
         )
         results[agent.name] = run_agent(base_path, agent, tick)
+
+    if firing_agents:
+        save_credits(base_path)
 
     # Cleanup old outbox entries
     max_age_ticks = config.get("max_outbox_age_ticks", 100)
