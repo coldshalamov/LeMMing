@@ -48,6 +48,17 @@ export default function Dashboard() {
     }
   }, [status?.tick, visualTick]);
 
+  // Handle Escape to close agent details
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedAgentName) {
+        setSelectedAgentName(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedAgentName]);
+
   const selectedAgent = agents?.find((a) => a.name === selectedAgentName);
 
   const handleRunTick = async () => {
@@ -73,21 +84,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col h-screen bg-neo-bg text-foreground font-sans overflow-hidden relative">
-      {/* 1) Graph Background */}
-      <div className="absolute inset-0 z-0">
-        {agents && graph && (
-          <OrgGraphView
-            agents={agents}
-            graph={graph}
-            selectedAgent={selectedAgentName}
-            onSelectAgent={setSelectedAgentName}
-            currentTick={visualTick}
-            className="w-full h-full border-none rounded-none bg-neo-bg"
-          />
-        )}
-      </div>
-
-      {/* 2) Overlay HUD */}
+      {/* 1) Overlay HUD */}
       <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between">
         {/* Header Bar */}
         <header className="flex items-center justify-between px-6 pt-4">
@@ -162,12 +159,12 @@ export default function Dashboard() {
         <div className="h-20" />
       </div>
 
-      {/* 3) Manager Sidebar (Left) */}
+      {/* 2) Manager Sidebar (Left) */}
       <div className="absolute top-24 left-6 bottom-24 w-[400px] z-20 pointer-events-none">
         {messages && <ManagerChat messages={messages} />}
       </div>
 
-      {/* 4) Agent Overlay (Top Right) */}
+      {/* 3) Agent Overlay (Top Right) */}
       <div className="absolute top-20 right-6 bottom-24 w-[450px] pointer-events-none z-20 flex flex-col justify-start">
         <AnimatePresence>
           {selectedAgent ? (
@@ -190,7 +187,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => setSelectedAgentName(null)}
                   className="text-white/20 hover:text-white transition-colors"
-                  title="Close"
+                  title="Close (Esc)"
                   aria-label="Close agent details"
                 >
                   <Plus size={20} className="rotate-45" />
@@ -259,7 +256,7 @@ export default function Dashboard() {
         </AnimatePresence>
       </div>
 
-      {/* 5) Bottom Control Bar */}
+      {/* 4) Bottom Control Bar */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
         <div className="flex items-center gap-4 p-2 pl-6 pr-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl">
           <div className="flex flex-col" role="status" aria-live="polite">
@@ -292,6 +289,20 @@ export default function Dashboard() {
             )}
           </button>
         </div>
+      </div>
+
+      {/* 5) Graph Background */}
+      <div className="absolute inset-0 z-0">
+        {agents && graph && (
+          <OrgGraphView
+            agents={agents}
+            graph={graph}
+            selectedAgent={selectedAgentName}
+            onSelectAgent={setSelectedAgentName}
+            currentTick={visualTick}
+            className="w-full h-full border-none rounded-none bg-neo-bg"
+          />
+        )}
       </div>
 
       {/* Modals */}
