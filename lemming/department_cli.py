@@ -6,7 +6,6 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -17,13 +16,27 @@ from .department import (
     get_department_agents,
     get_department_file,
     save_department,
-    save_org_structure,
     save_social_graph,
     validate_department,
 )
 from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
+
+
+def secure_extract_zip(zip_path: Path, target_dir: Path) -> None:
+    """Securely extract a ZIP file preventing Zip Slip vulnerabilities."""
+    import zipfile
+
+    target_dir_resolved = target_dir.resolve()
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for member in zf.namelist():
+            member_path = (target_dir_resolved / member).resolve()
+            if not member_path.is_relative_to(target_dir_resolved):
+                raise ValueError(
+                    f"Zip slip vulnerability detected: {member} attempts to " "path traverse out of target directory."
+                )
+        zf.extractall(target_dir_resolved)
 
 
 @click.group(name="department")
@@ -37,9 +50,10 @@ def list_departments() -> None:
     """List all discovered departments."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     departments = discover_departments(base_path)
 
     if not departments:
@@ -66,9 +80,10 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
     """Create a new department."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     dept = DepartmentMetadata(
         name=name,
         description=description,
@@ -93,9 +108,10 @@ def show_department(name: str) -> None:
     """Show details of a specific department."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     dept_file = get_department_file(base_path, name)
 
     if not dept_file.exists():
@@ -136,9 +152,10 @@ def export_structure(output: str) -> None:
     """Export complete organization structure to JSON."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     org_structure = export_org_structure(base_path)
 
     output_path = Path(output)
@@ -162,9 +179,10 @@ def package_department(name: str, output: str | None) -> None:
     """
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     output_dir = Path(output) if output else (base_path / "departments")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -237,9 +255,10 @@ def import_department(bundle_path: str, merge: bool) -> None:
     """Import a department bundle into the current organization."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
     bundle_file = Path(bundle_path)
 
     if not bundle_file.exists():
@@ -251,11 +270,10 @@ def import_department(bundle_path: str, merge: bool) -> None:
         raise click.Abort()
 
     import tempfile
-    import zipfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
-        shutil.unpack_archive(bundle_file, temp_path)
+        secure_extract_zip(bundle_file, temp_path)
 
         # Find the department directory (should be root or first subdirectory)
         dept_dirs = [d for d in temp_path.iterdir() if d.is_dir()]
@@ -305,7 +323,7 @@ def import_department(bundle_path: str, merge: bool) -> None:
                 shutil.copytree(agent_dir, agent_dst)
                 click.echo(f"✓ Imported agent: {agent_dir.name}")
 
-    click.echo(f"\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
+    click.echo("\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
 
 
 @department_group.command(name="analyze")
@@ -314,9 +332,10 @@ def analyze_social(output: str) -> None:
     """Analyze and export the social graph of the organization."""
     from .cli import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(level="INFO")  # type: ignore
 
     base_path = Path.cwd()
+
 
     # Load current tick
     from .engine import load_tick
