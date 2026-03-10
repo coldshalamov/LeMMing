@@ -95,10 +95,11 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className="flex items-start gap-2 cursor-pointer group"
+        className="flex items-start gap-2 cursor-pointer group rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
         onClick={() => canExpand && setExpanded(!expanded)}
         role="button"
         aria-expanded={expanded}
+        aria-label={expanded ? "Collapse log details" : "Expand log details"}
         tabIndex={0}
         onKeyDown={(e) => {
           if (canExpand && (e.key === "Enter" || e.key === " ")) {
