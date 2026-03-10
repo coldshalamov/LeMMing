@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
 interface GlobalSettingsModalProps {
@@ -109,7 +110,10 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.openai ? "text" : "password"}
                                     placeholder={isExisting.openai ? "••••••••••••••••" : "sk-..."}
                                     value={config.openai_api_key}
-                                    onChange={e => setConfig({ ...config, openai_api_key: e.target.value })}
+                                    onChange={e => {
+                                        if (status === "error") setStatus("idle");
+                                        setConfig({ ...config, openai_api_key: e.target.value });
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-cyan focus:outline-none focus:ring-1 focus:ring-brand-cyan font-mono text-sm"
                                 />
                                 <button
@@ -140,7 +144,10 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     type={showPassword.anthropic ? "text" : "password"}
                                     placeholder={isExisting.anthropic ? "••••••••••••••••" : "sk-ant-..."}
                                     value={config.anthropic_api_key}
-                                    onChange={e => setConfig({ ...config, anthropic_api_key: e.target.value })}
+                                    onChange={e => {
+                                        if (status === "error") setStatus("idle");
+                                        setConfig({ ...config, anthropic_api_key: e.target.value });
+                                    }}
                                     className="w-full bg-neo-surface border border-neo-border p-3 pr-10 rounded text-white focus:border-brand-purple focus:outline-none focus:ring-1 focus:ring-brand-purple font-mono text-sm"
                                 />
                                 <button
@@ -156,24 +163,38 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
-                        >
-                            {status === "loading" ? "SAVING..." : status === "success" ? (
-                                <>
-                                    <Check size={16} /> SAVED
-                                </>
-                            ) : "SAVE CONFIG"}
-                        </button>
+                    <div className="p-6 border-t border-white/5 flex items-center justify-between gap-3 bg-black/10">
+                        {status === "error" ? (
+                            <div className="flex items-center gap-2 text-red-400 text-xs px-2" role="alert">
+                                <AlertTriangle size={14} />
+                                <span>Failed to save. Check connection.</span>
+                            </div>
+                        ) : <div />}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                                className={clsx(
+                                    "px-6 py-2 font-bold rounded flex items-center gap-2 transition-colors disabled:opacity-50",
+                                    status === "error"
+                                        ? "!bg-red-500 text-white hover:bg-red-600"
+                                        : "bg-brand-cyan text-black hover:bg-cyan-300"
+                                )}
+                            >
+                                {status === "loading" ? "SAVING..." : status === "success" ? (
+                                    <>
+                                        <Check size={16} /> SAVED
+                                    </>
+                                ) : status === "error" ? "RETRY" : "SAVE CONFIG"}
+                            </button>
+                        </div>
                     </div>
                 </motion.div>
             </motion.div>
