@@ -13,6 +13,7 @@ def client() -> TestClient:
     api._request_timestamps.clear()
     return TestClient(api.app)
 
+
 def test_admin_auth_not_configured(client: TestClient, tmp_path):
     """Verify sensitive endpoints are accessible when no admin key is set."""
     # Ensure LEMMING_ADMIN_KEY is not set
@@ -20,8 +21,7 @@ def test_admin_auth_not_configured(client: TestClient, tmp_path):
         if "LEMMING_ADMIN_KEY" in os.environ:
             del os.environ["LEMMING_ADMIN_KEY"]
 
-        with patch("lemming.api.BASE_PATH", tmp_path), \
-             patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+        with patch("lemming.api.BASE_PATH", tmp_path), patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
 
             # Setup minimal environment for run_once (trigger_tick)
             config_dir = tmp_path / "lemming" / "config"
@@ -41,11 +41,14 @@ def test_admin_auth_not_configured(client: TestClient, tmp_path):
             resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
             assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
 
+
 def test_admin_auth_configured_success(client: TestClient, tmp_path):
     """Verify access is allowed with correct key when configured."""
-    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
-         patch("lemming.api.BASE_PATH", tmp_path), \
-         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
 
         # Setup minimal environment
         config_dir = tmp_path / "lemming" / "config"
@@ -67,11 +70,14 @@ def test_admin_auth_configured_success(client: TestClient, tmp_path):
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"}, headers=headers)
         assert resp.status_code == 200
 
+
 def test_admin_auth_configured_failure(client: TestClient, tmp_path):
     """Verify access is denied without correct key when configured."""
-    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
-         patch("lemming.api.BASE_PATH", tmp_path), \
-         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
 
         # Setup minimal environment
         config_dir = tmp_path / "lemming" / "config"
@@ -95,11 +101,14 @@ def test_admin_auth_configured_failure(client: TestClient, tmp_path):
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
         assert resp.status_code == 401
 
+
 def test_agent_creation_auth_configured(client: TestClient, tmp_path):
     """Verify agent creation/cloning is protected when admin key is set."""
-    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
-         patch("lemming.api.BASE_PATH", tmp_path), \
-         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
 
         # Setup minimal environment
         agents_dir = tmp_path / "agents"
@@ -138,9 +147,7 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         assert resp.status_code == 401
 
         # Clone Agent - No Auth
-        resp = client.post(
-            "/api/agents/clone", json={"source_agent": "source", "target_name": "cloned_agent"}
-        )
+        resp = client.post("/api/agents/clone", json={"source_agent": "source", "target_name": "cloned_agent"})
         assert resp.status_code == 401
 
         # 2. Test Authenticated Access
