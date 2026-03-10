@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, WebSocketException
+from fastapi import status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +21,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            secrets_data = json.load(f)
+            for k, v in secrets_data.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -90,6 +90,22 @@ async def verify_admin_access(request: Request):
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin key",
         )
+
+
+async def verify_websocket_access(websocket: WebSocket, key: str | None = None):
+    """Verify admin access for WebSocket if configured."""
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    # If no key is configured, allow access (default local dev mode)
+    if not admin_key:
+        return
+
+    # Check query parameter 'key' or header 'X-Admin-Key'
+    header_key = websocket.headers.get("X-Admin-Key")
+    token_to_check = key or header_key
+
+    # Use constant-time comparison to prevent timing attacks
+    if not token_to_check or not secrets.compare_digest(token_to_check, admin_key):
+        raise WebSocketException(code=http_status.WS_1008_POLICY_VIOLATION)
 
 
 def rate_limiter(limit: int = 10, window: int = 60):
@@ -672,7 +688,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     return {"status": "updated"}
 
 
-@app.websocket("/ws")
+@app.websocket("/ws", dependencies=[Depends(verify_websocket_access)])
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     try:
