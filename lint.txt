@@ -1,0 +1,43 @@
+ruff check lemming tests
+F841 Local variable `dept_parser` is assigned to but never used
+   --> lemming/cli.py:475:5
+    |
+474 |     # Department management commands
+475 |     dept_parser = subparsers.add_parser("department-list", help="List all departments")
+    |     ^^^^^^^^^^^
+476 |
+477 |     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
+    |
+help: Remove assignment to unused variable `dept_parser`
+
+E501 Line too long (233 > 120)
+   --> tests/test_api_auth.py:120:121
+    |
+118 | …
+119 | …
+120 | …ns": {"read_outboxes": [], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}'
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+121 | …
+122 | …
+    |
+
+E402 Module level import not at top of file
+  --> tests/test_tools_security.py:89:1
+   |
+89 | import os
+   | ^^^^^^^^^
+90 |
+91 | import pytest
+   |
+
+E402 Module level import not at top of file
+  --> tests/test_tools_security.py:91:1
+   |
+89 | import os
+90 |
+91 | import pytest
+   | ^^^^^^^^^^^^^
+   |
+
+Found 4 errors.
+No fixes available (1 hidden fix can be enabled with the `--unsafe-fixes` option).
