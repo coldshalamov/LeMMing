@@ -22,3 +22,7 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+## 2024-05-24 - [Python module shadowing breaking authentication]
+**Vulnerability:** The Python standard library `secrets` module was imported, but a local variable named `secrets` was used to load a JSON dictionary in `lemming/api.py`. This reassigned the global module reference, breaking `verify_admin_access` because it later called `secrets.compare_digest(...)`, leading to a crash (AttributeError) instead of proper authentication.
+**Learning:** Variable shadowing of imported security modules (like `secrets`) causes runtime `AttributeError`s that can break authentication flows, potentially leading to denial of service or failed auth checks.
+**Prevention:** Always use distinct names for local variables (like `secrets_data` or `secrets_config`) to avoid shadowing imported standard library modules.
