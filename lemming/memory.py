@@ -97,8 +97,6 @@ def save_memory(
     )
 
 
-
-
 def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
     """
     Load a memory entry for an agent.
