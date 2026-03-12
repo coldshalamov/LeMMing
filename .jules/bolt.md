@@ -23,3 +23,7 @@
 ## 2024-05-26 - [Pathlib vs Open String paths]
 **Learning:** `pathlib.Path` instantiation has overhead that is noticeably slower in hot loops than plain strings with `os.path.join`. We can gain a performance improvement by bypassing `Path` instantiation in internal paths when we just need to pass it to Python's built-in `open()`.
 **Action:** When working in hot loops for file I/O operations like loading cached outbox entries, use `open()` with string paths instead of `Path` objects.
+
+## 2024-05-27 - [Caching `load_agent`]
+**Learning:** `load_agent` ignores the `_agent_cache` used by `discover_agents`. In operations that frequently lookup individual agents by name, this causes excessive `json.load` overhead, defeating the purpose of the existing agent cache.
+**Action:** Share the `_agent_cache` mechanism inside `load_agent` by verifying `st_mtime` before file loading to improve single-agent lookup performance.

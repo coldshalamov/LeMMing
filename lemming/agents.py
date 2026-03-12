@@ -221,13 +221,23 @@ def _validate_resume_dict(resume_path: Path, data: dict[str, Any]) -> list[str]:
 
 def load_agent(base_path: Path, name: str) -> Agent:
     resume_path = get_resume_json_path(base_path, name)
-    # Optimization: Use EAFP to avoid redundant stat call.
+
+    # Optimization: Check cache first based on mtime to avoid redundant JSON parsing
     try:
-        data = _load_resume_json(resume_path)
+        mtime = resume_path.stat().st_mtime
     except FileNotFoundError:
         raise FileNotFoundError(f"Missing resume.json for agent {name}")
 
-    return Agent.from_resume_data(resume_path, data)
+    if resume_path in _agent_cache:
+        cached_mtime, cached_agent = _agent_cache[resume_path]
+        if cached_mtime == mtime:
+            return cached_agent
+
+    data = _load_resume_json(resume_path)
+    agent = Agent.from_resume_data(resume_path, data)
+
+    _agent_cache[resume_path] = (mtime, agent)
+    return agent
 
 
 def discover_agents(base_path: Path) -> list[Agent]:
