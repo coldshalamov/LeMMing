@@ -1,3 +1,7 @@
+import os
+
+import pytest
+
 from lemming.tools import CreateAgentTool, ShellTool
 
 
@@ -84,11 +88,6 @@ def test_shell_tool_sandbox_arguments(tmp_path):
     assert not result.success
     assert "security violation" in result.error.lower()
     assert "directory traversal" in result.error.lower()
-
-
-import os
-
-import pytest
 
 
 @pytest.mark.skipif(
