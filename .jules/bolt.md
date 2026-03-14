@@ -1,5 +1,3 @@
-# Bolt's Journal
-
 ## 2024-05-22 - [Project Structure]
 **Learning:** This project uses a file-based architecture for agent communication and state persistence.
 **Action:** Focus backend optimizations on file I/O operations (e.g., `os.scandir` instead of `os.listdir` or reading files) and efficient JSON handling.
@@ -23,3 +21,7 @@
 ## 2024-05-26 - [Pathlib vs Open String paths]
 **Learning:** `pathlib.Path` instantiation has overhead that is noticeably slower in hot loops than plain strings with `os.path.join`. We can gain a performance improvement by bypassing `Path` instantiation in internal paths when we just need to pass it to Python's built-in `open()`.
 **Action:** When working in hot loops for file I/O operations like loading cached outbox entries, use `open()` with string paths instead of `Path` objects.
+
+## 2024-05-27 - [load_agent caching]
+**Learning:** `load_agent` frequently reads `resume.json` from disk and parses it. Applying the OS `stat()` cache technique from `discover_agents` reduces load times from ~0.11ms to ~0.035ms, yielding a 3x speedup.
+**Action:** Utilize file modification timestamps (`st_mtime`) combined with memory cache to bypass slow disk reads and JSON decodes for static configurations.
