@@ -23,3 +23,7 @@
 ## 2024-05-26 - [Pathlib vs Open String paths]
 **Learning:** `pathlib.Path` instantiation has overhead that is noticeably slower in hot loops than plain strings with `os.path.join`. We can gain a performance improvement by bypassing `Path` instantiation in internal paths when we just need to pass it to Python's built-in `open()`.
 **Action:** When working in hot loops for file I/O operations like loading cached outbox entries, use `open()` with string paths instead of `Path` objects.
+
+## 2024-05-27 - [Recursive Path Scanning]
+**Learning:** `os.scandir` is fast, but recursively scanning thousands of files in agent subdirectories (`workspace`, `memory`) during discovery creates a massive bottleneck. Because the architecture enforces a flat agent structure (agents are top-level folders), there's no need to traverse deeper once an agent is found.
+**Action:** When searching for agent files (`resume.json`), stop adding subdirectories to the search stack as soon as the `resume.json` is found to prune the search tree.

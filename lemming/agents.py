@@ -256,18 +256,21 @@ def discover_agents(base_path: Path) -> list[Agent]:
         # Check for resume.json in this directory
         resume_entry = next((e for e in entries if e.name == "resume.json" and e.is_file()), None)
 
-        # Process subdirectories
-        for entry in entries:
-            if entry.is_dir():
-                # Skip hidden directories and agent_template
-                if entry.name.startswith("."):
-                    continue
-                if entry.name == "agent_template":
-                    continue
-                # Also skip agent_template if it's a subfolder?
-                # The original logic used rel_path.startswith("agent_template").
-                # This logic is simpler: we just don't traverse into agent_template at any level.
-                stack.append(Path(entry.path))
+        # Optimization: Enforce flat agent structure. If we found an agent, don't traverse its subdirectories
+        # (prevents scanning massive workspaces, memory, outbox directories).
+        if not resume_entry:
+            # Process subdirectories
+            for entry in entries:
+                if entry.is_dir():
+                    # Skip hidden directories and agent_template
+                    if entry.name.startswith("."):
+                        continue
+                    if entry.name == "agent_template":
+                        continue
+                    # Also skip agent_template if it's a subfolder?
+                    # The original logic used rel_path.startswith("agent_template").
+                    # This logic is simpler: we just don't traverse into agent_template at any level.
+                    stack.append(Path(entry.path))
 
         if resume_entry:
             resume_path = Path(resume_entry.path)
