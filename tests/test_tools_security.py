@@ -108,7 +108,7 @@ def test_shell_tool_absolute_path_argument(tmp_path):
     else:
         # Unix: Root (e.g. /etc/passwd)
         abs_path = "/etc/passwd"
-        
+
     command = f"echo {abs_path}"
 
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
