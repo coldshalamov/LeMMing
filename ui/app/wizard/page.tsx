@@ -548,7 +548,7 @@ export default function WizardPage() {
                       <button
                         type="button"
                         onClick={() => setShowToolModal(true)}
-                        className="w-full p-6 border-2 border-dashed border-white/20 rounded-xl hover:border-brand-cyan/50 hover:bg-white/5 transition-all group"
+                        className="w-full p-6 border-2 border-dashed border-white/20 rounded-xl hover:border-brand-cyan/50 hover:bg-white/5 transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                       >
                         <div className="flex items-center justify-center gap-3 text-gray-400 group-hover:text-brand-cyan transition-colors">
                           <Plus size={24} />
@@ -566,10 +566,28 @@ export default function WizardPage() {
                           {formData.permissions.tools.map((tool) => (
                             <div
                               key={tool}
-                              className="px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan flex items-center gap-2"
+                              className="pl-3 pr-1 py-1 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan flex items-center gap-2"
                             >
                               <Check size={12} />
                               {tool}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFormData({
+                                    ...formData,
+                                    permissions: {
+                                      ...formData.permissions,
+                                      tools: formData.permissions.tools.filter((t) => t !== tool),
+                                    },
+                                  });
+                                }}
+                                className="p-0.5 hover:bg-brand-cyan/20 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+                                aria-label={`Remove ${tool} capability`}
+                                title={`Remove ${tool}`}
+                              >
+                                <X size={12} />
+                              </button>
                             </div>
                           ))}
                         </div>
