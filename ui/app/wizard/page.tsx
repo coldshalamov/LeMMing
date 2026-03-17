@@ -13,7 +13,6 @@ import {
   Clock,
   Shield,
   Save,
-  X,
   Brain,
   Plus,
   Copy,
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { ScheduleClock } from "@/components/ScheduleClock";
 import { ToolSelectorModal } from "@/components/ToolSelectorModal";
