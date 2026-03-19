@@ -1,4 +1,3 @@
-
 from lemming.paths import get_agents_dir
 from lemming.tools import FileWriteTool
 
@@ -19,7 +18,7 @@ def test_nested_agent_workspace_isolation(tmp_path):
     (victim_dir / "workspace").mkdir()
 
     # 2. Create an "attacker" agent nested in "subdir"
-    attacker_dir = agents_dir / "subdir" / "victim" # Same name "victim"
+    attacker_dir = agents_dir / "subdir" / "victim"  # Same name "victim"
     attacker_dir.mkdir(parents=True)
     (attacker_dir / "workspace").mkdir()
 
@@ -28,11 +27,7 @@ def test_nested_agent_workspace_isolation(tmp_path):
 
     # The engine passes agent_path=attacker_dir
     result = tool.execute(
-        agent_name="victim",
-        base_path=base_path,
-        path="test_file.txt",
-        content="data",
-        agent_path=attacker_dir
+        agent_name="victim", base_path=base_path, path="test_file.txt", content="data", agent_path=attacker_dir
     )
 
     assert result.success
@@ -46,6 +41,7 @@ def test_nested_agent_workspace_isolation(tmp_path):
 
     # It SHOULD NOT be in victim's workspace
     assert not victim_file.exists(), "File should NOT be written to root agent's workspace"
+
 
 def test_legacy_agent_workspace_fallback(tmp_path):
     """
@@ -64,12 +60,7 @@ def test_legacy_agent_workspace_fallback(tmp_path):
     tool = FileWriteTool()
 
     # No agent_path provided
-    result = tool.execute(
-        agent_name="legacy",
-        base_path=base_path,
-        path="legacy.txt",
-        content="legacy"
-    )
+    result = tool.execute(agent_name="legacy", base_path=base_path, path="legacy.txt", content="legacy")
 
     assert result.success
     assert (root_dir / "workspace" / "legacy.txt").exists()
