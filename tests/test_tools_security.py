@@ -1,7 +1,3 @@
-import os
-
-import pytest
-
 from lemming.tools import CreateAgentTool, ShellTool
 
 
@@ -90,9 +86,9 @@ def test_shell_tool_sandbox_arguments(tmp_path):
     assert "directory traversal" in result.error.lower()
 
 
-@pytest.mark.skipif(
-    os.name == "nt", reason="ShellTool uses Unix-style tools/commands not available as executables on Windows"
-)
+import os
+import pytest
+@pytest.mark.skipif(os.name == 'nt', reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)")
 def test_shell_tool_absolute_path_argument(tmp_path):
     """Ensure ShellTool blocks absolute paths in arguments."""
     base_path = tmp_path / "lemming"
@@ -106,8 +102,7 @@ def test_shell_tool_absolute_path_argument(tmp_path):
 
     # Attempt absolute path
     import os
-
-    if os.name == "nt":
+    if os.name == 'nt':
         # Windows: Drive + Root (e.g. C:\Windows)
         abs_path = "C:\\Windows\\System32\\drivers\\etc\\hosts"
     else:
