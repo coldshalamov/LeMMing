@@ -192,14 +192,14 @@ class CLIProvider(LLMProvider):
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """
         Execute the CLI command.
-        
+
         The last message content is treated as the input/prompt for the CLI tool.
         """
         # Get the latest prompt
         prompt = messages[-1]["content"] if messages else ""
-        
+
         # Security check: Prevent Argument Injection
-        if self.prevent_arg_injection and prompt.startswith("-"):
+        if self.prevent_arg_injection and prompt.lstrip().startswith("-"):
             # We block any prompt starting with "-" to prevent it from being interpreted as a flag
             # by the underlying tool (e.g. -n, --help, -c, etc.)
             raise ValueError(f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
@@ -207,8 +207,8 @@ class CLIProvider(LLMProvider):
 
         # Prepare command
         cmd_args = self.command if isinstance(self.command, list) else shlex.split(self.command)
-        
-        # Determine how to pass input. 
+
+        # Determine how to pass input.
         # Default strategy: Append prompt as the last argument if it's not empty
         # A more advanced version might support stdin or templating.
         if prompt:
