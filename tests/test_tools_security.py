@@ -91,8 +91,7 @@ def test_shell_tool_sandbox_arguments(tmp_path):
 
 
 @pytest.mark.skipif(
-    os.name == 'nt',
-    reason="ShellTool uses Unix-style tools/commands not available as executables on Windows"
+    os.name == "nt", reason="ShellTool uses Unix-style tools/commands not available as executables on Windows"
 )
 def test_shell_tool_absolute_path_argument(tmp_path):
     """Ensure ShellTool blocks absolute paths in arguments."""
@@ -107,7 +106,8 @@ def test_shell_tool_absolute_path_argument(tmp_path):
 
     # Attempt absolute path
     import os
-    if os.name == 'nt':
+
+    if os.name == "nt":
         # Windows: Drive + Root (e.g. C:\Windows)
         abs_path = "C:\\Windows\\System32\\drivers\\etc\\hosts"
     else:
