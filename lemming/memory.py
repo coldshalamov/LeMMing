@@ -31,7 +31,9 @@ def validate_memory_key(key: str) -> None:
         )
 
 
-def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operation: str = 'set', tick: int | None = None) -> None:
+def save_memory(
+    base_path: Path, agent_name: str, key: str, value: Any, operation: str = "set", tick: int | None = None
+) -> None:
     """
     Save a memory entry for an agent.
 
@@ -45,11 +47,21 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operatio
     """
     validate_memory_key(key)
     memory_dir = get_memory_dir(base_path, agent_name)
+    # Optimization: bypass Path object instantiation for file ops in hot paths
+    memory_dir_str = str(memory_dir)
+    memory_file_str = os.path.join(memory_dir_str, f"{key}.json")
+
     # Optimization: Removed immediate mkdir call. We rely on try/except
     # in the write operation to handle missing directories, saving a stat call.
 
-    memory_file = memory_dir / f"{key}.json"
-    entry = {'key': key, 'value': value, 'timestamp_utc': datetime.now(UTC).isoformat(), 'agent': agent_name, 'operation': operation, 'tick': tick}
+    entry = {
+        "key": key,
+        "value": value,
+        "timestamp_utc": datetime.now(UTC).isoformat(),
+        "agent": agent_name,
+        "operation": operation,
+        "tick": tick,
+    }
     # Handle different operations
     if operation == "append":
         # Load existing value and append
@@ -74,20 +86,18 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operatio
     elif operation != "set":
         raise ValueError(f"Unknown memory operation: {operation}")
     try:
-        with memory_file.open("w", encoding="utf-8") as f:
+        with open(memory_file_str, "w", encoding="utf-8") as f:
             json.dump(entry, f, indent=2)
     except FileNotFoundError:
         # Parent directory likely doesn't exist
         memory_dir.mkdir(parents=True, exist_ok=True)
-        with memory_file.open("w", encoding="utf-8") as f:
+        with open(memory_file_str, "w", encoding="utf-8") as f:
             json.dump(entry, f, indent=2)
 
     logger.debug(
         "memory_saved",
         extra={"event": "memory_saved", "agent": agent_name, "key": key},
     )
-
-
 
 
 def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
@@ -107,13 +117,16 @@ def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
     except ValueError:
         return None
 
-    memory_file = get_memory_dir(base_path, agent_name) / f"{key}.json"
+    # Optimization: bypass Path object instantiation for file ops in hot paths
+    # os.path.join with strings is significantly faster than Path object construction
+    memory_dir_str = str(get_memory_dir(base_path, agent_name))
+    memory_file_str = os.path.join(memory_dir_str, f"{key}.json")
 
     # Optimization: Removed .exists() check. Using try/except FileNotFoundError (EAFP)
     # is faster as it saves a stat call.
 
     try:
-        with memory_file.open("r", encoding="utf-8") as f:
+        with open(memory_file_str, encoding="utf-8") as f:
             entry = json.load(f)
         # Backward compatibility: handle both old (timestamp) and new (timestamp_utc) format
         # Also handle missing operation/tick fields

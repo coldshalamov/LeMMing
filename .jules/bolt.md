@@ -27,3 +27,7 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+
+## 2024-05-27 - [Pathlib Instantiation Overhead in memory.py]
+**Learning:** `pathlib.Path` instantiation inside high-frequency file I/O operations (like `save_memory` and `load_memory`) acts as a noticeable bottleneck due to the cost of constructing path objects. The string operations via `os.path.join` bypassing object instantiation are consistently much faster.
+**Action:** Replaced `Path` instantiations in memory operations (`memory_file.open(...)` using `memory_dir / f"{key}.json"`) with string construction (`os.path.join(str(memory_dir), f"{key}.json")`) and standard built-in `open()`. Apply similar `Path` instantiation avoidance to other hot path file I/O operations where appropriate.
