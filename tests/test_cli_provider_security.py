@@ -21,6 +21,28 @@ def test_cli_provider_arg_injection():
         # Ensure subprocess was NOT called
         mock_run.assert_not_called()
 
+def test_cli_provider_arg_injection_bypass():
+    """Verify that CLIProvider correctly blocks argument injection bypasses (e.g. leading spaces/newlines)."""
+    provider = CLIProvider(command=["echo"])
+
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="mock output", stderr="", returncode=0)
+
+        # Simulate prompts that attempt to bypass the check
+        prompts = [
+            " -injected_flag",
+            "\n-injected_flag",
+            "\t-injected_flag",
+            "   \n\t -injected_flag"
+        ]
+
+        for prompt in prompts:
+            messages = [{"role": "user", "content": prompt}]
+            with pytest.raises(ValueError, match="Security violation"):
+                provider.call(model_name="echo", messages=messages)
+
+        mock_run.assert_not_called()
+
 def test_cli_provider_allow_arg_injection_with_config():
     """Verify that CLIProvider ALLOWS flags if prevent_arg_injection is False."""
     provider = CLIProvider(command=["echo"], prevent_arg_injection=False)
