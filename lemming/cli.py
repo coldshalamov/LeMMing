@@ -13,6 +13,7 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
+    save_org_structure,
     save_social_graph,
 )
 from .engine import load_tick, run_forever, run_once

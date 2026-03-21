@@ -1,5 +1,5 @@
+import pytest
 from dataclasses import asdict
-
 from lemming.messages import OutboxEntry
 
 

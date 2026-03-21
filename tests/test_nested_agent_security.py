@@ -1,5 +1,7 @@
-from lemming.paths import get_agents_dir
+import shutil
+from pathlib import Path
 from lemming.tools import FileWriteTool
+from lemming.paths import get_agents_dir
 
 
 def test_nested_agent_workspace_isolation(tmp_path):
