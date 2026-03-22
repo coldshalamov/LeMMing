@@ -1,6 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from lemming.providers import CLIProvider
+
 
 def test_cli_provider_arg_injection():
     """Verify that CLIProvider raises ValueError when prompt starts with '-'."""
@@ -21,6 +24,7 @@ def test_cli_provider_arg_injection():
         # Ensure subprocess was NOT called
         mock_run.assert_not_called()
 
+
 def test_cli_provider_allow_arg_injection_with_config():
     """Verify that CLIProvider ALLOWS flags if prevent_arg_injection is False."""
     provider = CLIProvider(command=["echo"], prevent_arg_injection=False)
@@ -36,6 +40,7 @@ def test_cli_provider_allow_arg_injection_with_config():
         mock_run.assert_called_once()
         args = mock_run.call_args[0][0]
         assert args == ["echo", "-allowed_flag"]
+
 
 def test_cli_provider_arg_injection_with_spaces():
     """Verify that CLIProvider raises ValueError when prompt starts with spaces then '-'."""
