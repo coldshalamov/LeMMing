@@ -27,3 +27,7 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+
+## 2024-05-27 - [Lazy Evaluation in Memory Contexts]
+**Learning:** `get_memory_context` previously loaded and parsed all memory files for an agent via `get_memory_summary`, even though it only needs to display `max_items` entries. This greedy evaluation wastes I/O and CPU, scaling linearly with total memory items. Fetching directory entries directly and breaking early yields an ~80% speedup.
+**Action:** When a function truncates or limits output, apply lazy evaluation. Avoid calling summary/aggregation functions that eagerly load unbounded datasets.

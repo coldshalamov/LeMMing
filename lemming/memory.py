@@ -31,7 +31,9 @@ def validate_memory_key(key: str) -> None:
         )
 
 
-def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operation: str = 'set', tick: int | None = None) -> None:
+def save_memory(
+    base_path: Path, agent_name: str, key: str, value: Any, operation: str = "set", tick: int | None = None
+) -> None:
     """
     Save a memory entry for an agent.
 
@@ -49,7 +51,14 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operatio
     # in the write operation to handle missing directories, saving a stat call.
 
     memory_file = memory_dir / f"{key}.json"
-    entry = {'key': key, 'value': value, 'timestamp_utc': datetime.now(UTC).isoformat(), 'agent': agent_name, 'operation': operation, 'tick': tick}
+    entry = {
+        "key": key,
+        "value": value,
+        "timestamp_utc": datetime.now(UTC).isoformat(),
+        "agent": agent_name,
+        "operation": operation,
+        "tick": tick,
+    }
     # Handle different operations
     if operation == "append":
         # Load existing value and append
@@ -86,8 +95,6 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operatio
         "memory_saved",
         extra={"event": "memory_saved", "agent": agent_name, "key": key},
     )
-
-
 
 
 def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
@@ -322,21 +329,46 @@ def get_memory_context(base_path: Path, agent_name: str, max_items: int = 20) ->
     May truncate or summarize if there are many keys/values.
     """
 
-    summary = get_memory_summary(base_path, agent_name)
-    if not summary:
+    memory_dir = get_memory_dir(base_path, agent_name)
+
+    try:
+        with os.scandir(memory_dir) as it:
+            entries = [entry for entry in it if entry.is_file() and entry.name.endswith(".json")]
+    except FileNotFoundError:
+        return "No memory entries."
+
+    if not entries:
         return "No memory entries."
 
     lines: list[str] = []
-    for idx, (key, value) in enumerate(summary.items()):
+    for idx, entry in enumerate(entries):
         if idx >= max_items:
             lines.append("... (truncated)")
             break
-        display = value
+
+        key = entry.name[:-5]
         try:
-            display = json.dumps(value)
-        except Exception:  # pragma: no cover - best effort
-            display = str(value)
-        lines.append(f"{key}: {display}")
+            with open(entry.path, encoding="utf-8") as f:
+                data = json.load(f)
+            value = data.get("value")
+
+            try:
+                display = json.dumps(value)
+            except Exception:  # pragma: no cover - best effort
+                display = str(value)
+            lines.append(f"{key}: {display}")
+        except Exception as exc:
+            logger.error(
+                "memory_load_failed",
+                extra={
+                    "event": "memory_load_failed",
+                    "agent": agent_name,
+                    "key": key,
+                    "error": str(exc),
+                },
+            )
+            continue
+
     return "\n".join(lines)
 
 
