@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-25 - Inline Actions in Multi-Step Wizards
+**Learning:** For multi-step wizards, forcing users to reopen a modal just to remove an item they selected is a source of friction.
+**Action:** When displaying selected items (like capabilities or permissions) as chips, include inline remove buttons on the chips themselves. Ensure these buttons have `aria-label` for screen readers and `focus-visible:ring-2` styling so keyboard users can navigate to and activate them easily without leaving the current step.
