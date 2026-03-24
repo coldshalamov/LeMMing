@@ -334,11 +334,11 @@ def get_memory_context(base_path: Path, agent_name: str, max_items: int = 20) ->
 
     try:
         with os.scandir(memory_dir) as it:
-            # Sort to maintain deterministic ordering for LLM prompt caching
+            # Sort alphabetically by filename for deterministic LLM prompt caching
             entries = sorted(
-                (entry for entry in it if entry.is_file() and entry.name.endswith(".json")), key=lambda e: e.name
+                (entry for entry in it if entry.is_file() and entry.name.endswith(".json")),
+                key=lambda e: e.name,
             )
-
             for idx, entry in enumerate(entries):
                 if idx >= max_items:
                     lines.append("... (truncated)")
