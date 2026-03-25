@@ -199,7 +199,7 @@ class CLIProvider(LLMProvider):
         prompt = messages[-1]["content"] if messages else ""
         
         # Security check: Prevent Argument Injection
-        if self.prevent_arg_injection and prompt.startswith("-"):
+        if self.prevent_arg_injection and prompt.lstrip().startswith("-"):
             # We block any prompt starting with "-" to prevent it from being interpreted as a flag
             # by the underlying tool (e.g. -n, --help, -c, etc.)
             raise ValueError(f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
