@@ -95,11 +95,16 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className="flex items-start gap-2 cursor-pointer group"
+        className={clsx(
+          "flex items-start gap-2 group transition-colors rounded-sm px-1 -mx-1",
+          canExpand
+            ? "cursor-pointer hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+            : ""
+        )}
         onClick={() => canExpand && setExpanded(!expanded)}
-        role="button"
-        aria-expanded={expanded}
-        tabIndex={0}
+        role={canExpand ? "button" : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        tabIndex={canExpand ? 0 : undefined}
         onKeyDown={(e) => {
           if (canExpand && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
@@ -112,6 +117,7 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
             "mt-0.5 transition-opacity",
             canExpand ? "opacity-50 group-hover:opacity-100" : "opacity-0",
           )}
+          aria-hidden="true"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </div>
