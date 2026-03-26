@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Space-Padding Argument Injection
+**Vulnerability:** The `CLIProvider` checked for argument injection by verifying if the prompt started with a hyphen (`prompt.startswith("-")`). Attackers could bypass this by adding leading whitespace (e.g., `  -n`).
+**Learning:** Checking the prefix of unsanitized input is ineffective if the parsing layer (like shell or shlex) ignores leading whitespace.
+**Prevention:** Always strip leading whitespace (`prompt.lstrip().startswith("-")`) before performing prefix-based argument validation.
