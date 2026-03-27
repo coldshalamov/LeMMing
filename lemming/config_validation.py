@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
-from jsonschema import Draft7Validator
+from jsonschema import Draft7Validator  # type: ignore
 
 
 class ValidationError(ValueError):
@@ -50,7 +50,7 @@ def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
     with resources.as_file(schema_path) as path:
         schema = json.loads(path.read_text(encoding="utf-8"))
     validator = Draft7Validator(schema)
-    return validator.iter_errors(instance)
+    yield from validator.iter_errors(instance)
 
 
 def _format_jsonschema_error(error: Any) -> str:

@@ -22,3 +22,7 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+## 2024-05-24 - [FileReadTool Memory Exhaustion (DoS)]
+**Vulnerability:** `FileReadTool.execute` in `lemming/tools.py` reads entire files into memory without size checks, allowing a rogue agent (or user output redirection) to create and read massive files, causing backend memory exhaustion.
+**Learning:** Tools handling file operations often implicitly trust file sizes. While write limits existed (`MAX_FILE_SIZE = 100KB`), read limits were surprisingly omitted.
+**Prevention:** Always check `Path.stat().st_size` against a safe maximum before reading file contents into memory in any tool operation.
