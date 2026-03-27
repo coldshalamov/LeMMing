@@ -13,6 +13,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar, cast
 
+import requests  # type: ignore[import-untyped]
+
 logger = logging.getLogger(__name__)
 
 
@@ -136,7 +138,6 @@ class OllamaProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call Ollama API."""
-        import requests
 
         logger.info(
             "ollama_call",
