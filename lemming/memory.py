@@ -328,53 +328,22 @@ def get_memory_context(base_path: Path, agent_name: str, max_items: int = 20) ->
     Return a text block summarizing the agent's memory suitable for prompt injection.
     May truncate or summarize if there are many keys/values.
     """
-    # Optimization: Lazy evaluation. Read and parse only up to max_items files using os.scandir
-    # instead of loading all memories into a dictionary with get_memory_summary().
-    memory_dir = get_memory_dir(base_path, agent_name)
-    lines: list[str] = []
 
-    try:
-        with os.scandir(memory_dir) as it:
-            # We must sort to maintain deterministic ordering for LLM caching
-            entries = sorted(
-                (entry for entry in it if entry.is_file() and entry.name.endswith(".json")), key=lambda e: e.name
-            )
-
-            if not entries:
-                return "No memory entries."
-
-            count = 0
-            for entry in entries:
-                if count >= max_items:
-                    lines.append("... (truncated)")
-                    break
-
-                key = entry.name[:-5]
-                try:
-                    with open(entry.path, encoding="utf-8") as f:
-                        data = json.load(f)
-                    value = data.get("value")
-                    display = value
-                    try:
-                        display = json.dumps(value)
-                    except Exception:  # pragma: no cover - best effort
-                        display = str(value)
-                    lines.append(f"{key}: {display}")
-                    count += 1
-                except Exception as exc:
-                    logger.error(
-                        "memory_load_failed",
-                        extra={
-                            "event": "memory_load_failed",
-                            "agent": agent_name,
-                            "key": key,
-                            "error": str(exc),
-                        },
-                    )
-
-    except FileNotFoundError:
+    summary = get_memory_summary(base_path, agent_name)
+    if not summary:
         return "No memory entries."
 
+    lines: list[str] = []
+    for idx, (key, value) in enumerate(summary.items()):
+        if idx >= max_items:
+            lines.append("... (truncated)")
+            break
+        display = value
+        try:
+            display = json.dumps(value)
+        except Exception:  # pragma: no cover - best effort
+            display = str(value)
+        lines.append(f"{key}: {display}")
     return "\n".join(lines)
 
 
