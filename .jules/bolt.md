@@ -27,3 +27,7 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+
+## $(date +%Y-%m-%d) - [Lazy Evaluation for Memory Context]
+**Learning:** `get_memory_context` eagerly loaded and parsed all JSON memory files into a dictionary via `get_memory_summary`, even when only extracting a small number (e.g., 20) of items due to truncation. This eager loading strategy incurred significant O(N) JSON parsing and disk I/O overhead as the number of memory entries scaled.
+**Action:** Always prefer lazy evaluation (e.g., explicitly reading with `os.scandir` and breaking early) over eager loading when only a truncated subset of items (`max_items`) is required. Remember to sort entries after scanning to maintain deterministic ordering for prompt caching.
