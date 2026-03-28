@@ -322,21 +322,53 @@ def get_memory_context(base_path: Path, agent_name: str, max_items: int = 20) ->
     May truncate or summarize if there are many keys/values.
     """
 
-    summary = get_memory_summary(base_path, agent_name)
-    if not summary:
+    memory_dir = get_memory_dir(base_path, agent_name)
+
+    # Optimization: Avoid O(N) file reads and JSON parsing by only reading up to max_items files lazily
+    try:
+        entries = []
+        with os.scandir(memory_dir) as it:
+            for entry in it:
+                if entry.is_file() and entry.name.endswith(".json"):
+                    entries.append(entry.name)
+    except FileNotFoundError:
         return "No memory entries."
 
+    if not entries:
+        return "No memory entries."
+
+    entries.sort()
+
     lines: list[str] = []
-    for idx, (key, value) in enumerate(summary.items()):
+    for idx, filename in enumerate(entries):
         if idx >= max_items:
             lines.append("... (truncated)")
             break
-        display = value
+
+        key = filename[:-5]
         try:
-            display = json.dumps(value)
-        except Exception:  # pragma: no cover - best effort
-            display = str(value)
-        lines.append(f"{key}: {display}")
+            with open(memory_dir / filename, encoding="utf-8") as f:
+                data = json.load(f)
+            value = data.get("value")
+
+            display = value
+            try:
+                display = json.dumps(value)
+            except Exception:  # pragma: no cover - best effort
+                display = str(value)
+
+            lines.append(f"{key}: {display}")
+        except Exception as exc:
+            logger.error(
+                "memory_context_load_failed",
+                extra={
+                    "event": "memory_context_load_failed",
+                    "agent": agent_name,
+                    "key": key,
+                    "error": str(exc),
+                },
+            )
+
     return "\n".join(lines)
 
 

@@ -1,8 +1,8 @@
-import sys
-import subprocess
-from pathlib import Path
-import pytest
 import os
+import subprocess
+import sys
+
+import pytest
 
 RUNNER_SCRIPT = """
 import sys
