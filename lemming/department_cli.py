@@ -23,6 +23,25 @@ from .department import (
 )
 from .paths import get_agents_dir
 
+
+def secure_extract_zip(zip_path: Path, target_dir: Path) -> None:
+    """Securely extract a zip file, preventing path traversal (Zip Slip)."""
+    import zipfile
+
+    target_dir = target_dir.resolve()
+
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for member in zf.infolist():
+            # Get the resolved absolute path of the extracted file
+            member_path = (target_dir / member.filename).resolve()
+
+            # Ensure the extracted file is within the target directory
+            if not member_path.is_relative_to(target_dir):
+                raise ValueError(f"Security violation: Archive member '{member.filename}' attempts path traversal")
+
+            zf.extract(member, target_dir)
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -255,7 +274,7 @@ def import_department(bundle_path: str, merge: bool) -> None:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
-        shutil.unpack_archive(bundle_file, temp_path)
+        secure_extract_zip(bundle_file, temp_path)
 
         # Find the department directory (should be root or first subdirectory)
         dept_dirs = [d for d in temp_path.iterdir() if d.is_dir()]
