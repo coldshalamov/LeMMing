@@ -271,7 +271,7 @@ export default function WizardPage() {
                         htmlFor="agent-slug"
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
-                        AGENT_SLUG (Folder Name)
+                        AGENT_SLUG (Folder Name) <span className="text-red-500" title="Required">*</span>
                       </label>
                       <input
                         id="agent-slug"
@@ -291,7 +291,7 @@ export default function WizardPage() {
                         htmlFor="agent-title"
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
-                        TITLE
+                        TITLE <span className="text-red-500" title="Required">*</span>
                       </label>
                       <input
                         id="agent-title"
@@ -312,7 +312,7 @@ export default function WizardPage() {
                           htmlFor="agent-desc"
                           className="block text-xs font-mono text-gray-400"
                         >
-                          DESCRIPTION
+                          DESCRIPTION <span className="text-red-500" title="Required">*</span>
                         </label>
                         <span
                           id="agent-desc-count"
@@ -548,7 +548,7 @@ export default function WizardPage() {
                       <button
                         type="button"
                         onClick={() => setShowToolModal(true)}
-                        className="w-full p-6 border-2 border-dashed border-white/20 rounded-xl hover:border-brand-cyan/50 hover:bg-white/5 transition-all group"
+                        className="w-full p-6 border-2 border-dashed border-white/20 rounded-xl hover:border-brand-cyan/50 hover:bg-white/5 transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                       >
                         <div className="flex items-center justify-center gap-3 text-gray-400 group-hover:text-brand-cyan transition-colors">
                           <Plus size={24} />
