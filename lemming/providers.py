@@ -20,7 +20,13 @@ class LLMProvider(ABC):
     """Abstract base class for LLM providers."""
 
     @abstractmethod
-    def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
+    def call(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
         """
         Call the LLM with the given messages.
 
@@ -136,7 +142,7 @@ class OllamaProvider(LLMProvider):
 
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """Call Ollama API."""
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         logger.info(
             "ollama_call",
