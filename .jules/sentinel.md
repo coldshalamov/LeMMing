@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Insecure API Key Storage Permissions
+**Vulnerability:** The engine configuration endpoint wrote API keys to `secrets.json` using default umask permissions (e.g., `0o644`), allowing any user on the same system to read the plaintext keys.
+**Learning:** Local credential files must be explicitly secured at creation time. Defense in depth requires protecting secrets not just from remote attackers, but also from local privilege escalation or multi-user access.
+**Prevention:** Always use `os.chmod(path, 0o600)` (or equivalent) immediately after creating or updating files containing sensitive credentials to ensure only the owner can read or write them.
