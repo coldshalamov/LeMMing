@@ -10,10 +10,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect  # type: ignore[import-not-found]
-from fastapi import status as http_status
-from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
-from pydantic import BaseModel, ConfigDict, Field, field_validator  # type: ignore[import-not-found]
+from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import discover_agents, load_agent, validate_resume_data
 from .engine import load_tick, run_once
@@ -21,6 +20,7 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
+    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets_data: dict[str, str] = json.load(f)
-            for k, v in secrets_data.items():
+            secrets = json.load(f)
+            for k, v in secrets.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
