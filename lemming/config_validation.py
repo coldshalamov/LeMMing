@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
-from jsonschema import Draft7Validator
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 
 
 class ValidationError(ValueError):
@@ -49,8 +49,8 @@ def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
     schema_path = resources.files(__package__).joinpath("schemas", schema_name)
     with resources.as_file(schema_path) as path:
         schema = json.loads(path.read_text(encoding="utf-8"))
-    validator = Draft7Validator(schema)
-    return validator.iter_errors(instance)
+    validator = Draft202012Validator(schema)
+    return validator.iter_errors(instance)  # type: ignore[no-any-return]
 
 
 def _format_jsonschema_error(error: Any) -> str:
