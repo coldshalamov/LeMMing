@@ -9,3 +9,7 @@
 ## 2025-03-08 - Maintain Aria Labels on Disabled Buttons
 **Learning:** Changing the `aria-label` entirely based on disabled state (e.g. from "Next Step" to "Please fill out required fields") is an accessibility anti-pattern. Screen reader users lose the context of what the button does. Additionally, adding the native `disabled={true}` attribute removes the button from the tab sequence altogether, meaning keyboard-only screen reader users might not discover the button or its `aria-label` at all. To make disabled states fully discoverable, use `aria-disabled="true"`, style it appropriately, and manually prevent the action in the `onClick` handler, while keeping it focusable.
 **Action:** Kept the primary `aria-label` ("Continue to [Next Step] step") statically defined, used `aria-disabled={!canProceedToNextStep}`, removed the native `disabled` attribute so it remains focusable, and prevented execution in the `handleNext` function. Validation instructions are provided via the native `title` attribute.
+
+## 2024-05-24 - Inline Removal of Selected Items
+**Learning:** For multi-step wizards or forms that use modals for selection, forcing users to re-open the modal just to deselect an item creates unnecessary friction.
+**Action:** Added inline remove buttons (with 'X' icons, aria-labels, and focus-visible styles) directly to the selected tool chips in the wizard to allow quick, accessible single-click removals.
