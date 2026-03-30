@@ -10,8 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi import status as http_status
+from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -21,6 +20,7 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
+    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -669,9 +669,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     with open(SECRETS_PATH, "w") as f:
         json.dump(current_secrets, f, indent=2)
 
-    # Security Enhancement: Ensure only owner can read/write the secrets file
     import stat
-
     try:
         os.chmod(SECRETS_PATH, stat.S_IRUSR | stat.S_IWUSR)
     except Exception as e:
