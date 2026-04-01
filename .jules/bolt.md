@@ -27,3 +27,7 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+
+## $(date +%Y-%m-%d) - [JSON Schema Instantiation Overhead]
+**Learning:** Instantiating `Draft7Validator(schema)` requires JSON parsing of the schema definition and involves heavy validation logic setup. In a multi-agent system where `config_validation` runs on every engine tick across all models/agents, repeatedly reading schemas from disk and recreating these validator instances creates a significant bottleneck.
+**Action:** When validating against static JSON schemas in hot loops, always cache the `Draft7Validator` instance or schema definitions globally in memory to eliminate redundant disk I/O and object creation.
