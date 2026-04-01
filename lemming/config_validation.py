@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
-from jsonschema import Draft7Validator
+from jsonschema import Draft7Validator  # type: ignore[import-untyped]
 
 
 class ValidationError(ValueError):
@@ -45,7 +45,7 @@ def _validate_against_schema(instance: Any, schema_name: str, context: str) -> N
         raise ValidationError(f"{context}: " + "; ".join(errors))
 
 
-_schema_cache: dict[str, Draft7Validator] = {}
+_schema_cache: dict[str, Any] = {}
 
 
 def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
@@ -55,7 +55,7 @@ def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
             schema = json.loads(path.read_text(encoding="utf-8"))
         _schema_cache[schema_name] = Draft7Validator(schema)
 
-    return _schema_cache[schema_name].iter_errors(instance)
+    return _schema_cache[schema_name].iter_errors(instance)  # type: ignore[no-any-return]
 
 
 def _format_jsonschema_error(error: Any) -> str:
