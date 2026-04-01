@@ -1,8 +1,11 @@
-from lemming.tools import ShellTool
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
 import pytest
+
+from lemming.tools import ShellTool
+
 
 @pytest.mark.skipif(os.name == 'nt', reason="Relies on Unix commands (cat, ls) not available as executables on Windows")
 def test_shell_tool_vulnerabilities(tmp_path):
@@ -21,7 +24,7 @@ def test_shell_tool_vulnerabilities(tmp_path):
         command = "type C:\\Windows\\System32\\drivers\\etc\\hosts"
     else:
         command = "cat /.dockerenv"
-    
+
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     # Assert that it is BLOCKED by our security check
@@ -35,7 +38,7 @@ def test_shell_tool_vulnerabilities(tmp_path):
         command = "dir C:\\"
     else:
         command = "ls /"
-        
+
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
 
     # Assert that it is BLOCKED by our security check
