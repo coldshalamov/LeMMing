@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Insecure File Permissions for Credentials
+**Vulnerability:** The `/api/engine/config` endpoint saved sensitive API keys to a local `secrets.json` file without restricting file permissions. The default file creation permissions could allow other users on the system to read the keys.
+**Learning:** By default, Python's `open()` creates files using the system's default umask, which typically allows read access to other users. This is dangerous for files holding secrets.
+**Prevention:** Whenever generating local files that store sensitive credentials, explicitly set restrictive file permissions using `os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)` immediately after file creation to prevent local privilege escalation.
