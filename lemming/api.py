@@ -667,10 +667,9 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
         current_secrets["ANTHROPIC_API_KEY"] = config.anthropic_api_key
         os.environ["ANTHROPIC_API_KEY"] = config.anthropic_api_key
 
-    # Open file with restrictive permissions explicitly to prevent race conditions
-    fd = os.open(SECRETS_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR)
-    with open(fd, "w", encoding="utf-8") as f:
+    with open(SECRETS_PATH, "w") as f:
         json.dump(current_secrets, f, indent=2)
+    os.chmod(SECRETS_PATH, stat.S_IRUSR | stat.S_IWUSR)
 
     return {"status": "updated"}
 
