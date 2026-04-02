@@ -197,15 +197,24 @@ export default function WizardPage() {
         <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
             {STEPS.map((step, idx) => (
-              <div
+              <button
                 key={step.id}
+                onClick={(e) => {
+                  if (idx < stepIdx) {
+                    setCurrentStep(idx);
+                  } else {
+                    e.preventDefault();
+                  }
+                }}
+                aria-disabled={idx >= stepIdx}
+                aria-label={`Go to ${step.label} step`}
                 className={clsx(
                   "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-mono transition-colors",
                   idx === stepIdx
                     ? "bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/50"
                     : idx < stepIdx
-                      ? "text-brand-lime"
-                      : "text-white/20",
+                      ? "text-brand-lime hover:bg-brand-lime/10 cursor-pointer"
+                      : "text-white/20 cursor-default",
                 )}
               >
                 <step.icon size={10} />
@@ -214,7 +223,7 @@ export default function WizardPage() {
                 ) : (
                   <span className="hidden sm:inline">{step.label}</span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
 
