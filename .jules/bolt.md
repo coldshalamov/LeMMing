@@ -27,3 +27,7 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+
+## $(date +%Y-%m-%d) - [Optimizing log reading with file seek]
+**Learning:** Reading entire log files into memory to parse the last N lines using `read_text().splitlines()` can create memory spikes and block the thread. By seeking to the end of the file (`f.seek()`) and iterating backwards in chunks to count newlines, we only decode and process the exact segment we need.
+**Action:** When extracting the tail of large files (like structured logs), use a chunked reverse-read approach instead of loading the whole file into memory.
