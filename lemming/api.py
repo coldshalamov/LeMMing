@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +21,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -340,41 +340,10 @@ def _read_agent_logs(base_path: Path, agent_name: str, limit: int = 100) -> list
     if not log_path.exists():
         return []
 
-    # Safe log reading with DoS protection
-    # Read only the last 1MB of logs if the file is large
-    max_log_read_size = 1 * 1024 * 1024  # 1MB
-
-    try:
-        size = log_path.stat().st_size
-        if size == 0:
-            return []
-
-        with log_path.open("rb") as f:
-            if size > max_log_read_size:
-                f.seek(size - max_log_read_size)
-                content_bytes = f.read()
-                # We might have cut a multibyte char or be in middle of line.
-                # Skip to next newline to ensure clean start.
-                first_newline = content_bytes.find(b"\n")
-                if first_newline != -1:
-                    content_bytes = content_bytes[first_newline + 1 :]
-                else:
-                    # No newline found in the last 1MB? That's a huge line.
-                    # Just decode what we can, ignoring errors at the start/end
-                    pass
-            else:
-                content_bytes = f.read()
-
-        # Decode using replace to handle any remaining partial bytes gracefully
-        content = content_bytes.decode("utf-8", errors="replace")
-        lines = content.splitlines()
-
-    except OSError:
-        return []
+    lines = _read_last_lines(log_path, limit)
 
     entries: list[dict[str, Any]] = []
-    # If we still have too many lines, take only the last 'limit'
-    for line in lines[-limit:]:
+    for line in lines:
         try:
             parsed = json.loads(line)
         except json.JSONDecodeError:

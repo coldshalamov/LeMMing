@@ -13,7 +13,6 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
-    save_org_structure,
     save_social_graph,
 )
 from .engine import load_tick, run_forever, run_once
@@ -146,6 +145,41 @@ def inspect_cmd(base_path: Path, name: str, outbox_limit: int = 5) -> None:
         print("\nNo memory recorded.")
 
 
+def _read_last_lines(file_path: Path, limit: int) -> list[str]:
+    """Efficiently read the last N lines from a file."""
+    if limit <= 0:
+        return []
+
+    chunk_size = 8192
+    import os
+
+    try:
+        with file_path.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            end_pos = f.tell()
+            if end_pos == 0:
+                return []
+
+            pos = end_pos
+            lines_found = 0
+
+            while pos > 0 and lines_found < limit:
+                read_len = min(chunk_size, pos)
+                pos -= read_len
+                f.seek(pos)
+                chunk = f.read(read_len)
+                lines_found += chunk.count(b"\n")
+
+            f.seek(pos)
+            data = f.read(end_pos - pos)
+            text = data.decode("utf-8", errors="ignore")
+            lines = text.splitlines()
+
+            return lines[-limit:]
+    except OSError:
+        return []
+
+
 def logs_cmd(base_path: Path, name: str, lines: int) -> None:
     log_dir = get_logs_dir(base_path, name)
     log_path = log_dir / "structured.jsonl"
@@ -153,8 +187,8 @@ def logs_cmd(base_path: Path, name: str, lines: int) -> None:
         print(f"No structured log file found for agent '{name}'. It will be created on first run.")
         return
 
-    content = log_path.read_text(encoding="utf-8").splitlines()
-    for line in content[-lines:]:
+    content = _read_last_lines(log_path, lines)
+    for line in content:
         print(line)
 
 
@@ -473,7 +507,7 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
     # Department management commands
-    dept_parser = subparsers.add_parser("department-list", help="List all departments")
+    subparsers.add_parser("department-list", help="List all departments")
 
     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
     dept_create_parser.add_argument("name", help="Department name")
