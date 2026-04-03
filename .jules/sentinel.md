@@ -22,3 +22,7 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+## 2024-05-29 - Insecure Local File Permissions and Module Shadowing
+**Vulnerability:** The `secrets.json` file storing API keys was created without explicit restrictive permissions, potentially allowing local privilege escalation if the default mask is permissive. Furthermore, the variable `secrets` shadowed the built-in module, causing `AttributeError`s during authentication.
+**Learning:** `os.open(..., os.O_CREAT, 0o600)` alone is insufficient if a file with weak permissions already exists, and shadowing modules can break critical security functions like `secrets.compare_digest`.
+**Prevention:** Explicitly apply `os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)` after writing sensitive files to ensure strict permissions. Avoid using module names for variables.
