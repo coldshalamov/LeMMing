@@ -182,7 +182,7 @@ class OllamaProvider(LLMProvider):
 class CLIProvider(LLMProvider):
     """CLI execution provider for wrapping local tools."""
 
-    def __init__(self, command: list[str] | str, cwd: str | None = None, env: dict[str, str] | None = None, timeout: float = 60.0, prevent_arg_injection: bool = True):
+    def __init__(self, command: list[str] | str, cwd: str | None = None, env: dict[str, str] | None = None, timeout: float = 60.0, prevent_arg_injection: bool = True):  # noqa: E501
         self.command = command
         self.cwd = Path(cwd) if cwd else None
         self.env = env
