@@ -6,7 +6,6 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -17,7 +16,6 @@ from .department import (
     get_department_agents,
     get_department_file,
     save_department,
-    save_org_structure,
     save_social_graph,
     validate_department,
 )
@@ -35,9 +33,9 @@ def department_group() -> None:
 @department_group.command(name="list")
 def list_departments() -> None:
     """List all discovered departments."""
-    from .cli import setup_logging
+    from .logging_config import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     departments = discover_departments(base_path)
@@ -64,9 +62,9 @@ def list_departments() -> None:
 @click.option("--readme", "-r", default="", help="README content")
 def create_department(name: str, description: str, author: str, readme: str) -> None:
     """Create a new department."""
-    from .cli import setup_logging
+    from .logging_config import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     dept = DepartmentMetadata(
@@ -91,9 +89,9 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
 @click.argument("name")
 def show_department(name: str) -> None:
     """Show details of a specific department."""
-    from .cli import setup_logging
+    from .logging_config import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     dept_file = get_department_file(base_path, name)
@@ -134,9 +132,9 @@ def show_department(name: str) -> None:
 @click.option("--output", "-o", default="organization.json", help="Output file path")
 def export_structure(output: str) -> None:
     """Export complete organization structure to JSON."""
-    from .cli import setup_logging
+    from .logging_config import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     org_structure = export_org_structure(base_path)
@@ -160,9 +158,9 @@ def package_department(name: str, output: str | None) -> None:
     Creates a zip file containing the department metadata and all agent folders
     that belong to this department.
     """
-    from .cli import setup_logging
+    from .logging_config import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     output_dir = Path(output) if output else (base_path / "departments")
@@ -235,9 +233,9 @@ This is a LeMMing department bundle containing {len(agents)} agent(s).
 @click.option("--merge", "-m", is_flag=True, help="Merge with existing organization")
 def import_department(bundle_path: str, merge: bool) -> None:
     """Import a department bundle into the current organization."""
-    from .cli import setup_logging
+    from .logging_config import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
     bundle_file = Path(bundle_path)
@@ -251,7 +249,6 @@ def import_department(bundle_path: str, merge: bool) -> None:
         raise click.Abort()
 
     import tempfile
-    import zipfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -305,16 +302,16 @@ def import_department(bundle_path: str, merge: bool) -> None:
                 shutil.copytree(agent_dir, agent_dst)
                 click.echo(f"✓ Imported agent: {agent_dir.name}")
 
-    click.echo(f"\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
+    click.echo("\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
 
 
 @department_group.command(name="analyze")
 @click.option("--output", "-o", default="social_graph.json", help="Output file path")
 def analyze_social(output: str) -> None:
     """Analyze and export the social graph of the organization."""
-    from .cli import setup_logging
+    from .logging_config import setup_logging
 
-    setup_logging(level="INFO")
+    setup_logging(Path.cwd(), level="INFO")
 
     base_path = Path.cwd()
 
