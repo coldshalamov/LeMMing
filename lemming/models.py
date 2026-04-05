@@ -56,7 +56,31 @@ class ModelRegistry:
         return sorted(self._models.keys())
 
 
-_model_registry_cache: dict[Path, ModelRegistry] = {}
+_registry_cache: dict[Path, tuple[float, ModelRegistry]] = {}
+
+
+def reset_models_cache() -> None:
+    """Clear the model registry cache."""
+    _registry_cache.clear()
+
+
+def _get_registry(config_dir: Path | None = None) -> ModelRegistry:
+    resolved_dir = config_dir or Path(__file__).parent / "config"
+    models_path = resolved_dir / "models.json"
+
+    try:
+        mtime = models_path.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+
+    if resolved_dir in _registry_cache:
+        cached_mtime, cached_registry = _registry_cache[resolved_dir]
+        if cached_mtime == mtime:
+            return cached_registry
+
+    registry = ModelRegistry(config_dir)
+    _registry_cache[resolved_dir] = (mtime, registry)
+    return registry
 
 
 def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, config_dir: Path | None = None) -> str:
@@ -72,11 +96,7 @@ def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, con
     Returns:
         LLM response as string
     """
-    resolved_dir = config_dir or Path(__file__).parent / "config"
-    if resolved_dir not in _model_registry_cache:
-        _model_registry_cache[resolved_dir] = ModelRegistry(resolved_dir)
-
-    registry = _model_registry_cache[resolved_dir]
+    registry = _get_registry(config_dir)
     config = registry.get(model_key)
 
     # Get provider instance

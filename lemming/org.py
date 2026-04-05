@@ -155,8 +155,11 @@ def save_credits(base_path: Path | None = None) -> None:
 
 
 def reset_caches() -> None:
+    from .models import reset_models_cache
+
     global _org_config_cache, _credits_cache, _config_dir
     _org_config_cache = None
     _credits_cache = None
     _config_dir = DEFAULT_CONFIG_DIR
     reset_agents_cache()
+    reset_models_cache()
