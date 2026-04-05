@@ -27,3 +27,6 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+## 2024-05-27 - [Caching Expensive Config Validation]
+**Learning:** Instantiating config registries (like `ModelRegistry`) that run JSON schema validations (`jsonschema.Draft7Validator`) on every call can introduce significant hidden overhead (~0.75ms per call) on hot paths like LLM interactions.
+**Action:** Use a module-level dictionary cache keyed by the config directory to store and reuse registry instances, preventing redundant disk reads and schema validations on repeated function calls.

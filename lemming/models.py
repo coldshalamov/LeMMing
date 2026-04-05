@@ -56,6 +56,9 @@ class ModelRegistry:
         return sorted(self._models.keys())
 
 
+_model_registry_cache: dict[Path, ModelRegistry] = {}
+
+
 def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, config_dir: Path | None = None) -> str:
     """
     Call an LLM using the configured provider.
@@ -69,7 +72,11 @@ def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, con
     Returns:
         LLM response as string
     """
-    registry = ModelRegistry(config_dir)
+    resolved_dir = config_dir or Path(__file__).parent / "config"
+    if resolved_dir not in _model_registry_cache:
+        _model_registry_cache[resolved_dir] = ModelRegistry(resolved_dir)
+
+    registry = _model_registry_cache[resolved_dir]
     config = registry.get(model_key)
 
     # Get provider instance
