@@ -38,7 +38,6 @@ def list_departments() -> None:
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
 
-
     base_path = Path.cwd()
     departments = discover_departments(base_path)
 
@@ -69,7 +68,6 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
 
-
     base_path = Path.cwd()
     dept = DepartmentMetadata(
         name=name,
@@ -97,7 +95,6 @@ def show_department(name: str) -> None:
 
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
-
 
     base_path = Path.cwd()
     dept_file = get_department_file(base_path, name)
@@ -143,7 +140,6 @@ def export_structure(output: str) -> None:
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
 
-
     base_path = Path.cwd()
     org_structure = export_org_structure(base_path)
 
@@ -170,7 +166,6 @@ def package_department(name: str, output: str | None) -> None:
 
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
-
 
     base_path = Path.cwd()
     output_dir = Path(output) if output else (base_path / "departments")
@@ -248,7 +243,6 @@ def import_department(bundle_path: str, merge: bool) -> None:
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
 
-
     base_path = Path.cwd()
     bundle_file = Path(bundle_path)
 
@@ -325,7 +319,6 @@ def analyze_social(output: str) -> None:
 
     base_path = Path.cwd()
     setup_logging(base_path=base_path, level="INFO")
-
 
     base_path = Path.cwd()
 
