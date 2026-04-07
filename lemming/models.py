@@ -18,6 +18,13 @@ class ModelConfig:
     provider_config: dict | None = None
 
 
+_models_cache: dict[Path, tuple[float, dict[str, ModelConfig]]] = {}
+
+
+def reset_models_cache() -> None:
+    _models_cache.clear()
+
+
 class ModelRegistry:
     def __init__(self, config_dir: Path | None = None) -> None:
         self.config_dir = config_dir or Path(__file__).parent / "config"
@@ -28,8 +35,22 @@ class ModelRegistry:
         if self._loaded:
             return
         models_path = self.config_dir / "models.json"
-        if not models_path.exists():
+
+        # Optimization: Check module-level cache by using file's modification time (mtime)
+        # to skip redundant disk reads and expensive JSON schema validation per instance.
+        try:
+            mtime = models_path.stat().st_mtime
+            if self.config_dir in _models_cache:
+                cached_mtime, cached_models = _models_cache[self.config_dir]
+                if cached_mtime == mtime:
+                    self._models = cached_models
+                    self._loaded = True
+                    return
+        except FileNotFoundError:
             raise FileNotFoundError(f"Model registry not found at {models_path}")
+        except OSError:
+            pass
+
         with models_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         validate_models(data)
@@ -40,6 +61,13 @@ class ModelRegistry:
                 provider_config=cfg.get("provider_config"),
             )
         self._loaded = True
+
+        try:
+            mtime = models_path.stat().st_mtime
+            _models_cache[self.config_dir] = (mtime, self._models)
+        except OSError:
+            pass
+
         logger.debug(
             "models_loaded",
             extra={"event": "models_loaded", "path": str(models_path)},
