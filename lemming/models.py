@@ -22,7 +22,6 @@ _models_cache: dict[Path, tuple[float, dict[str, ModelConfig]]] = {}
 
 
 def reset_models_cache() -> None:
-    global _models_cache
     _models_cache.clear()
 
 
@@ -37,6 +36,8 @@ class ModelRegistry:
             return
         models_path = self.config_dir / "models.json"
 
+        # Optimization: Check module-level cache by using file's modification time (mtime)
+        # to skip redundant disk reads and expensive JSON schema validation per instance.
         try:
             mtime = models_path.stat().st_mtime
             if self.config_dir in _models_cache:
