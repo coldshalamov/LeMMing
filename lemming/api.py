@@ -94,11 +94,7 @@ async def verify_admin_access(request: Request):
 
 def rate_limiter(limit: int = 10, window: int = 60):
     async def dependency(request: Request):
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            client_ip = forwarded.split(",")[0].strip()
-        else:
-            client_ip = request.client.host if request.client else "unknown"
+        client_ip = request.client.host if request.client else "unknown"
         now = time.time()
 
         # Initialize
@@ -670,8 +666,11 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
         current_secrets["ANTHROPIC_API_KEY"] = config.anthropic_api_key
         os.environ["ANTHROPIC_API_KEY"] = config.anthropic_api_key
 
+    import stat
+
     with open(SECRETS_PATH, "w") as f:
         json.dump(current_secrets, f, indent=2)
+    os.chmod(SECRETS_PATH, stat.S_IRUSR | stat.S_IWUSR)
 
     return {"status": "updated"}
 

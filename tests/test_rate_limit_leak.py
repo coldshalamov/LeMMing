@@ -20,7 +20,6 @@ async def test_rate_limiter_memory_cap():
         for i in range(unique_ips):
             mock_request = Mock()
             mock_request.client.host = f"10.0.0.{i}"
-            mock_request.headers.get.return_value = None
 
             # Call the dependency
             await limiter(mock_request)
