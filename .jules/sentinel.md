@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+## 2025-01-20 - Ensure true client IP is used for rate limiting
+
+**Vulnerability:** Rate limit bypassed due to incorrect client IP resolution (always using reverse proxy's IP).
+**Learning:** In FastAPI/cloud deployments, `request.client.host` often returns the reverse proxy's IP. The true client IP is typically passed in the `X-Forwarded-For` header.
+**Prevention:** Always check the `X-Forwarded-For` header before falling back to `request.client.host` when tracking client IP for rate limiting or logging.
