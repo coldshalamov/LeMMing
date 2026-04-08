@@ -20,9 +20,11 @@ class ModelConfig:
 
 _registry_cache: dict[Path, tuple[float, dict[str, ModelConfig]]] = {}
 
+
 def reset_models_cache() -> None:
     global _registry_cache
     _registry_cache.clear()
+
 
 class ModelRegistry:
     def __init__(self, config_dir: Path | None = None) -> None:
@@ -46,7 +48,7 @@ class ModelRegistry:
         except FileNotFoundError:
             raise FileNotFoundError(f"Model registry not found at {models_path}")
         except OSError:
-            pass # Fallback to loading from disk
+            pass  # Fallback to loading from disk
 
         with models_path.open("r", encoding="utf-8") as f:
             data = json.load(f)

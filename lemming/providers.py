@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import shlex
-import subprocess
 import time
+import os
+import subprocess
+import shlex
+import json
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
@@ -182,14 +182,7 @@ class OllamaProvider(LLMProvider):
 class CLIProvider(LLMProvider):
     """CLI execution provider for wrapping local tools."""
 
-    def __init__(
-        self,
-        command: list[str] | str,
-        cwd: str | None = None,
-        env: dict[str, str] | None = None,
-        timeout: float = 60.0,
-        prevent_arg_injection: bool = True,
-    ):
+    def __init__(self, command: list[str] | str, cwd: str | None = None, env: dict[str, str] | None = None, timeout: float = 60.0, prevent_arg_injection: bool = True):
         self.command = command
         self.cwd = Path(cwd) if cwd else None
         self.env = env
@@ -209,10 +202,8 @@ class CLIProvider(LLMProvider):
         if self.prevent_arg_injection and prompt.startswith("-"):
             # We block any prompt starting with "-" to prevent it from being interpreted as a flag
             # by the underlying tool (e.g. -n, --help, -c, etc.)
-            raise ValueError(
-                f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
-                "Disable 'prevent_arg_injection' in provider config if this is intended."
-            )
+            raise ValueError(f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
+                             "Disable 'prevent_arg_injection' in provider config if this is intended.")
 
         # Prepare command
         cmd_args = self.command if isinstance(self.command, list) else shlex.split(self.command)
