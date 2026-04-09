@@ -27,3 +27,7 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+
+## 2024-05-27 - [Social Graph Analysis Optimization]
+**Learning:** Analyzing agent interactions with O(N^2) loops over relationships inside a file I/O loop is extremely slow. `Path.glob` and `Path.open()` also add noticeable overhead in file-heavy operations.
+**Action:** Use an O(1) hash map `{(source, target): relationship}` to track and update relationship strengths. Replace `Path.glob` and `.exists()` checks with `os.scandir` and try/except (EAFP). Use `os.path.join` and built-in `open()` instead of `Path` methods to bypass object instantiation overhead.
