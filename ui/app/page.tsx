@@ -36,7 +36,9 @@ export default function Dashboard() {
   const { messages } = useMessages();
   const { isConnected } = useWebSocketStream();
 
-  const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
+  const [selectedAgentName, setSelectedAgentName] = useState<string | null>(
+    null,
+  );
   const [visualTick, setVisualTick] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [isTicking, setIsTicking] = useState(false);
@@ -221,7 +223,11 @@ export default function Dashboard() {
                         >
                           {m.payload.text || JSON.stringify(m.payload)}
                         </div>
-                      )) || <div className="italic opacity-30">No recent activity</div>}
+                      )) || (
+                      <div className="italic opacity-30">
+                        No recent activity
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -249,7 +255,9 @@ export default function Dashboard() {
                   </p>
                   <p className="font-mono text-xs mt-2 text-white/10">
                     Use{" "}
-                    <span className="px-1.5 py-0.5 bg-white/10 rounded">TAB</span>{" "}
+                    <span className="px-1.5 py-0.5 bg-white/10 rounded">
+                      TAB
+                    </span>{" "}
                     to navigate graph
                   </p>
                 </>
@@ -275,12 +283,12 @@ export default function Dashboard() {
 
           <button
             onClick={handleRunTick}
-            disabled={isTicking}
+            aria-disabled={isTicking}
             className={clsx(
-              "w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50",
+              "w-12 h-12 rounded-full flex items-center justify-center transition-transform shadow-lg",
               isTicking
-                ? "bg-gray-600 text-gray-400"
-                : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)]",
+                ? "bg-gray-600 text-gray-400 opacity-50 cursor-not-allowed"
+                : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)] hover:scale-105 active:scale-95",
             )}
             title="Run one tick"
             aria-label="Run one tick"
