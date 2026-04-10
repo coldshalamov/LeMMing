@@ -10,6 +10,14 @@ from .providers import get_provider
 
 logger = logging.getLogger(__name__)
 
+_registry_cache: dict[Path, ModelRegistry] = {}
+
+
+def reset_models_cache() -> None:
+    """Clear the models registry cache."""
+    global _registry_cache
+    _registry_cache.clear()
+
 
 @dataclass
 class ModelConfig:
@@ -23,16 +31,22 @@ class ModelRegistry:
         self.config_dir = config_dir or Path(__file__).parent / "config"
         self._models: dict[str, ModelConfig] = {}
         self._loaded = False
+        self._last_mtime: float = 0
 
     def _load(self) -> None:
-        if self._loaded:
-            return
         models_path = self.config_dir / "models.json"
         if not models_path.exists():
             raise FileNotFoundError(f"Model registry not found at {models_path}")
+
+        mtime = models_path.stat().st_mtime
+        if self._loaded and mtime == self._last_mtime:
+            return
+
         with models_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         validate_models(data)
+
+        self._models.clear()
         for key, cfg in data.items():
             self._models[key] = ModelConfig(
                 provider=cfg["provider"],
@@ -40,6 +54,7 @@ class ModelRegistry:
                 provider_config=cfg.get("provider_config"),
             )
         self._loaded = True
+        self._last_mtime = mtime
         logger.debug(
             "models_loaded",
             extra={"event": "models_loaded", "path": str(models_path)},
@@ -69,7 +84,11 @@ def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, con
     Returns:
         LLM response as string
     """
-    registry = ModelRegistry(config_dir)
+    registry_path = config_dir or Path(__file__).parent / "config"
+    if registry_path not in _registry_cache:
+        _registry_cache[registry_path] = ModelRegistry(config_dir)
+
+    registry = _registry_cache[registry_path]
     config = registry.get(model_key)
 
     # Get provider instance

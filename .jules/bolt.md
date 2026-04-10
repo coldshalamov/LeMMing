@@ -27,3 +27,6 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+## 2025-02-28 - ModelRegistry Caching Optimization
+**Learning:** Instantiating `ModelRegistry` and validating JSON schemas on every `call_llm` invocation creates a significant performance bottleneck due to redundant disk I/O and schema validation, especially in high-throughput multi-agent environments.
+**Action:** Introduced an in-memory cache `_registry_cache` keyed by the configuration directory. Implemented hot-reloading by tracking `models.json` file modifications (`_last_mtime`) to safely bypass validation while maintaining flexibility. Added `reset_models_cache()` to ensure test isolation.
