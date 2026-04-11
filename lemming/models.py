@@ -10,6 +10,12 @@ from .providers import get_provider
 
 logger = logging.getLogger(__name__)
 
+_registry_cache: dict[Path, tuple[float, dict[str, ModelConfig]]] = {}
+
+
+def reset_models_cache() -> None:
+    _registry_cache.clear()
+
 
 @dataclass
 class ModelConfig:
@@ -28,6 +34,20 @@ class ModelRegistry:
         if self._loaded:
             return
         models_path = self.config_dir / "models.json"
+
+        # Optimization: Bypass expensive JSON schema validation by checking if
+        # the models.json file is unmodified and reusing the cached registry.
+        try:
+            mtime = models_path.stat().st_mtime
+            if self.config_dir in _registry_cache:
+                cached_mtime, cached_models = _registry_cache[self.config_dir]
+                if cached_mtime == mtime:
+                    self._models = cached_models
+                    self._loaded = True
+                    return
+        except OSError:
+            pass
+
         if not models_path.exists():
             raise FileNotFoundError(f"Model registry not found at {models_path}")
         with models_path.open("r", encoding="utf-8") as f:
@@ -40,6 +60,13 @@ class ModelRegistry:
                 provider_config=cfg.get("provider_config"),
             )
         self._loaded = True
+
+        try:
+            mtime = models_path.stat().st_mtime
+            _registry_cache[self.config_dir] = (mtime, self._models)
+        except OSError:
+            pass
+
         logger.debug(
             "models_loaded",
             extra={"event": "models_loaded", "path": str(models_path)},
