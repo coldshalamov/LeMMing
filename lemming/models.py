@@ -18,6 +18,15 @@ class ModelConfig:
     provider_config: dict | None = None
 
 
+# Cache to avoid redundant JSON schema validation
+_models_cache: dict[Path, tuple[float, dict[str, ModelConfig]]] = {}
+
+
+def reset_models_cache() -> None:
+    global _models_cache
+    _models_cache.clear()
+
+
 class ModelRegistry:
     def __init__(self, config_dir: Path | None = None) -> None:
         self.config_dir = config_dir or Path(__file__).parent / "config"
@@ -30,6 +39,18 @@ class ModelRegistry:
         models_path = self.config_dir / "models.json"
         if not models_path.exists():
             raise FileNotFoundError(f"Model registry not found at {models_path}")
+
+        try:
+            mtime = models_path.stat().st_mtime
+            if self.config_dir in _models_cache:
+                cached_mtime, cached_models = _models_cache[self.config_dir]
+                if cached_mtime == mtime:
+                    self._models = cached_models
+                    self._loaded = True
+                    return
+        except OSError:
+            mtime = 0.0
+
         with models_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         validate_models(data)
@@ -40,6 +61,10 @@ class ModelRegistry:
                 provider_config=cfg.get("provider_config"),
             )
         self._loaded = True
+
+        if mtime > 0.0:
+            _models_cache[self.config_dir] = (mtime, self._models)
+
         logger.debug(
             "models_loaded",
             extra={"event": "models_loaded", "path": str(models_path)},

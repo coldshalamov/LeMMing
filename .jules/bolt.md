@@ -27,3 +27,7 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+
+## 2026-04-13 - [ModelRegistry caching]
+**Learning:** ModelRegistry re-validates models.json on every instantiation even if nothing changes, adding JSON Schema overhead.
+**Action:** Added mtime-based caching for ModelRegistry, saving expensive repetitive validations across instances.
