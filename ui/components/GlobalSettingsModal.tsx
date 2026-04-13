@@ -164,9 +164,16 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             Cancel
                         </button>
                         <button
-                            onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            onClick={(e) => {
+                                if (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                handleSave();
+                            }}
+                            aria-disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                            title={status === "loading" ? "Saving..." : (!config.openai_api_key && !config.anthropic_api_key) ? "Please enter at least one API key" : "Save Configuration"}
+                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 aria-disabled:hover:bg-brand-cyan transition-colors aria-disabled:opacity-50 aria-disabled:cursor-not-allowed"
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
