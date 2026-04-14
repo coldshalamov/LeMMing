@@ -18,21 +18,37 @@ class ModelConfig:
     provider_config: dict | None = None
 
 
+_registry_cache: dict[Path | None, ModelRegistry] = {}
+
+
+def reset_models_cache() -> None:
+    global _registry_cache
+    _registry_cache.clear()
+
+
 class ModelRegistry:
     def __init__(self, config_dir: Path | None = None) -> None:
         self.config_dir = config_dir or Path(__file__).parent / "config"
         self._models: dict[str, ModelConfig] = {}
         self._loaded = False
+        self._mtime = 0.0
 
     def _load(self) -> None:
-        if self._loaded:
-            return
         models_path = self.config_dir / "models.json"
         if not models_path.exists():
             raise FileNotFoundError(f"Model registry not found at {models_path}")
+
+        # Performance optimization: use file mtime to avoid redundant JSON schema
+        # validations when calling LLMs, while still supporting hot-reloading
+        current_mtime = models_path.stat().st_mtime
+        if self._loaded and self._mtime == current_mtime:
+            return
+
         with models_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         validate_models(data)
+
+        self._models.clear()
         for key, cfg in data.items():
             self._models[key] = ModelConfig(
                 provider=cfg["provider"],
@@ -40,6 +56,7 @@ class ModelRegistry:
                 provider_config=cfg.get("provider_config"),
             )
         self._loaded = True
+        self._mtime = current_mtime
         logger.debug(
             "models_loaded",
             extra={"event": "models_loaded", "path": str(models_path)},
@@ -69,7 +86,9 @@ def call_llm(model_key: str, messages: list[dict], temperature: float = 0.2, con
     Returns:
         LLM response as string
     """
-    registry = ModelRegistry(config_dir)
+    if config_dir not in _registry_cache:
+        _registry_cache[config_dir] = ModelRegistry(config_dir)
+    registry = _registry_cache[config_dir]
     config = registry.get(model_key)
 
     # Get provider instance
