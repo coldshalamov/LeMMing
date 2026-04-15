@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +21,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -397,8 +397,9 @@ async def get_agent(agent_name: str) -> AgentInfo:
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
 
-    _, credits = _load_agents_with_credits(BASE_PATH)
-    return _build_agent_info(agent, credits)
+    # Optimization: Fetch credits only for the requested agent to avoid O(N) lookup
+    agent_credits = get_agent_credits(agent_name, BASE_PATH)
+    return _build_agent_info(agent, {agent_name: agent_credits})
 
 
 @app.post(
