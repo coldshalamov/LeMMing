@@ -161,3 +161,44 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         }, headers=headers)
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
+
+
+def test_websocket_auth(client: TestClient, tmp_path):
+    """Verify WebSocket endpoint is protected when admin key is set."""
+    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
+         patch("lemming.api.BASE_PATH", tmp_path), \
+         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+
+        # Setup minimal environment
+        config_dir = tmp_path / "lemming" / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "tick.json").write_text("0")
+        (config_dir / "org_config.json").write_text('{"base_turn_seconds": 1}')
+        (config_dir / "credits.json").write_text("{}")
+        (config_dir / "models.json").write_text("{}")
+        if not (tmp_path / "agents").exists():
+            (tmp_path / "agents").mkdir()
+
+        from fastapi import status as http_status
+        from fastapi.websockets import WebSocketDisconnect
+
+        # No token
+        with pytest.raises(WebSocketDisconnect) as exc:
+            with client.websocket_connect("/ws"):
+                pass
+        assert exc.value.code == http_status.WS_1008_POLICY_VIOLATION
+
+        # Wrong token
+        with pytest.raises(WebSocketDisconnect) as exc:
+            with client.websocket_connect("/ws?admin_key=wrong"):
+                pass
+        assert exc.value.code == http_status.WS_1008_POLICY_VIOLATION
+
+        # Correct token
+        try:
+            with client.websocket_connect("/ws?admin_key=secret123") as websocket:
+                data = websocket.receive_json()
+                assert "status" in data
+                assert "messages" in data
+        except WebSocketDisconnect:
+            pytest.fail("WebSocket connection closed unexpectedly with correct token")

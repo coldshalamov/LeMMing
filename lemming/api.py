@@ -672,8 +672,25 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     return {"status": "updated"}
 
 
+async def verify_admin_access_ws(websocket: WebSocket) -> bool:
+    """Verify admin access for websocket if configured."""
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    if not admin_key:
+        return True
+
+    # WebSockets from browser can't easily set custom headers, so we check query params
+    request_key = websocket.query_params.get("admin_key")
+    if not request_key or not secrets.compare_digest(request_key, admin_key):
+        return False
+    return True
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
+    if not await verify_admin_access_ws(websocket):
+        await websocket.close(code=http_status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
     try:
         while True:
