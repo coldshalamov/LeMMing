@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            loaded_secrets = json.load(f)
+            for k, v in loaded_secrets.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -397,9 +397,8 @@ async def get_agent(agent_name: str) -> AgentInfo:
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
 
-    # Optimization: Fetch credits only for the requested agent to avoid O(N) lookup
-    agent_credits = get_agent_credits(agent_name, BASE_PATH)
-    return _build_agent_info(agent, {agent_name: agent_credits})
+    _, credits = _load_agents_with_credits(BASE_PATH)
+    return _build_agent_info(agent, credits)
 
 
 @app.post(
