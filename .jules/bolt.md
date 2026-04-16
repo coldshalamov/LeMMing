@@ -27,3 +27,6 @@
 ## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
+## 2026-04-16 - [O(N) vs O(1) in Endpoints]
+**Learning:** Calling functions like `discover_agents()` inside single-item lookup endpoints (like `/api/agents/{agent_name}`) causes O(N) disk I/O scanning overhead.
+**Action:** When fetching data for a single entity, use targeted O(1) lookup functions (like `get_agent_credits`) instead of batch discovery functions.

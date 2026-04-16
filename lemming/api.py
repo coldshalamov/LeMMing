@@ -397,7 +397,8 @@ async def get_agent(agent_name: str) -> AgentInfo:
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
 
-    _, credits = _load_agents_with_credits(BASE_PATH)
+    # Optimization: Use O(1) get_agent_credits instead of O(N) _load_agents_with_credits
+    credits = {agent.name: get_agent_credits(agent.name, BASE_PATH)}
     return _build_agent_info(agent, credits)
 
 
