@@ -10,6 +10,12 @@ from .providers import get_provider
 
 logger = logging.getLogger(__name__)
 
+_registry_cache: dict[Path, tuple[float, dict[str, ModelConfig]]] = {}
+
+
+def reset_models_cache() -> None:
+    _registry_cache.clear()
+
 
 @dataclass
 class ModelConfig:
@@ -28,6 +34,18 @@ class ModelRegistry:
         if self._loaded:
             return
         models_path = self.config_dir / "models.json"
+
+        try:
+            mtime = models_path.stat().st_mtime
+            if self.config_dir.resolve() in _registry_cache:
+                cached_mtime, cached_models = _registry_cache[self.config_dir.resolve()]
+                if cached_mtime == mtime:
+                    self._models = cached_models.copy()
+                    self._loaded = True
+                    return
+        except OSError:
+            mtime = 0
+
         if not models_path.exists():
             raise FileNotFoundError(f"Model registry not found at {models_path}")
         with models_path.open("r", encoding="utf-8") as f:
@@ -40,6 +58,13 @@ class ModelRegistry:
                 provider_config=cfg.get("provider_config"),
             )
         self._loaded = True
+
+        try:
+            if mtime != 0:
+                _registry_cache[self.config_dir.resolve()] = (mtime, self._models.copy())
+        except OSError:
+            pass
+
         logger.debug(
             "models_loaded",
             extra={"event": "models_loaded", "path": str(models_path)},
