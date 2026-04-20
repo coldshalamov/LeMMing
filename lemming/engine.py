@@ -60,17 +60,18 @@ If you have nothing to do, respond with: {"notes": "No action needed."}
 
 def load_tick(base_path: Path) -> int:
     tick_file = get_tick_file(base_path)
-    if tick_file.exists():
-        try:
-            with tick_file.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            return int(data.get("current_tick", 1))
-        except Exception:  # pragma: no cover - defensive
-            logger.warning(
-                "tick_load_failed",
-                extra={"event": "tick_load_failed", "path": str(tick_file)},
-            )
-    return 1
+    try:
+        with tick_file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        return int(data.get("current_tick", 1))
+    except FileNotFoundError:
+        return 1
+    except Exception:  # pragma: no cover - defensive
+        logger.warning(
+            "tick_load_failed",
+            extra={"event": "tick_load_failed", "path": str(tick_file)},
+        )
+        return 1
 
 
 def persist_tick(base_path: Path, tick: int) -> None:
@@ -533,8 +534,12 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         results[agent.name] = run_agent(base_path, agent, tick)
 
     # Cleanup old outbox entries
-    max_age_ticks = config.get("max_outbox_age_ticks", 100)
-    removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
+    cleanup_interval = config.get("outbox_cleanup_interval", 10)
+    removed = 0
+    if tick % cleanup_interval == 0:
+        max_age_ticks = config.get("max_outbox_age_ticks", 100)
+        removed = cleanup_old_outbox_entries(base_path, tick, max_age_ticks=max_age_ticks)
+
     if removed:
         logger.info(
             "outbox_cleanup",
