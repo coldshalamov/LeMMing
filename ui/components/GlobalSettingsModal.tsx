@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
+import clsx from "clsx";
 
 interface GlobalSettingsModalProps {
     onClose: () => void;
@@ -155,6 +156,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         </div>
                     </div>
 
+                    {status === "error" && (
+                        <div className="px-6 pb-0">
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-xs" role="alert">
+                                <AlertTriangle size={14} />
+                                <span>Failed to save configuration. Please check your connection.</span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Footer */}
                     <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
                         <button
@@ -166,11 +176,20 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         <button
                             onClick={handleSave}
                             disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            className={clsx(
+                                "px-6 py-2 font-bold rounded flex items-center gap-2 transition-colors disabled:opacity-50",
+                                status === "error"
+                                    ? "bg-red-500 text-white hover:bg-red-600"
+                                    : "bg-brand-cyan text-black hover:bg-cyan-300"
+                            )}
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
                                     <Check size={16} /> SAVED
+                                </>
+                            ) : status === "error" ? (
+                                <>
+                                    <AlertTriangle size={16} /> RETRY
                                 </>
                             ) : "SAVE CONFIG"}
                         </button>

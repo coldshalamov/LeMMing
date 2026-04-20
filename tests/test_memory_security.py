@@ -1,8 +1,8 @@
-import shutil
-from pathlib import Path
 import pytest
-from lemming.tools import MemoryWriteTool, MemoryReadTool, ToolResult
+
 from lemming.memory import validate_memory_key
+from lemming.tools import MemoryReadTool, MemoryWriteTool
+
 
 class TestMemorySecurity:
     @pytest.fixture
@@ -43,7 +43,7 @@ class TestMemorySecurity:
         result = tool.execute(agent_name, base_path, key=evil_key)
 
         assert not result.success
-        assert result.output == "" # Memory not found or invalid key returns None -> Memory not found
+        assert result.output == ""  # Memory not found or invalid key returns None -> Memory not found
 
     def test_memory_key_validation(self):
         # Valid keys
