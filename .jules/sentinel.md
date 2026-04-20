@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-30 - WebSocket Authentication Bypass
+**Vulnerability:** The `/ws` endpoint did not apply the `verify_admin_access` dependency used by other sensitive endpoints, allowing unauthenticated access to real-time system status and messages even when `LEMMING_ADMIN_KEY` was configured.
+**Learning:** WebSocket endpoints often require separate authentication handling because standard HTTP headers (like `X-Admin-Key`) are not always supported or convenient in WebSocket clients.
+**Prevention:** Explicitly apply authentication dependencies to WebSocket endpoints. Support alternative authentication methods like query parameters (e.g., `ws://...?key=SECRET`) in addition to headers for better client compatibility.
