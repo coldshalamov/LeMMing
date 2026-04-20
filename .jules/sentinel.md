@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Inconsistent Auth Enforcement on API
+**Vulnerability:** While an authentication dependency `verify_admin_access` existed, it was only applied to "write" endpoints (like `create_agent`), leaving "read" endpoints (like `list_messages`, `get_agent_logs`) and WebSocket exposed. This allowed data leakage even when `LEMMING_ADMIN_KEY` was configured.
+**Learning:** Security dependencies must be applied consistently to all sensitive endpoints, not just state-mutating ones. "Read-only" data (logs, messages) is often just as sensitive as "write" access.
+**Prevention:** Use `APIRouter` with dependencies for grouped routes or apply authentication middleware globally (with an exclusion list) rather than annotating individual endpoints ad-hoc.

@@ -1,15 +1,18 @@
 import os
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 from lemming import api
+
 
 @pytest.fixture
 def client() -> TestClient:
     # Reset rate limits before each test
     api._request_timestamps.clear()
     return TestClient(api.app)
+
 
 def test_admin_auth_not_configured(client: TestClient, tmp_path):
     """Verify sensitive endpoints are accessible when no admin key is set."""
@@ -18,8 +21,7 @@ def test_admin_auth_not_configured(client: TestClient, tmp_path):
         if "LEMMING_ADMIN_KEY" in os.environ:
             del os.environ["LEMMING_ADMIN_KEY"]
 
-        with patch("lemming.api.BASE_PATH", tmp_path), \
-             patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+        with patch("lemming.api.BASE_PATH", tmp_path), patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
 
             # Setup minimal environment for run_once (trigger_tick)
             config_dir = tmp_path / "lemming" / "config"
@@ -39,11 +41,14 @@ def test_admin_auth_not_configured(client: TestClient, tmp_path):
             resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
             assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
 
+
 def test_admin_auth_configured_success(client: TestClient, tmp_path):
     """Verify access is allowed with correct key when configured."""
-    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
-         patch("lemming.api.BASE_PATH", tmp_path), \
-         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
 
         # Setup minimal environment
         config_dir = tmp_path / "lemming" / "config"
@@ -65,11 +70,14 @@ def test_admin_auth_configured_success(client: TestClient, tmp_path):
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"}, headers=headers)
         assert resp.status_code == 200
 
+
 def test_admin_auth_configured_failure(client: TestClient, tmp_path):
     """Verify access is denied without correct key when configured."""
-    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
-         patch("lemming.api.BASE_PATH", tmp_path), \
-         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
 
         # Setup minimal environment
         config_dir = tmp_path / "lemming" / "config"
@@ -93,11 +101,14 @@ def test_admin_auth_configured_failure(client: TestClient, tmp_path):
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
         assert resp.status_code == 401
 
+
 def test_agent_creation_auth_configured(client: TestClient, tmp_path):
     """Verify agent creation/cloning is protected when admin key is set."""
-    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
-         patch("lemming.api.BASE_PATH", tmp_path), \
-         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
 
         # Setup minimal environment
         agents_dir = tmp_path / "agents"
@@ -105,7 +116,12 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         # Create a source agent for cloning
         source_dir = agents_dir / "source"
         source_dir.mkdir()
-        (source_dir / "resume.json").write_text('{"name": "source", "title": "Src", "short_description": "Src", "model": {"key": "gpt"}, "permissions": {"read_outboxes": [], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}')
+        (source_dir / "resume.json").write_text(
+            '{"name": "source", "title": "Src", "short_description": "Src", "model": {"key": "gpt"}, '
+            '"permissions": {"read_outboxes": [], "tools": []}, '
+            '"schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, '
+            '"instructions": "test"}'
+        )
         (source_dir / "outbox").mkdir()
         (source_dir / "memory").mkdir()
         (source_dir / "logs").mkdir()
@@ -114,50 +130,118 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         # 1. Test Unauthenticated Access
 
         # Create Agent - No Auth
-        resp = client.post("/api/agents", json={
-            "name": "new_agent",
-            "resume": {
+        resp = client.post(
+            "/api/agents",
+            json={
                 "name": "new_agent",
-                "title": "New",
-                "short_description": "New agent",
-                "model": {"key": "gpt"},
-                "permissions": {"read_outboxes": [], "tools": []},
-                "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
-                "instructions": "test"
-            }
-        })
+                "resume": {
+                    "name": "new_agent",
+                    "title": "New",
+                    "short_description": "New agent",
+                    "model": {"key": "gpt"},
+                    "permissions": {"read_outboxes": [], "tools": []},
+                    "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+                    "instructions": "test",
+                },
+            },
+        )
         assert resp.status_code == 401
 
         # Clone Agent - No Auth
-        resp = client.post("/api/agents/clone", json={
-            "source_agent": "source",
-            "target_name": "cloned_agent"
-        })
+        resp = client.post("/api/agents/clone", json={"source_agent": "source", "target_name": "cloned_agent"})
         assert resp.status_code == 401
 
         # 2. Test Authenticated Access
         headers = {"X-Admin-Key": "secret123"}
 
         # Create Agent - Auth
-        resp = client.post("/api/agents", json={
-            "name": "auth_agent",
-            "resume": {
+        resp = client.post(
+            "/api/agents",
+            json={
                 "name": "auth_agent",
-                "title": "Auth",
-                "short_description": "Auth agent",
-                "model": {"key": "gpt"},
-                "permissions": {"read_outboxes": [], "tools": []},
-                "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
-                "instructions": "test"
-            }
-        }, headers=headers)
+                "resume": {
+                    "name": "auth_agent",
+                    "title": "Auth",
+                    "short_description": "Auth agent",
+                    "model": {"key": "gpt"},
+                    "permissions": {"read_outboxes": [], "tools": []},
+                    "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+                    "instructions": "test",
+                },
+            },
+            headers=headers,
+        )
         assert resp.status_code == 201
         assert (agents_dir / "auth_agent").exists()
 
         # Clone Agent - Auth
-        resp = client.post("/api/agents/clone", json={
-            "source_agent": "source",
-            "target_name": "auth_cloned"
-        }, headers=headers)
+        resp = client.post(
+            "/api/agents/clone", json={"source_agent": "source", "target_name": "auth_cloned"}, headers=headers
+        )
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
+
+
+def test_read_endpoints_auth_configured(client: TestClient, tmp_path):
+    """Verify read endpoints are protected when admin key is set."""
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
+        # Setup minimal environment
+        config_dir = tmp_path / "lemming" / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "tick.json").write_text("0")
+        (config_dir / "org_config.json").write_text('{"base_turn_seconds": 1}')
+        (config_dir / "credits.json").write_text("{}")
+        (config_dir / "models.json").write_text("{}")
+        if not (tmp_path / "agents").exists():
+            (tmp_path / "agents").mkdir()
+
+        # Unauthenticated attempts
+        assert client.get("/api/agents").status_code == 401
+        assert client.get("/api/messages").status_code == 401
+        assert client.get("/api/config").status_code == 401
+        assert client.get("/api/credits").status_code == 401
+        assert client.get("/api/tools").status_code == 401
+        assert client.get("/api/models").status_code == 401
+        assert client.get("/api/org-graph").status_code == 401
+        assert client.get("/api/status").status_code == 401
+
+        # Authenticated attempts
+        headers = {"X-Admin-Key": "secret123"}
+        assert client.get("/api/agents", headers=headers).status_code == 200
+        assert client.get("/api/messages", headers=headers).status_code == 200
+        assert client.get("/api/config", headers=headers).status_code == 200
+        assert client.get("/api/credits", headers=headers).status_code == 200
+
+
+def test_websocket_auth(client: TestClient, tmp_path):
+    """Verify WebSocket endpoint is protected."""
+    with (
+        patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}),
+        patch("lemming.api.BASE_PATH", tmp_path),
+        patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"),
+    ):
+        # Setup minimal environment
+        config_dir = tmp_path / "lemming" / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "tick.json").write_text("0")
+        (config_dir / "org_config.json").write_text('{"base_turn_seconds": 1}')
+        (config_dir / "credits.json").write_text("{}")
+        (config_dir / "models.json").write_text("{}")
+        if not (tmp_path / "agents").exists():
+            (tmp_path / "agents").mkdir()
+
+        # Unauthenticated - should fail
+        from fastapi.websockets import WebSocketDisconnect
+
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect("/ws") as websocket:
+                pass
+
+        # Authenticated with query param
+        with client.websocket_connect("/ws?key=secret123") as websocket:
+            data = websocket.receive_json()
+            assert "status" in data
