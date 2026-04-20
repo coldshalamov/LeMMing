@@ -16,8 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, _tick_from_filename_str, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import _tick_from_filename_str
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +226,7 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
                     if tick_val >= recent_tick_threshold:
                         try:
                             # Optimization: bypass Path object creation
-                            with open(entry.path, "r", encoding="utf-8") as f:
+                            with open(entry.path, encoding="utf-8") as f:
                                 entry_data = json.load(f)
 
                                 # Optimization: bypass OutboxEntry instantiation
