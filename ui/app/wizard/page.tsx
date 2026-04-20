@@ -566,10 +566,29 @@ export default function WizardPage() {
                           {formData.permissions.tools.map((tool) => (
                             <div
                               key={tool}
-                              className="px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan flex items-center gap-2"
+                              className="pl-3 pr-1 py-1 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan flex items-center gap-2 group/chip"
                             >
                               <Check size={12} />
                               {tool}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData({
+                                    ...formData,
+                                    permissions: {
+                                      ...formData.permissions,
+                                      tools: formData.permissions.tools.filter(
+                                        (t) => t !== tool
+                                      ),
+                                    },
+                                  })
+                                }
+                                aria-label={`Remove ${tool} capability`}
+                                title={`Remove ${tool}`}
+                                className="text-brand-cyan/50 hover:text-brand-cyan hover:bg-brand-cyan/20 p-1 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+                              >
+                                <X size={12} />
+                              </button>
                             </div>
                           ))}
                         </div>
