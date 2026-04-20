@@ -6,13 +6,15 @@ Uses a WinEvent hook on toast windows plus UIAutomation to read the toast text.
 Requires Python 3.12+, keyboard, pywin32, comtypes.
 Run:  py -3.12 scripts\\toast_alt_enter.py
 """
+
 import ctypes
 import ctypes.wintypes as wintypes
+
+import comtypes.client
 import keyboard
 import win32api
 import win32con
 import win32gui
-import comtypes.client
 
 # Generate / load UIAutomation interfaces.
 comtypes.client.GetModule("UIAutomationCore.dll")
@@ -55,7 +57,7 @@ def toast_text(hwnd: int) -> str:
                 parts.append(name)
         return " ".join(parts)
     except Exception:
-    return ""
+        return ""
 
 
 def _restore_and_focus_window(title_hint: str) -> None:
