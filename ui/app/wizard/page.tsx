@@ -146,8 +146,7 @@ export default function WizardPage() {
       // Success! Redirect to dashboard
       window.location.href = "/";
     } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Failed to deploy agent.";
+      const message = e instanceof Error ? e.message : "Failed to deploy agent.";
       setError(message);
       setIsDeploying(false);
     }
@@ -339,7 +338,7 @@ export default function WizardPage() {
                           })
                         }
                         className="w-full bg-neo-surface border border-neo-border p-3 rounded text-white focus:border-brand-cyan focus:outline-none h-32"
-                        placeholder="What is this agent's purpose?"
+                        placeholder="What is this agent&apos;s purpose?"
                       />
                     </div>
 
@@ -457,10 +456,7 @@ export default function WizardPage() {
                       >
                         Instructions
                       </h4>
-                      <p
-                        id="instructions-desc"
-                        className="text-xs text-gray-400"
-                      >
+                      <p id="instructions-desc" className="text-xs text-gray-400">
                         This becomes the agent instruction block in the resume.
                       </p>
                       <textarea
@@ -470,10 +466,7 @@ export default function WizardPage() {
                         placeholder="Add custom instructions here..."
                         value={formData.instructions}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            instructions: e.target.value,
-                          })
+                          setFormData({ ...formData, instructions: e.target.value })
                         }
                       />
                     </div>
@@ -484,12 +477,9 @@ export default function WizardPage() {
                 {stepIdx === 2 && (
                   <div className="space-y-6">
                     <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded text-blue-300 text-sm">
-                      <p className="mb-2">
-                        Set when your agent runs during each tick cycle.
-                      </p>
+                      <p className="mb-2">Set when your agent runs during each tick cycle.</p>
                       <p className="text-xs text-gray-400">
-                        The organization runs on a regular timer (default: 10
-                        seconds per tick, configurable).
+                        The organization runs on a regular timer (default: 10 seconds per tick, configurable).
                       </p>
                     </div>
 
@@ -538,10 +528,7 @@ export default function WizardPage() {
                         onChange={(newOffset) =>
                           setFormData({
                             ...formData,
-                            schedule: {
-                              ...formData.schedule,
-                              phase_offset: newOffset,
-                            },
+                            schedule: { ...formData.schedule, phase_offset: newOffset },
                           })
                         }
                       />
@@ -664,8 +651,7 @@ export default function WizardPage() {
                             Purpose
                           </div>
                           <p className="text-gray-300 text-sm">
-                            {formData.short_description ||
-                              "No description provided"}
+                            {formData.short_description || "No description provided"}
                           </p>
                         </div>
 
@@ -690,9 +676,7 @@ export default function WizardPage() {
                               <Clock size={16} className="text-brand-cyan" />
                               <span className="text-white text-sm">
                                 Every {formData.schedule.run_every_n_ticks} tick
-                                {formData.schedule.run_every_n_ticks > 1
-                                  ? "s"
-                                  : ""}
+                                {formData.schedule.run_every_n_ticks > 1 ? "s" : ""}
                               </span>
                             </div>
                           </div>
@@ -722,16 +706,14 @@ export default function WizardPage() {
                               Can Read From
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              {formData.permissions.read_outboxes.map(
-                                (agent) => (
-                                  <div
-                                    key={agent}
-                                    className="px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan"
-                                  >
-                                    {agent}
-                                  </div>
-                                ),
-                              )}
+                              {formData.permissions.read_outboxes.map((agent) => (
+                                <div
+                                  key={agent}
+                                  className="px-3 py-1.5 bg-brand-cyan/10 border border-brand-cyan/30 rounded-full text-xs text-brand-cyan"
+                                >
+                                  {agent}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
@@ -741,17 +723,13 @@ export default function WizardPage() {
                             Resource Budget
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-300">
-                              Maximum Credits
-                            </span>
+                            <span className="text-sm text-gray-300">Maximum Credits</span>
                             <span className="text-brand-lime font-mono font-bold">
                               {formData.credits.max_credits}
                             </span>
                           </div>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-sm text-gray-300">
-                              Soft Cap
-                            </span>
+                            <span className="text-sm text-gray-300">Soft Cap</span>
                             <span className="text-white/80 font-mono font-semibold">
                               {formData.credits.soft_cap}
                             </span>
@@ -773,11 +751,7 @@ export default function WizardPage() {
                   <button
                     onClick={handleBack}
                     className="px-6 py-2 rounded border border-neo-border text-gray-400 hover:text-white flex items-center gap-2"
-                    title={
-                      stepIdx === 0
-                        ? "Cancel wizard"
-                        : `Go back to ${STEPS[stepIdx - 1]?.label}`
-                    }
+                    title={stepIdx === 0 ? "Cancel wizard" : `Go back to ${STEPS[stepIdx - 1]?.label}`}
                     aria-label={
                       stepIdx === 0
                         ? "Cancel wizard and return to dashboard"
@@ -795,7 +769,7 @@ export default function WizardPage() {
                         "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
                         canProceedToNextStep
                           ? "bg-brand-cyan text-black hover:bg-cyan-300"
-                          : "bg-white/10 text-white/30 cursor-not-allowed",
+                          : "bg-white/10 text-white/30 cursor-not-allowed"
                       )}
                       title={
                         canProceedToNextStep
@@ -812,14 +786,11 @@ export default function WizardPage() {
                       onClick={handleDeploy}
                       disabled={isDeploying}
                       className={clsx(
-                        "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)] disabled:cursor-not-allowed",
+                        "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)]",
                         isDeploying
                           ? "bg-gray-500 cursor-wait"
                           : "bg-brand-lime text-black hover:bg-lime-400",
                       )}
-                      title={
-                        isDeploying ? "Deployment in progress" : "Deploy agent"
-                      }
                     >
                       {isDeploying ? (
                         <Loader2 size={16} className="animate-spin" />
