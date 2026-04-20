@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Zip Slip in Bundle Import
+**Vulnerability:** The `import department` CLI command used `shutil.unpack_archive` to extract department ZIP bundles. This function is vulnerable to Zip Slip, where maliciously crafted archives containing `../` in file names can extract files outside the intended target directory, potentially overwriting critical system files.
+**Learning:** High-level archive extraction functions like `shutil.unpack_archive` or `ZipFile.extractall()` do not typically validate that extracted paths remain within the target directory boundaries.
+**Prevention:** Never use `shutil.unpack_archive` or blind `extractall` on untrusted archives. Always iterate through archive members (`namelist` or `infolist`) and use `pathlib.Path.is_relative_to(target_dir.resolve())` on the resolved absolute target path to ensure it does not escape the target directory before extracting.
