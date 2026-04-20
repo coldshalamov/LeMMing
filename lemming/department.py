@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +167,19 @@ def get_department_agents(base_path: Path, department_name: str) -> list[Agent]:
     return department_agents
 
 
+def _tick_from_filename_str(filename: str) -> int:
+    """Helper to extract tick from filename string.
+
+    Returns -1 if parsing fails so it sorts to the end.
+    """
+    try:
+        # Optimization: partition is faster than split
+        tick_part = filename.partition("_")[0]
+        return int(tick_part)
+    except (ValueError, IndexError):
+        return -1
+
+
 def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelationship]:
     """Analyze the social graph from agent permissions and outbox interactions.
 
@@ -206,26 +218,39 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
     # Analyze recent outbox interactions to strengthen relationships
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
-        if not outbox_dir.exists():
-            continue
 
         # Count interactions with each recipient
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
+        # Optimization: Use os.scandir to avoid Path creation and load only recent files
+        try:
+            with os.scandir(outbox_dir) as it:
+                for entry in it:
+                    if not entry.is_file() or not entry.name.endswith(".json"):
+                        continue
 
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
+                    # Optimization: Check tick from filename before loading
+                    tick = _tick_from_filename_str(entry.name)
+                    if tick == -1 or tick < recent_tick_threshold:
+                        continue
+
+                    try:
+                        with open(entry.path, encoding="utf-8") as f:
+                            entry_data = json.load(f)
+
+                            # Support both 'recipients' (standard) and 'to' (legacy/fallback)
+                            recipients = entry_data.get("recipients") or entry_data.get("to") or []
+
+                            # Update interaction counts
+                            for rel in relationships:
+                                if rel.source == agent.name and rel.target in recipients:
+                                    interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
+                    except Exception:
+                        continue
+        except OSError:
+            # Directory not found or other error
+            continue
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
