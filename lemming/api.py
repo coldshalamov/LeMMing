@@ -674,6 +674,13 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    if admin_key:
+        request_key = websocket.headers.get("X-Admin-Key") or websocket.query_params.get("admin_key")
+        if not request_key or not secrets.compare_digest(request_key, admin_key):
+            await websocket.close(code=http_status.WS_1008_POLICY_VIOLATION)
+            return
+
     await websocket.accept()
     try:
         while True:
