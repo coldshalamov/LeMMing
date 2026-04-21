@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            loaded_secrets = json.load(f)
+            for k, v in loaded_secrets.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -674,6 +674,13 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
+    admin_key = os.environ.get("LEMMING_ADMIN_KEY")
+    if admin_key:
+        request_key = websocket.headers.get("X-Admin-Key") or websocket.query_params.get("admin_key")
+        if not request_key or not secrets.compare_digest(request_key, admin_key):
+            await websocket.close(code=http_status.WS_1008_POLICY_VIOLATION)
+            return
+
     await websocket.accept()
     try:
         while True:
