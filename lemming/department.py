@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -206,35 +205,54 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
     # Analyze recent outbox interactions to strengthen relationships
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
-        if not outbox_dir.exists():
+
+        # Optimization: Use os.scandir to avoid loading all files and check ticks from filename
+        try:
+            with os.scandir(outbox_dir) as it:
+                # Count interactions with each recipient
+                interaction_counts: dict[str, int] = {}
+                recent_tick_threshold = max(0, current_tick - 100)
+
+                for entry in it:
+                    if not entry.is_file() or not entry.name.endswith(".json"):
+                        continue
+
+                    # Optimization: Parse tick from filename to skip old files without opening them
+                    try:
+                        # Filename format: {tick}_{id}.json
+                        tick = int(entry.name.partition("_")[0])
+                    except (ValueError, IndexError):
+                        continue
+
+                    if tick < recent_tick_threshold:
+                        continue
+
+                    try:
+                        with open(entry.path, encoding="utf-8") as f:
+                            entry_data = json.load(f)
+
+                        # Optimization: Skip OutboxEntry instantiation, work with dict directly
+                        # Support both 'to' and 'recipients' fields
+                        recipients = entry_data.get("to") or entry_data.get("recipients") or []
+
+                        if recipients:
+                            for rel in relationships:
+                                if rel.source == agent.name and rel.target in recipients:
+                                    interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
+                    except Exception:
+                        continue
+
+                # Update relationship strengths based on interaction frequency
+                for target, count in interaction_counts.items():
+                    for rel in relationships:
+                        if rel.source == agent.name and rel.target == target:
+                            rel.interaction_count += count
+                            rel.last_interaction_tick = current_tick
+                            # Increase strength based on interaction frequency
+                            rel.strength = min(1.0, rel.strength + (count * 0.05))
+
+        except OSError:
             continue
-
-        # Count interactions with each recipient
-        interaction_counts: dict[str, int] = {}
-        recent_tick_threshold = max(0, current_tick - 100)
-
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
-
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
-
-        # Update relationship strengths based on interaction frequency
-        for target, count in interaction_counts.items():
-            for rel in relationships:
-                if rel.source == agent.name and rel.target == target:
-                    rel.interaction_count += count
-                    rel.last_interaction_tick = current_tick
-                    # Increase strength based on interaction frequency
-                    rel.strength = min(1.0, rel.strength + (count * 0.05))
 
     return relationships
 
