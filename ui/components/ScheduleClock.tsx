@@ -1,7 +1,7 @@
 // Interactive Clock Component for Agent Scheduling
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import clsx from "clsx";
 
 interface ScheduleClockProps {
@@ -12,6 +12,7 @@ interface ScheduleClockProps {
 
 export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProps) {
     const [hoveredPosition, setHoveredPosition] = useState<number | null>(null);
+    const itemRefs = useRef<(SVGGElement | null)[]>([]);
 
     // Calculate activation points based on frequency
     const getActivationPoints = (): number[] => {
@@ -44,6 +45,23 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
         };
     });
 
+    const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onChange(index);
+        } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+            e.preventDefault();
+            const nextIndex = (index + 1) % 12;
+            onChange(nextIndex);
+            itemRefs.current[nextIndex]?.focus();
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+            e.preventDefault();
+            const prevIndex = (index - 1 + 12) % 12;
+            onChange(prevIndex);
+            itemRefs.current[prevIndex]?.focus();
+        }
+    };
+
     return (
         <div className="flex flex-col items-center gap-4">
             <div
@@ -71,17 +89,13 @@ export function ScheduleClock({ frequency, offset, onChange }: ScheduleClockProp
                         return (
                             <g
                                 key={pos.index}
-                                role="button"
-                                tabIndex={0}
+                                ref={(el) => { itemRefs.current[pos.index] = el; }}
+                                role="radio"
+                                tabIndex={isFirst ? 0 : -1}
                                 aria-label={`Set start offset to position ${pos.index === 0 ? 12 : pos.index}`}
-                                aria-pressed={isFirst}
+                                aria-checked={isFirst}
                                 onClick={() => onChange(pos.index)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        onChange(pos.index);
-                                    }
-                                }}
+                                onKeyDown={(e) => handleKeyDown(e, pos.index)}
                                 onMouseEnter={() => setHoveredPosition(pos.index)}
                                 className="cursor-pointer focus:outline-none group"
                             >
