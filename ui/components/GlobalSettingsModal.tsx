@@ -153,6 +153,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 </button>
                             </div>
                         </div>
+
+                        {status === "error" && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3 text-red-400 text-xs" role="alert">
+                                <AlertTriangle size={16} className="shrink-0" />
+                                <p>Failed to save configuration. Please try again.</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer */}
