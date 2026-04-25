@@ -792,9 +792,9 @@ export default function WizardPage() {
                       }}
                       aria-disabled={isDeploying}
                       className={clsx(
-                        "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)] aria-disabled:cursor-not-allowed",
+                        "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)]",
                         isDeploying
-                          ? "bg-gray-500"
+                          ? "bg-gray-500 cursor-wait"
                           : "bg-brand-lime text-black hover:bg-lime-400",
                       )}
                       title={isDeploying ? "Deploying unit..." : "Deploy unit"}
