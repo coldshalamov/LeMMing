@@ -783,14 +783,21 @@ export default function WizardPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={handleDeploy}
-                      disabled={isDeploying}
+                      onClick={(e) => {
+                        if (isDeploying) {
+                          e.preventDefault();
+                          return;
+                        }
+                        handleDeploy();
+                      }}
+                      aria-disabled={isDeploying}
                       className={clsx(
-                        "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)]",
+                        "px-6 py-2 rounded font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.4)] aria-disabled:cursor-not-allowed",
                         isDeploying
-                          ? "bg-gray-500 cursor-wait"
+                          ? "bg-gray-500"
                           : "bg-brand-lime text-black hover:bg-lime-400",
                       )}
+                      title={isDeploying ? "Deploying unit..." : "Deploy unit"}
                     >
                       {isDeploying ? (
                         <Loader2 size={16} className="animate-spin" />
