@@ -634,6 +634,7 @@ export default function WizardPage() {
                           onClick={handleCopyConfig}
                           className="text-xs flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors"
                           aria-label="Copy agent configuration JSON to clipboard"
+                          title="Copy JSON"
                         >
                           {isCopied ? (
                             <Check size={14} className="text-brand-lime" />

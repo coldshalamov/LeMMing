@@ -153,6 +153,7 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                             onClick={onClose}
                             className="p-2 hover:bg-white/5 rounded-lg transition-colors"
                             aria-label="Close"
+                            title="Close"
                         >
                             <X size={24} className="text-gray-400" />
                         </button>
