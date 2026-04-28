@@ -274,15 +274,21 @@ export default function Dashboard() {
           <div className="h-8 w-px bg-white/10 mx-2" />
 
           <button
-            onClick={handleRunTick}
-            disabled={isTicking}
+            onClick={(e) => {
+              if (isTicking) {
+                e.preventDefault();
+                return;
+              }
+              handleRunTick();
+            }}
+            aria-disabled={isTicking}
             className={clsx(
-              "w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50",
+              "w-12 h-12 rounded-full flex items-center justify-center transition-transform shadow-lg aria-disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
               isTicking
-                ? "bg-gray-600 text-gray-400"
-                : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)]",
+                ? "bg-gray-600 text-gray-400 cursor-wait aria-disabled:hover:scale-100 aria-disabled:active:scale-100"
+                : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)] hover:scale-105 active:scale-95",
             )}
-            title="Run one tick"
+            title={isTicking ? "Executing tick..." : "Run one tick"}
             aria-label="Run one tick"
           >
             {isTicking ? (
