@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2026-04-28 - Variable Shadowing Vulnerability Breaking Security Checks
+**Vulnerability:** A local variable `secrets` created during configuration loading shadowed the Python `secrets` standard library module.
+**Learning:** This prevented the execution of security functions like `secrets.compare_digest`, breaking authentication logic.
+**Prevention:** Avoid naming local variables the same as imported standard libraries (e.g., use `loaded_secrets` instead of `secrets`).
