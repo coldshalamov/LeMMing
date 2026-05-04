@@ -36,6 +36,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
     }, [onClose]);
 
     const handleSave = async () => {
+        if (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) return;
         setStatus("loading");
         try {
             await updateEngineConfig(config);
@@ -80,6 +81,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             onClick={onClose}
                             className="p-2 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                             aria-label="Close settings"
+                            title="Close settings"
                         >
                             <X size={20} className="text-gray-400" />
                         </button>
@@ -165,8 +167,9 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            aria-disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                            title={status === "loading" ? "Saving configuration..." : (!config.openai_api_key && !config.anthropic_api_key) ? "Enter at least one API key to save" : "Save configuration"}
+                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 transition-colors aria-disabled:opacity-50 hover:bg-cyan-300 aria-disabled:hover:bg-brand-cyan aria-disabled:cursor-not-allowed [&[aria-disabled='true'][title='Saving configuration...']]:cursor-wait"
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
