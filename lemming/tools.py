@@ -451,7 +451,10 @@ class FileListTool(Tool):
             workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
+        if not (
+            target_path.is_relative_to(workspace_dir.resolve())
+            or target_path.is_relative_to((base_path / "shared").resolve())
+        ):
              return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
