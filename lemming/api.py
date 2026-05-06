@@ -222,7 +222,11 @@ class ToolInfo(BaseModel):
     description: str
 
 
-@app.post("/api/messages", dependencies=[Depends(rate_limiter(limit=10, window=60))])
+# Security concern: Missing authentication allowed users to directly inject messages into agent outboxes
+@app.post(
+    "/api/messages",
+    dependencies=[Depends(rate_limiter(limit=10, window=60)), Depends(verify_admin_access)],
+)
 async def send_message(request: SendMessageRequest) -> dict[str, str]:
     """Send a message from 'human' to a target agent."""
     tick = load_tick(BASE_PATH)
