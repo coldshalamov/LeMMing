@@ -161,3 +161,19 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         }, headers=headers)
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
+
+        # Send Message - No Auth
+        resp = client.post("/api/messages", json={
+            "text": "Hello",
+            "importance": "normal",
+            "target": "source"
+        })
+        assert resp.status_code == 401
+
+        # Send Message - Auth
+        resp = client.post("/api/messages", json={
+            "text": "Hello",
+            "importance": "normal",
+            "target": "source"
+        }, headers=headers)
+        assert resp.status_code == 200
