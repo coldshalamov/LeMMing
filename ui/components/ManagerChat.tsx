@@ -211,9 +211,20 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
                             />
                             <button
                                 type="submit"
-                                disabled={!inputValue.trim() || isSending}
-                                aria-label={isSending ? "Sending message..." : "Send message"}
-                                className="p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-[38px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                onClick={(e) => {
+                                    if (!inputValue.trim() || isSending) {
+                                        e.preventDefault();
+                                        return;
+                                    }
+                                }}
+                                aria-disabled={!inputValue.trim() || isSending}
+                                aria-label="Send message"
+                                title={isSending ? "Sending message..." : (!inputValue.trim() ? "Type a message to send" : "Send message")}
+                                className={clsx(
+                                    "p-2 bg-brand-purple text-white rounded-lg transition-colors h-[38px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+                                    (!inputValue.trim() || isSending) ? "opacity-50" : "hover:bg-purple-600",
+                                    isSending ? "cursor-wait" : (!inputValue.trim() ? "cursor-not-allowed" : "")
+                                )}
                             >
                                 {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                             </button>
