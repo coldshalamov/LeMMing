@@ -1,9 +1,11 @@
 import os
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 from lemming import api
+
 
 @pytest.fixture
 def client() -> TestClient:
@@ -91,6 +93,10 @@ def test_admin_auth_configured_failure(client: TestClient, tmp_path):
 
         # update_engine_config
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
+        assert resp.status_code == 401
+
+        # send_message
+        resp = client.post("/api/messages", json={"text": "hello", "target": "agent", "importance": 5})
         assert resp.status_code == 401
 
 def test_agent_creation_auth_configured(client: TestClient, tmp_path):
