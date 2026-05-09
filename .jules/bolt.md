@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2024-05-27 - [JSON Deserialization and F-String Optimization]
+**Learning:** `json.load(f)` is slower than `json.loads(f.read())` when parsing high-throughput JSON. String `.format()` is significantly slower than f-strings.
+**Action:** Use `open(..., 'rb')` with `json.loads(f.read())` and prefer f-strings over `.format()` in hot file I/O operations like loading and writing outbox messages.
