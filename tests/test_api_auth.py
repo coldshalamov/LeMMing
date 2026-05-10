@@ -161,3 +161,34 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         }, headers=headers)
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
+
+def test_send_message_auth_configured(client: TestClient, tmp_path):
+    """Verify message sending is protected when admin key is set."""
+    with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
+         patch("lemming.api.BASE_PATH", tmp_path), \
+         patch("lemming.api.SECRETS_PATH", tmp_path / "secrets.json"):
+
+        # Setup minimal environment
+        config_dir = tmp_path / "lemming" / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "tick.json").write_text("0")
+        (config_dir / "org_config.json").write_text('{"base_turn_seconds": 1}')
+        (config_dir / "credits.json").write_text("{}")
+        (config_dir / "models.json").write_text("{}")
+
+        # 1. Test Unauthenticated Access
+        resp = client.post("/api/messages", json={
+            "target": "agent1",
+            "text": "Hello!",
+            "importance": "normal"
+        })
+        assert resp.status_code == 401
+
+        # 2. Test Authenticated Access
+        headers = {"X-Admin-Key": "secret123"}
+        resp = client.post("/api/messages", json={
+            "target": "agent1",
+            "text": "Hello!",
+            "importance": "normal"
+        }, headers=headers)
+        assert resp.status_code == 200
