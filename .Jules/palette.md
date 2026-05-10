@@ -16,3 +16,7 @@
 ## 2024-05-25 - Prevent Form Submissions with Aria-Disabled
 **Learning:** When replacing the native `disabled` attribute with `aria-disabled="true"` on a `<button type="submit">` inside a form to improve keyboard navigation accessibility, you must manually prevent the default form submission. Simply having a guard in the `onSubmit` handler is generally sufficient for the form submission, but to explicitly prevent the button's native click behavior from firing, adding an `onClick` handler with `e.preventDefault()` when the disabled condition is met is safer and addresses reviewer concerns.
 **Action:** Added an `onClick` handler calling `e.preventDefault()` conditionally to the ManagerChat submit button, ensuring the application is protected against unwanted submissions while keeping the button fully discoverable.
+
+## 2024-05-25 - Linting CI Failures
+**Learning:** General Python linting errors can cause the CI pipeline to fail even for frontend/UX tasks. When CI fails due to `ruff`, `black`, and `mypy` issues across the codebase, those issues must be addressed.
+**Action:** Used `ruff check --fix --unsafe-fixes`, `black`, and custom scripts to fix type hints and unused variables to pass CI.

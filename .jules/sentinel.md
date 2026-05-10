@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-25 - Python CI Failures
+**Vulnerability:** Not a security vulnerability.
+**Learning:** Fixing general Python bugs (like variable shadowing of standard library modules causing `mypy` errors) and linting issues is generally out of scope for Sentinel, but when the codebase has extensive preexisting linter issues that break the CI pipeline, they must be fixed to allow the CI to pass.
+**Prevention:** Always run linters and fix their output before pushing.
