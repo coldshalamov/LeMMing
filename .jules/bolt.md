@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2024-05-11 - Optimize outbox scanning in analyze_social_graph
+**Learning:** Parsing the tick directly from the outbox file name (`entry.name.partition('_')[0]`) using `os.scandir` is significantly faster than using `Path.glob` and fully deserializing every JSON file to instantiate `OutboxEntry` objects.
+**Action:** Use `os.scandir` to pre-filter by tick from the filename, and use `json.loads(f.read())` to avoid full instantiation when analyzing outbox files.
