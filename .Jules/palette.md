@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2025-05-13 - Verify CSS Classes vs Visual Output
+**Learning:** When adding CSS styles like cursor states via `disabled:cursor-wait`, these interactive styles do not inherently show up in headless Playwright verification screenshots. To confirm the CSS logic works properly in verification scripts without full integration test coverage, programmatically check the classes via `locator.get_attribute('class')` rather than relying entirely on screenshots.
+**Action:** Used `loading_btn.get_attribute("class")` to verify that `disabled:cursor-wait` was correctly applied during loading state in Playwright scripts.
