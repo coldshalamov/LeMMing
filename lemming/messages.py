@@ -97,8 +97,7 @@ class OutboxEntry:
 
 
 def outbox_filename(entry: OutboxEntry) -> str:
-    # Optimization: f-strings are ~2x faster than .format() in hot paths
-    return f"{entry.tick:08d}_{entry.id}.json"
+    return OUTBOX_FILENAME_TEMPLATE.format(tick=entry.tick, entry_id=entry.id)
 
 
 def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> Path:
