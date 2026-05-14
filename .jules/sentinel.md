@@ -15,10 +15,15 @@
 
 ## 2024-05-27 - Workspace Hijacking via Name Collision
 **Vulnerability:** Tools relied on `agent_name` to resolve `agent_path`. Nested agents (e.g., `agents/sub/victim`) could spoof root agents (e.g., `agents/victim`) because names are not unique across the tree.
-**Learning:** In a hierarchical or nested system, "name" is often ambiguous. Path resolution must be context-aware (pass the instance's path) rather than derived from a non-unique identifier.
+**Learning:** In a hierarchical or nested system, "name" is often ambiguous. Path resolution must be context-aware (pass the instance's path) rather than determination from a non-unique identifier.
 **Prevention:** Pass the authoritative `agent_path` (or unique ID) from the engine execution context to tools, rather than re-resolving it from the name.
 
 ## 2024-05-28 - Argument Injection in CLI Wrappers
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - WebSocket Security Bypass
+**Vulnerability:** Standard HTTP dependencies (like `verify_admin_access`) were not applied to WebSocket endpoints, allowing attackers to bypass authentication and stream sensitive data even when `LEMMING_ADMIN_KEY` was set.
+**Learning:** WebSockets often bypass standard HTTP middleware stacks. Additionally, browser `WebSocket` APIs cannot set custom headers, requiring auth tokens to be passed via query parameters (e.g. `?key=...`).
+**Prevention:** Create dedicated WebSocket dependencies that validate authentication via query parameters (or headers for non-browser clients) and raise `WebSocketException` to close the connection during the handshake.
