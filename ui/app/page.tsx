@@ -48,6 +48,18 @@ export default function Dashboard() {
     }
   }, [status?.tick, visualTick]);
 
+  // Handle Escape key to dismiss agent details
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedAgentName(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const selectedAgent = agents?.find((a) => a.name === selectedAgentName);
 
   const handleRunTick = async () => {
