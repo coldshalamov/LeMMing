@@ -13,3 +13,6 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+## 2024-03-10 - [Modals require explicit focus states]
+**Learning:** Custom interactive elements within modals (like grid selection cards, filter chips, and close buttons) often lack default browser focus indicators due to heavy styling.
+**Action:** Always add explicit `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color]` classes to interactive elements inside custom modals to ensure proper keyboard accessibility.
