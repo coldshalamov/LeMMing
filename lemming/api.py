@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            loaded_secrets = json.load(f)
+            for k, v in loaded_secrets.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -668,6 +668,12 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
 
     with open(SECRETS_PATH, "w") as f:
         json.dump(current_secrets, f, indent=2)
+
+    import stat
+    try:
+        os.chmod(SECRETS_PATH, stat.S_IRUSR | stat.S_IWUSR)
+    except Exception as e:
+        logger.warning(f"Could not set secure permissions on secrets.json: {e}")
 
     return {"status": "updated"}
 
