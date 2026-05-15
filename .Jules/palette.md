@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2024-05-23 - Contextual Disabled Button Styles
+**Learning:** For disabled async buttons, providing an accurate visual cue via pointer states is critical. If a button is disabled because a process is ongoing (e.g., `status === "loading"`), use `cursor-wait` to indicate that the system is working. If it is disabled due to missing requirements (e.g., missing API keys), use `cursor-not-allowed`. This provides immediate, non-verbal feedback to the user about why the interaction is blocked. Combined with `aria-disabled="true"` and an informative `title` attribute, this ensures both visual and assistive technology users have complete context.
+**Action:** When implementing `aria-disabled` logic, conditionally map the Tailwind cursor classes based on the exact reason for the disabled state (`cursor-wait` vs `cursor-not-allowed`) rather than applying a blanket style.
