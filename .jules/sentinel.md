@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Unbounded File Reads Leading to DoS/Context Overflow
+**Vulnerability:** `FileReadTool` did not restrict the size of files it could read. An agent or user could point the tool to a massive file (e.g., a huge log or data file), reading it entirely into memory and returning it as output. This risks application OOM (Out Of Memory) crashes and LLM context window overflow.
+**Learning:** Tools that ingest file content into application memory and LLM messages must enforce hard limits to preserve system stability and prevent denial-of-service, even for "read-only" operations.
+**Prevention:** Implement a maximum size constraint (e.g., `MAX_READ_SIZE = 100 * 1024`) and validate file size using `Path.stat().st_size` before opening the file. Reject requests that exceed the limit securely without loading the file.
