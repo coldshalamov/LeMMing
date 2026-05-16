@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Shared Rate Limit Bucket Vulnerability
+**Vulnerability:** The in-memory rate limiter keyed entries only by client IP. This meant a user consuming quota on one endpoint (e.g., `send_message`) would be blocked from other endpoints (e.g., `update_engine_config`) if their total request count exceeded the stricter limit, even if they hadn't used the second endpoint.
+**Learning:** Shared state for rate limiting (bucket) MUST be scoped by the resource/endpoint being protected, otherwise usage couples unexpectedly.
+**Prevention:** Include a `scope` or `resource_id` in the rate limit storage key (e.g., `ip:scope`) to ensure buckets are isolated.
