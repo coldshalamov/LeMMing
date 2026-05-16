@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2024-05-18 - Accurate cursor states for async actions
+**Learning:** The "SAVE CONFIG" button in `GlobalSettingsModal` previously lacked visual feedback when disabled during an asynchronous save, using default cursor behavior which isn't informative.
+**Action:** When a button is disabled due to a loading state, use `cursor-wait` to inform the user that the system is processing. Use `cursor-not-allowed` when the button is structurally disabled (e.g., missing required input).
