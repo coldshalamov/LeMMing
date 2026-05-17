@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2026-05-17 - [JSON Parsing Optimization]
+**Learning:** In high-throughput I/O pathways in Python, using `open(..., 'rb')` with `json.loads(f.read())` is noticeably faster than text mode `open(..., 'r')` with `json.load(f)`.
+**Action:** Use binary mode reading and `json.loads` for hot paths to speed up JSON parsing.
