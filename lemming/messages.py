@@ -68,20 +68,32 @@ class OutboxEntry:
             meta=meta or {},
         )
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self, copy: bool = True) -> dict[str, Any]:
         # Optimization: Manual dict construction is ~30x faster than dataclasses.asdict
         # because it avoids deep recursive copying and inspection overhead.
-        # We perform shallow copies of mutable fields to preserve basic safety.
+        # We perform shallow copies of mutable fields to preserve basic safety by default.
+        if copy:
+            return {
+                "id": self.id,
+                "tick": self.tick,
+                "agent": self.agent,
+                "kind": self.kind,
+                "payload": self.payload.copy(),
+                "tags": self.tags[:],
+                "created_at": self.created_at,
+                "recipients": self.recipients[:] if self.recipients is not None else None,
+                "meta": self.meta.copy(),
+            }
         return {
             "id": self.id,
             "tick": self.tick,
             "agent": self.agent,
             "kind": self.kind,
-            "payload": self.payload.copy(),
-            "tags": self.tags[:],
+            "payload": self.payload,
+            "tags": self.tags,
             "created_at": self.created_at,
-            "recipients": self.recipients[:] if self.recipients is not None else None,
-            "meta": self.meta.copy(),
+            "recipients": self.recipients,
+            "meta": self.meta,
         }
 
     @classmethod
@@ -109,12 +121,12 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
     try:
         with entry_path.open("w", encoding="utf-8") as f:
-            json.dump(entry.to_dict(), f, indent=2)
+            json.dump(entry.to_dict(copy=False), f, indent=2)
     except FileNotFoundError:
         # Parent directory likely doesn't exist
         outbox_dir.mkdir(parents=True, exist_ok=True)
         with entry_path.open("w", encoding="utf-8") as f:
-            json.dump(entry.to_dict(), f, indent=2)
+            json.dump(entry.to_dict(copy=False), f, indent=2)
 
     return entry_path
 
