@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
 interface GlobalSettingsModalProps {
@@ -35,7 +36,10 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [onClose]);
 
+    const isSaveDisabled = status === "loading" || (!config.openai_api_key && !config.anthropic_api_key);
+
     const handleSave = async () => {
+        if (isSaveDisabled) return;
         setStatus("loading");
         try {
             await updateEngineConfig(config);
@@ -165,8 +169,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            aria-disabled={isSaveDisabled}
+                            title={status === "loading" ? "Saving config..." : isSaveDisabled ? "Please provide at least one API key" : "Save configuration"}
+                            className={clsx(
+                                "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors bg-brand-cyan text-black",
+                                isSaveDisabled
+                                    ? "opacity-50"
+                                    : "hover:bg-cyan-300",
+                                status === "loading" ? "cursor-wait" : isSaveDisabled ? "cursor-not-allowed" : "cursor-pointer"
+                            )}
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
