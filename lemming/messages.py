@@ -121,8 +121,10 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        # Optimization: use 'rb' mode and json.loads(f.read())
+        # which is noticeably faster than json.load(f) for hot paths
+        with open(entry_path, "rb") as f:
+            data = json.loads(f.read())
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning(
