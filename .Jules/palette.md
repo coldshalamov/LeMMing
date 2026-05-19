@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2026-05-19 - Focus Visible Styles for Multi-step Wizard
+**Learning:** Keyboard accessibility often gets missed in multi-step forms. Programmatic or mouse interactions work fine, but users relying on Tab navigation need clear visual indicators on complex custom buttons (like large "Select Capabilities" dashed boxes or "Deploy" buttons).
+**Action:** Added consistent `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan` (and appropriate offset/colors) to all interactive buttons in the wizard flow.
