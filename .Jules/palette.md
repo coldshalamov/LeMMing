@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2026-05-26 - Modal Action Button UX Enhancements
+**Learning:** In standard modal dialogs, disabled Save buttons can be confusing without context. Applying dynamic cursors (`disabled:cursor-wait` vs `disabled:cursor-not-allowed`), explicitly explaining the disabled state via the `title` attribute, and ensuring keyboard focus states on all footer actions improves accessibility and usability.
+**Action:** Added `Loader2` spinner, conditional cursors, explanatory tooltips, and `focus-visible` styling to the Global Settings modal footer buttons.
