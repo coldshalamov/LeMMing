@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2026-05-27 - Focus-visible states on modal interactions
+**Learning:** Interactive elements such as modals and filter lists often miss `:focus-visible` keyboard focus states during initial development, making it difficult for keyboard-only users to navigate custom UIs.
+**Action:** Ensured robust `:focus-visible` states using existing design tokens (`focus-visible:ring-brand-cyan`) on all Tool Selector modal interactions, including the close button, category filter tabs, tool grid selections, and action buttons.
