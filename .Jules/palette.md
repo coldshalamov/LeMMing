@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2026-05-28 - Focus Ring Contrast & Spacing
+**Learning:** Adding `focus-visible:ring-offset-2 focus-visible:ring-offset-black` is crucial when applying focus rings to elements on dark backgrounds (like the black overlay buttons in the dashboard) to ensure the focus ring doesn't blend into the button edge.
+**Action:** Always include `ring-offset-2` with a contrasting offset color (e.g., `ring-offset-black` or `ring-offset-neo-bg`) when applying focus rings on dark themes.
