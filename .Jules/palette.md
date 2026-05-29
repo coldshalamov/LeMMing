@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2026-05-29 - Missing Keyboard Focus Indicators
+**Learning:** Some primary dashboard actions (links and icon buttons) lack visible focus states, making keyboard navigation difficult to track for users relying on tab navigation.
+**Action:** Always append the standard `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan` utility classes (or `brand-lime` for lime elements) to all interactive `button` and `Link` elements to ensure keyboard accessibility.
