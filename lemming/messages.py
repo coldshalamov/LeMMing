@@ -86,14 +86,14 @@ class OutboxEntry:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> OutboxEntry:
+        # ⚡ Bolt Optimization: Copy data once instead of conditionally multiple times
+        kwargs = dict(data)
         # Backward compatibility: older entries used ``timestamp``.
-        if "created_at" not in data and "timestamp" in data:
-            data = dict(data)
-            data["created_at"] = data.pop("timestamp")
-        if "recipients" not in data:
-            data = dict(data)
-            data["recipients"] = None
-        return cls(**data)
+        if "created_at" not in kwargs and "timestamp" in kwargs:
+            kwargs["created_at"] = kwargs.pop("timestamp")
+        if "recipients" not in kwargs:
+            kwargs["recipients"] = None
+        return cls(**kwargs)
 
 
 def outbox_filename(entry: OutboxEntry) -> str:
@@ -121,8 +121,9 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        # ⚡ Bolt Optimization: Use binary read + json.loads for faster parsing in hot loops
+        with open(entry_path, "rb") as f:
+            data = json.loads(f.read())
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning(
