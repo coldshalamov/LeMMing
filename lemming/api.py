@@ -39,8 +39,10 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            # SECURITY: Use _secrets_dict instead of 'secrets' to avoid shadowing the built-in secrets module
+            # which is needed for secrets.compare_digest in verify_admin_access
+            _secrets_dict = json.load(f)
+            for k, v in _secrets_dict.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
