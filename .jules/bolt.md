@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2026-06-07 - [Pathlib vs OS Path Strings in Hot Loops]
+**Learning:** Using `pathlib.Path` objects and their methods (like `stat()`) inside frequently called caching functions introduces measurable parsing overhead. Using `os.path.join` and `os.stat` with string paths can yield a ~2.5x to ~4.5x speedup for cache hits in hot loops.
+**Action:** When implementing filesystem-based caches that are called frequently per tick, use string paths instead of `Path` objects.

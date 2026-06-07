@@ -20,9 +20,9 @@ OUTBOX_FILENAME_TEMPLATE = "{tick:08d}_{entry_id}.json"
 
 # Caches for outbox operations to avoid repetitive filesystem scans
 # Key: outbox_dir_path -> (mtime, count)
-_outbox_count_cache: dict[Path, tuple[float, int]] = {}
+_outbox_count_cache: dict[str, tuple[float, int]] = {}
 # Key: outbox_dir_path -> (mtime, list_of_filenames_sorted_desc)
-_outbox_files_cache: dict[Path, tuple[float, list[str]]] = {}
+_outbox_files_cache: dict[str, tuple[float, list[str]]] = {}
 
 
 @dataclass
@@ -121,7 +121,7 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
+        with open(entry_path, encoding="utf-8") as f:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
@@ -178,20 +178,22 @@ def _scan_outbox_files_optimized(
     base_path: Path, agent_name: str, since_tick: int | None = None, limit: int = 0
 ) -> list[tuple[int, str, str]]:
     """Internal optimized version returning (tick, filename, full_path_str)."""
-    outbox_dir = get_outbox_dir(base_path, agent_name)
+    # Optimization: Construct path manually as string instead of instantiating Path objects
+    # to avoid parsing overhead in hot caching loops
+    outbox_dir_str = os.path.join(str(base_path), "agents", agent_name, "outbox")
     results = []
 
     try:
         # Optimization: Use st_mtime as cache key. Directory mtime updates when files are added/removed.
         # This replaces O(N) scan with O(1) cache lookup for repeated calls.
-        mtime = outbox_dir.stat().st_mtime
+        mtime = os.stat(outbox_dir_str).st_mtime
 
-        cached = _outbox_files_cache.get(outbox_dir)
+        cached = _outbox_files_cache.get(outbox_dir_str)
         if cached and cached[0] == mtime:
             filenames = cached[1]
         else:
             # Cache miss or stale: scan all files
-            with os.scandir(outbox_dir) as it:
+            with os.scandir(outbox_dir_str) as it:
                 filenames = sorted(
                     (
                         entry.name
@@ -205,9 +207,7 @@ def _scan_outbox_files_optimized(
             if len(_outbox_files_cache) > 1000:
                 _outbox_files_cache.clear()
 
-            _outbox_files_cache[outbox_dir] = (mtime, filenames)
-
-        outbox_dir_str = str(outbox_dir)
+            _outbox_files_cache[outbox_dir_str] = (mtime, filenames)
 
         # Apply filters to cached list
         count = 0
@@ -307,18 +307,20 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
 
     This avoids reading and parsing the JSON files, which is significantly faster.
     """
-    outbox_dir = get_outbox_dir(base_path, agent_name)
+    # Optimization: Construct path manually as string instead of instantiating Path objects
+    # to avoid parsing overhead in hot caching loops
+    outbox_dir_str = os.path.join(str(base_path), "agents", agent_name, "outbox")
 
     try:
         # Optimization: Check cache first based on directory mtime
-        mtime = outbox_dir.stat().st_mtime
+        mtime = os.stat(outbox_dir_str).st_mtime
 
-        cached = _outbox_count_cache.get(outbox_dir)
+        cached = _outbox_count_cache.get(outbox_dir_str)
         if cached and cached[0] == mtime:
             return cached[1]
 
         count = 0
-        with os.scandir(outbox_dir) as it:
+        with os.scandir(outbox_dir_str) as it:
             for entry in it:
                 if entry.name.endswith(".json") and entry.is_file():
                     count += 1
@@ -327,7 +329,7 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
         if len(_outbox_count_cache) > 1000:
             _outbox_count_cache.clear()
 
-        _outbox_count_cache[outbox_dir] = (mtime, count)
+        _outbox_count_cache[outbox_dir_str] = (mtime, count)
         return count
     except FileNotFoundError:
         return 0
