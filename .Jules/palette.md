@@ -12,3 +12,11 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2026-06-07 - Manager Chat Disabled Button Accessibility
+**Learning:** The Manager Chat send button was using native `disabled` and dynamically changing its `aria-label` based on state, which hid the button from screen reader tab order and lost its primary context. Furthermore, using Tailwind `disabled:` pseudo-classes prevents styles from applying when switching to `aria-disabled`.
+**Action:** Replaced native `disabled` with `aria-disabled`, fixed the `aria-label` to "Send message", manually prevented clicks, and replaced `disabled:` Tailwind classes with conditional classes based on state.
+
+## 2026-06-07 - Aria-Disabled Hover Styles
+**Learning:** When converting native `disabled` to `aria-disabled`, CSS `:hover` states will apply to the visually disabled element.
+**Action:** Ensure hover classes (like `hover:bg-purple-600`) are applied conditionally based on the disabled state to prevent visual bugs.
