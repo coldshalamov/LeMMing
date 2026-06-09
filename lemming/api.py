@@ -43,6 +43,7 @@ if SECRETS_PATH.exists():
             for k, v in _secrets_dict.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
+            del _secrets_dict
     except Exception:
         pass
 
