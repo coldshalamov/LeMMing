@@ -243,7 +243,7 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
                         except Exception:
                             continue
         except OSError:
-            pass
+            continue
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
