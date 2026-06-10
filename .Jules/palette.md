@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2025-03-08 - Maintain Aria Labels on Disabled Buttons
+**Learning:** When removing native `disabled` attributes in favor of `aria-disabled` for accessibility, standard CSS pseudo-classes like Tailwind's `hover:` styles will still apply. The `disabled:` utility class also stops working. Ensure hover styles and disabled visual treatments (e.g. `opacity-50`, `cursor-not-allowed`) are explicitly handled using conditional class names (e.g. with `clsx`), and that the click handler properly blocks the action.
+**Action:** Refactored multiple async loading buttons (Settings Modal, Manager Chat, Dashboard Tick, Wizard Deploy) to use `aria-disabled`, conditionally block their `onClick` handlers, and conditionally apply `opacity-50`, `cursor-wait` / `cursor-not-allowed` while avoiding `hover:` triggers during the disabled state. Added descriptive `title` attributes.
