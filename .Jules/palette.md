@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2025-03-08 - Mocking Fetch in Playwright
+**Learning:** When overriding `window.fetch` in Playwright via `page.evaluate()` to mock API responses, the first argument (`args[0]`) might be a `Request` object rather than a URL string. Calling string methods like `.includes()` directly on it will cause TypeErrors.
+**Action:** Always extract the URL safely (e.g., `const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');`) before checking its path.
