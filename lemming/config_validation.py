@@ -45,12 +45,19 @@ def _validate_against_schema(instance: Any, schema_name: str, context: str) -> N
         raise ValidationError(f"{context}: " + "; ".join(errors))
 
 
+_VALIDATOR_CACHE: dict[str, Draft7Validator] = {}
+
+
 def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
-    schema_path = resources.files(__package__).joinpath("schemas", schema_name)
-    with resources.as_file(schema_path) as path:
-        schema = json.loads(path.read_text(encoding="utf-8"))
-    validator = Draft7Validator(schema)
-    return validator.iter_errors(instance)
+    # Bolt: Compiling Draft7Validator is expensive. Cache the compiled validator
+    # keyed by schema_name to significantly speed up repeated validations.
+    if schema_name not in _VALIDATOR_CACHE:
+        schema_path = resources.files(__package__).joinpath("schemas", schema_name)
+        with resources.as_file(schema_path) as path:
+            schema = json.loads(path.read_text(encoding="utf-8"))
+        _VALIDATOR_CACHE[schema_name] = Draft7Validator(schema)
+
+    return _VALIDATOR_CACHE[schema_name].iter_errors(instance)
 
 
 def _format_jsonschema_error(error: Any) -> str:
