@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2024-05-24 - Disabled Button Accessibility
+**Learning:** Native `disabled` attributes remove elements from the tab order, which hides them from screen reader users and prevents them from discovering the action or understanding why it is unavailable.
+**Action:** Replace `disabled` with `aria-disabled="true"`, conditionally block the `onClick` handler, conditionally remove hover styles, and add a descriptive `title` attribute explaining the disabled state.
