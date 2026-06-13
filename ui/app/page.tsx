@@ -36,7 +36,9 @@ export default function Dashboard() {
   const { messages } = useMessages();
   const { isConnected } = useWebSocketStream();
 
-  const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
+  const [selectedAgentName, setSelectedAgentName] = useState<string | null>(
+    null,
+  );
   const [visualTick, setVisualTick] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [isTicking, setIsTicking] = useState(false);
@@ -221,7 +223,11 @@ export default function Dashboard() {
                         >
                           {m.payload.text || JSON.stringify(m.payload)}
                         </div>
-                      )) || <div className="italic opacity-30">No recent activity</div>}
+                      )) || (
+                      <div className="italic opacity-30">
+                        No recent activity
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -249,7 +255,9 @@ export default function Dashboard() {
                   </p>
                   <p className="font-mono text-xs mt-2 text-white/10">
                     Use{" "}
-                    <span className="px-1.5 py-0.5 bg-white/10 rounded">TAB</span>{" "}
+                    <span className="px-1.5 py-0.5 bg-white/10 rounded">
+                      TAB
+                    </span>{" "}
                     to navigate graph
                   </p>
                 </>
