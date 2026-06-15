@@ -47,6 +47,7 @@ def _validate_against_schema(instance: Any, schema_name: str, context: str) -> N
 
 _VALIDATOR_CACHE: dict[str, Draft7Validator] = {}
 
+
 def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
     # ⚡ Bolt: Cache Draft7Validator to prevent redundant file IO and schema compilation
     if schema_name not in _VALIDATOR_CACHE:
