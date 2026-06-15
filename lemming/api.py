@@ -39,10 +39,11 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            _secrets_dict = json.load(f)
+            for k, v in _secrets_dict.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
+            del _secrets_dict
     except Exception:
         pass
 
