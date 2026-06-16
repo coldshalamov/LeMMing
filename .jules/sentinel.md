@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2025-04-25 - Local Variable Shadowing
+**Vulnerability:** In `lemming/api.py`, `secrets = json.load(f)` shadowed the standard library `secrets` module, causing `secrets.compare_digest` to fail and breaking authentication on the `/api/engine/config` endpoint.
+**Learning:** Python's dynamic typing allows local variables to silently overwrite imported modules, breaking critical security functions if names clash.
+**Prevention:** Never use standard library module names (like `secrets`, `json`, `os`) as local variables.
