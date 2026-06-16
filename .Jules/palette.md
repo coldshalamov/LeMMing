@@ -15,3 +15,6 @@
 ## 2025-01-16 - Screen Reader Focus for Disabled Buttons
 **Learning:** Native `disabled` attributes remove elements from the focus order. Screen reader users can't hear `title` attributes that explain *why* an action is disabled (e.g., "Enter API key to save").
 **Action:** Use `aria-disabled="true"` instead of `disabled` for key interactive elements. Handle `onClick` logic conditionally and carefully separate hover CSS classes so they don't apply when `aria-disabled` is active.
+## 2025-01-16 - Handling Form Submissions with Aria-Disabled
+**Learning:** When replacing the native `disabled` attribute with `aria-disabled` on form `type="submit"` buttons, the element remains interactive at the DOM level. Unlike standard click handlers where you can intercept `onClick`, standard HTML forms might still try to submit via enter key presses or other methods if the submit button is technically active.
+**Action:** Always ensure the parent form's `onSubmit` logic or the corresponding `onClick` logic explicitly evaluates the "disabled" conditions and returns early to prevent unintended operations.
