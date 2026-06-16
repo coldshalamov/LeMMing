@@ -45,11 +45,18 @@ def _validate_against_schema(instance: Any, schema_name: str, context: str) -> N
         raise ValidationError(f"{context}: " + "; ".join(errors))
 
 
+# Cache Draft7Validator instances to prevent redundant file I/O and JSON parsing overhead
+# during extensive configuration and resume validation across API and engine operations.
+_validator_cache: dict[str, Draft7Validator] = {}
+
+
 def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
-    schema_path = resources.files(__package__).joinpath("schemas", schema_name)
-    with resources.as_file(schema_path) as path:
-        schema = json.loads(path.read_text(encoding="utf-8"))
-    validator = Draft7Validator(schema)
+    if schema_name not in _validator_cache:
+        schema_path = resources.files(__package__).joinpath("schemas", schema_name)
+        with resources.as_file(schema_path) as path:
+            schema = json.loads(path.read_text(encoding="utf-8"))
+        _validator_cache[schema_name] = Draft7Validator(schema)
+    validator = _validator_cache[schema_name]
     return validator.iter_errors(instance)
 
 
