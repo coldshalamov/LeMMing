@@ -22,3 +22,17 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Unbounded File Reads in Tools
+**Vulnerability:** The `FileReadTool` allowed reading files of arbitrary size into memory. A malicious or buggy agent could trigger an OOM (Out Of Memory) crash by reading a massive file (e.g., `/dev/zero` or a large log).
+**Learning:** Trusted internal tools are often missing the defensive bounds checks applied to external APIs. Even "trusted" agents can cause DoS.
+**Prevention:** Enforce hard limits on all I/O operations. Use `os.stat()` to check file size *before* reading content into memory.
+
+## 2024-05-30 - CI Infrastructure Flakes
+**Observation:** GitHub Actions occasionally fails with "The job was not acquired by Runner of type hosted even after multiple attempts".
+**Learning:** This is an infrastructure issue, not a code failure. It requires a retry/re-run of the workflow.
+**Prevention:** N/A (External dependency).
+
+## 2024-05-30 - Persistent CI Runner Flakes
+**Observation:** CI builds continue to fail with "The job was not acquired by Runner of type hosted" despite retries.
+**Action:** Pushing another commit to trigger a fresh workflow run, hoping for a healthy runner.
