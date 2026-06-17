@@ -132,8 +132,9 @@ def _parse_model(model_data: Any) -> AgentModel:
 
 
 def _load_resume_json(resume_path: Path) -> dict[str, Any]:
-    with resume_path.open("r", encoding="utf-8") as f:
-        data: dict[str, Any] = json.load(f)
+    # Optimization: Use rb mode and loads(read()) for faster JSON parsing
+    with resume_path.open("rb") as f:
+        data: dict[str, Any] = json.loads(f.read())
     return data
 
 
