@@ -86,10 +86,22 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     </div>
 
                     <div className="p-6 space-y-6">
-                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex gap-3 text-yellow-500 text-xs leading-relaxed">
+                        <div role="alert" className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex gap-3 text-yellow-500 text-xs leading-relaxed">
                             <AlertTriangle size={16} className="shrink-0" />
                             <p>API keys are stored locally in <code className="bg-black/40 px-1 rounded">secrets.json</code> and loaded into the engine environment. Never share this file.</p>
                         </div>
+
+                        {status === "error" && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                role="alert"
+                                className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3 text-red-400 text-xs leading-relaxed"
+                            >
+                                <AlertTriangle size={16} className="shrink-0" />
+                                <p>Failed to save configuration. Please check your connection and try again.</p>
+                            </motion.div>
+                        )}
 
                         {/* OpenAI Key */}
                         <div className="space-y-2">
@@ -99,7 +111,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     OpenAI API Key
                                 </span>
                                 {isExisting.openai && (
-                                    <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
+                                    <span aria-label="OpenAI API Key already set" className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
                                 )}
                             </label>
                             <div className="relative">
@@ -131,7 +143,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     Anthropic API Key
                                 </span>
                                 {isExisting.anthropic && (
-                                    <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
+                                    <span aria-label="Anthropic API Key already set" className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">ALREADY SET</span>
                                 )}
                             </label>
                             <div className="relative">
@@ -166,13 +178,17 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         <button
                             onClick={handleSave}
                             disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            className={`px-6 py-2 font-bold rounded flex items-center gap-2 transition-colors disabled:opacity-50 ${
+                                status === "error"
+                                    ? "bg-brand-pink text-white hover:bg-pink-600"
+                                    : "bg-brand-cyan text-black hover:bg-cyan-300"
+                            }`}
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
-                            ) : "SAVE CONFIG"}
+                            ) : status === "error" ? "RETRY" : "SAVE CONFIG"}
                         </button>
                     </div>
                 </motion.div>
