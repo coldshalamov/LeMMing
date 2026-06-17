@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Missing Authentication on Message Endpoint
+**Vulnerability:** The `/api/messages` POST endpoint lacked `verify_admin_access` dependency, allowing unauthenticated attackers to send messages and interfere with agent behavior.
+**Learning:** Rate limiting is not a substitute for authentication on action-triggering endpoints.
+**Prevention:** Ensure all state-mutating endpoints (`POST`, `PUT`, `DELETE`), especially those allowing interactions with core systems, enforce `verify_admin_access`.
