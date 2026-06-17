@@ -13,12 +13,13 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
-    save_org_structure,
+    save_department,
     save_social_graph,
+    validate_department,
 )
 from .engine import load_tick, run_forever, run_once
 from .memory import get_memory_summary
-from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
+from .messages import OutboxEntry, read_multi_agent_outbox_entries, read_outbox_entries, write_outbox_entry
 from .org import derive_org_graph, get_agent_credits, get_credits, save_derived_org_graph
 from .paths import get_logs_dir
 
@@ -199,16 +200,9 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
     else:
         # Show all recent messages from all agents
         agents = discover_agents(base_path)
-        entries = []
-        for ag in agents:
-            if ag.name == HUMAN_AGENT_NAME:
-                continue
-            agent_entries = read_outbox_entries(base_path, ag.name, limit=limit)
-            entries.extend(agent_entries)
-
-        # Sort by tick and created_at, most recent first
-        entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
-        entries = entries[:limit]
+        # Optimization: Use read_multi_agent_outbox_entries for O(limit) file reads instead of O(agents * limit)
+        agent_names = [ag.name for ag in agents if ag.name != HUMAN_AGENT_NAME]
+        entries = read_multi_agent_outbox_entries(base_path, agent_names, limit=limit)
         print("\n📥 Recent messages from all agents:")
 
     if not entries:
@@ -247,7 +241,7 @@ def department_list_cmd(base_path: Path) -> None:
 
 def department_create_cmd(base_path: Path, name: str, description: str, author: str = "") -> None:
     """Create a new department."""
-    from .department import DepartmentMetadata, save_department, validate_department
+    from .department import DepartmentMetadata
 
     dept = DepartmentMetadata(
         name=name,
@@ -473,7 +467,7 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
     # Department management commands
-    dept_parser = subparsers.add_parser("department-list", help="List all departments")
+    subparsers.add_parser("department-list", help="List all departments")
 
     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
     dept_create_parser.add_argument("name", help="Department name")
