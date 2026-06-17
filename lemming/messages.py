@@ -121,7 +121,7 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
+        with open(entry_path, encoding="utf-8") as f:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
@@ -238,65 +238,19 @@ def _scan_outbox_files_optimized(
 def read_outbox_entries(
     base_path: Path, agent_name: str, limit: int = 50, since_tick: int | None = None
 ) -> list[OutboxEntry]:
-    outbox_dir = get_outbox_dir(base_path, agent_name)
-    # Optimization: removed outbox_dir.exists() check to rely on try/except block below
-
     if limit <= 0:
         return []
 
+    # Optimization: Leverage the directory cache in _scan_outbox_files_optimized
+    # instead of doing a custom os.scandir and heapq.nlargest.
+    results = _scan_outbox_files_optimized(base_path, agent_name, since_tick=since_tick, limit=limit)
+
     entries: list[OutboxEntry] = []
-    outbox_dir_str = str(outbox_dir)
-
-    # Sort files by tick descending.
-    # Optimization: Use os.scandir to avoid creating Path objects for all files.
-    # Use heapq.nlargest to avoid sorting all files when we only need the top K.
-    try:
-        with os.scandir(outbox_dir) as it:
-            # Helper generator to filter non-json files
-            candidate_files = (entry.name for entry in it if entry.is_file() and entry.name.endswith(".json"))
-
-            # If since_tick is provided, we can pre-filter files that are definitely too old
-            # IF the filename tick parsing is reliable. It is.
-            if since_tick is not None:
-                candidate_files = (name for name in candidate_files if _tick_from_filename_str(name) >= since_tick)
-
-            filenames = heapq.nlargest(limit, candidate_files, key=None)
-    except FileNotFoundError:
-        return []
-
-    min_collected_tick = float("inf")
-
-    for name in filenames:
-        # Optimization: Parse tick from filename string directly to avoid Path creation.
-        # _tick_from_filename_str returns -1 on error.
-        tick_val_int = _tick_from_filename_str(name)
-        tick_val = tick_val_int if tick_val_int != -1 else None
-
-        # If we encounter a file with a tick older than since_tick, we can stop
-        # because subsequent files (sorted by tick desc) will have even smaller ticks.
-        # We only break if tick_val is valid (not None).
-        if since_tick is not None:
-            if tick_val is not None and tick_val < since_tick:
-                break
-
-        # Optimization: If we have collected enough entries, check if we can stop.
-        if len(entries) >= limit:
-            if tick_val is not None and min_collected_tick > tick_val:
-                break
-
-        entry_path = os.path.join(outbox_dir_str, name)
-        entry = _load_entry(entry_path)
+    for _, _, full_path in results:
+        entry = _load_entry(full_path)
         if entry is None:
             continue
-
-        # Still need to check since_tick in case filename parsing failed or logic differed
-        if since_tick is not None and entry.tick < since_tick:
-            continue
-
         entries.append(entry)
-
-        if entry.tick < min_collected_tick:
-            min_collected_tick = entry.tick
 
     entries.sort(key=lambda e: (e.tick, e.created_at), reverse=True)
     return entries[:limit]
