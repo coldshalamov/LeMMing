@@ -1,4 +1,3 @@
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -10,6 +9,7 @@ def client() -> TestClient:
     # Reset rate limits before each test
     api._request_timestamps.clear()
     return TestClient(api.app)
+
 
 def test_rate_limit_update_engine_config(client: TestClient, tmp_path):
     """Verify rate limiting on update_engine_config."""
@@ -33,6 +33,7 @@ def test_rate_limit_update_engine_config(client: TestClient, tmp_path):
 
     finally:
         api.SECRETS_PATH = old_secrets_path
+
 
 def test_rate_limit_trigger_tick(client: TestClient, tmp_path):
     """Verify rate limiting on trigger_tick."""

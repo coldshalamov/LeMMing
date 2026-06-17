@@ -6,7 +6,6 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -17,7 +16,6 @@ from .department import (
     get_department_agents,
     get_department_file,
     save_department,
-    save_org_structure,
     save_social_graph,
     validate_department,
 )
@@ -35,11 +33,10 @@ def department_group() -> None:
 @department_group.command(name="list")
 def list_departments() -> None:
     """List all discovered departments."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(base_path, level="INFO")
     departments = discover_departments(base_path)
 
     if not departments:
@@ -64,11 +61,10 @@ def list_departments() -> None:
 @click.option("--readme", "-r", default="", help="README content")
 def create_department(name: str, description: str, author: str, readme: str) -> None:
     """Create a new department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(base_path, level="INFO")
     dept = DepartmentMetadata(
         name=name,
         description=description,
@@ -91,11 +87,10 @@ def create_department(name: str, description: str, author: str, readme: str) -> 
 @click.argument("name")
 def show_department(name: str) -> None:
     """Show details of a specific department."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(base_path, level="INFO")
     dept_file = get_department_file(base_path, name)
 
     if not dept_file.exists():
@@ -134,11 +129,10 @@ def show_department(name: str) -> None:
 @click.option("--output", "-o", default="organization.json", help="Output file path")
 def export_structure(output: str) -> None:
     """Export complete organization structure to JSON."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(base_path, level="INFO")
     org_structure = export_org_structure(base_path)
 
     output_path = Path(output)
@@ -160,11 +154,10 @@ def package_department(name: str, output: str | None) -> None:
     Creates a zip file containing the department metadata and all agent folders
     that belong to this department.
     """
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(base_path, level="INFO")
     output_dir = Path(output) if output else (base_path / "departments")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -235,11 +228,10 @@ This is a LeMMing department bundle containing {len(agents)} agent(s).
 @click.option("--merge", "-m", is_flag=True, help="Merge with existing organization")
 def import_department(bundle_path: str, merge: bool) -> None:
     """Import a department bundle into the current organization."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(base_path, level="INFO")
     bundle_file = Path(bundle_path)
 
     if not bundle_file.exists():
@@ -253,9 +245,26 @@ def import_department(bundle_path: str, merge: bool) -> None:
     import tempfile
     import zipfile
 
+    def secure_extract_zip(zip_path: Path, extract_to: Path) -> None:
+        """Securely extract a zip file, preventing Zip Slip vulnerabilities."""
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            extract_to_resolved = extract_to.resolve()
+            for member in zf.namelist():
+                # Resolve the target path
+                target_path = (extract_to_resolved / member).resolve()
+
+                # Verify that the target path is within the extraction directory
+                if not target_path.is_relative_to(extract_to_resolved):
+                    raise click.ClickException(
+                        f"Security violation: Zip member '{member}' attempts to escape extraction directory."
+                    )
+
+                # Extract the member
+                zf.extract(member, extract_to)
+
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
-        shutil.unpack_archive(bundle_file, temp_path)
+        secure_extract_zip(bundle_file, temp_path)
 
         # Find the department directory (should be root or first subdirectory)
         dept_dirs = [d for d in temp_path.iterdir() if d.is_dir()]
@@ -305,18 +314,17 @@ def import_department(bundle_path: str, merge: bool) -> None:
                 shutil.copytree(agent_dir, agent_dst)
                 click.echo(f"✓ Imported agent: {agent_dir.name}")
 
-    click.echo(f"\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
+    click.echo("\n✓ Department import complete. Run 'python -m lemming.cli bootstrap' to finalize.")
 
 
 @department_group.command(name="analyze")
 @click.option("--output", "-o", default="social_graph.json", help="Output file path")
 def analyze_social(output: str) -> None:
     """Analyze and export the social graph of the organization."""
-    from .cli import setup_logging
-
-    setup_logging(level="INFO")
+    from .logging_config import setup_logging
 
     base_path = Path.cwd()
+    setup_logging(base_path, level="INFO")
 
     # Load current tick
     from .engine import load_tick
