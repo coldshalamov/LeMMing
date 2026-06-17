@@ -3,6 +3,9 @@
 import re
 from pathlib import Path
 
+# Pre-compile regex for performance in frequently called path validation
+_VALID_PATH_PART_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+
 
 def validate_agent_name(name: str) -> None:
     """Validate that the agent name is safe to use in paths."""
@@ -10,7 +13,7 @@ def validate_agent_name(name: str) -> None:
         raise ValueError("Agent name cannot be empty")
 
     # Strict allowlist: alphanumeric, underscores, hyphens
-    if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+    if not _VALID_PATH_PART_PATTERN.match(name):
         raise ValueError(
             f"Agent name '{name}' is invalid. Only alphanumeric characters, underscores, and hyphens are allowed."
         )
@@ -45,7 +48,7 @@ def validate_path_prefix(prefix: str | None) -> None:
             raise ValueError(f"Path prefix cannot contain '{part}' segments")
 
         # Strict allowlist: alphanumeric, underscores, hyphens
-        if not re.match(r"^[a-zA-Z0-9_-]+$", part):
+        if not _VALID_PATH_PART_PATTERN.match(part):
             raise ValueError(f"Invalid path segment '{part}'. Only alphanumeric, '_', '-' allowed.")
 
 
