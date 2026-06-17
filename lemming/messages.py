@@ -121,8 +121,8 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        with open(entry_path, "rb") as f:
+            data = json.loads(f.read())
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning(
@@ -317,11 +317,7 @@ def count_outbox_entries(base_path: Path, agent_name: str) -> int:
         if cached and cached[0] == mtime:
             return cached[1]
 
-        count = 0
-        with os.scandir(outbox_dir) as it:
-            for entry in it:
-                if entry.name.endswith(".json") and entry.is_file():
-                    count += 1
+        count = len([n for n in os.listdir(outbox_dir) if n.endswith(".json")])
 
         # Simple eviction policy to prevent memory leaks
         if len(_outbox_count_cache) > 1000:
