@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
+import clsx from "clsx";
 
 interface GlobalSettingsModalProps {
     onClose: () => void;
@@ -164,9 +165,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             Cancel
                         </button>
                         <button
-                            onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            onClick={(status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) ? undefined : handleSave}
+                            aria-disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                            className={clsx(
+                                "px-6 py-2 font-bold rounded flex items-center gap-2 transition-colors",
+                                (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key))
+                                    ? "bg-brand-cyan/50 text-black/50 cursor-not-allowed"
+                                    : "bg-brand-cyan text-black hover:bg-cyan-300"
+                            )}
+                            title={status === "loading" ? "Saving configuration..." : (!config.openai_api_key && !config.anthropic_api_key) ? "Please enter at least one API key" : "Save configuration"}
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
