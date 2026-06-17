@@ -151,7 +151,7 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-2 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                             aria-label="Close"
                         >
                             <X size={24} className="text-gray-400" />
@@ -165,7 +165,7 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                             onClick={() => setActiveCategory(null)}
                             aria-pressed={activeCategory === null}
                             className={clsx(
-                                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                                "px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                                 activeCategory === null
                                     ? "bg-brand-cyan text-white"
                                     : "bg-white/5 text-gray-400 hover:bg-white/10"
@@ -180,7 +180,7 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                                 onClick={() => setActiveCategory(cat.id)}
                                 aria-pressed={activeCategory === cat.id}
                                 className={clsx(
-                                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
+                                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                                     activeCategory === cat.id
                                         ? "bg-brand-cyan text-white"
                                         : "bg-white/5 text-gray-400 hover:bg-white/10"
@@ -206,7 +206,7 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                                         onClick={() => toggleTool(tool.id)}
                                         aria-pressed={isSelected}
                                         className={clsx(
-                                            "p-4 rounded-xl border-2 transition-all text-left",
+                                            "p-4 rounded-xl border-2 transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                                             isSelected
                                                 ? "border-brand-cyan bg-brand-cyan/10"
                                                 : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
@@ -253,14 +253,14 @@ export function ToolSelectorModal({ selectedTools, onClose, onSave }: ToolSelect
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-4 py-2 rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 transition-colors"
+                                className="px-4 py-2 rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSave}
-                                className="px-6 py-2 rounded-lg bg-brand-cyan text-white hover:bg-brand-cyan/90 transition-colors font-medium"
+                                className="px-6 py-2 rounded-lg bg-brand-cyan text-white hover:bg-brand-cyan/90 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                             >
                                 Save Selection
                             </button>
