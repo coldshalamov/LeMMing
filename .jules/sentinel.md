@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2026-02-04 - Unbounded Memory Consumption in Tool Outputs
+**Vulnerability:** The `ShellTool` and `FileReadTool` did not enforce size limits on output capture or file reading. This allowed agents (or attackers controlling agents) to cause Denial of Service (DoS) via Memory Exhaustion (OOM) by generating or reading multi-megabyte payloads.
+**Learning:** `subprocess.run(capture_output=True)` and `path.read_text()` load the entire content into memory. In a multi-agent system, even "small" leaks multiply by the number of concurrent agents/ticks.
+**Prevention:** Enforce strict size limits (`MAX_OUTPUT_SIZE`, `MAX_READ_SIZE`) on all I/O operations. Check file sizes (`st_size`) before reading and implement limits on subprocess output capture.
