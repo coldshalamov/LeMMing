@@ -16,8 +16,6 @@ from .paths import get_agents_dir, get_outbox_dir
 logger = logging.getLogger(__name__)
 
 
-OUTBOX_FILENAME_TEMPLATE = "{tick:08d}_{entry_id}.json"
-
 # Caches for outbox operations to avoid repetitive filesystem scans
 # Key: outbox_dir_path -> (mtime, count)
 _outbox_count_cache: dict[Path, tuple[float, int]] = {}
@@ -88,16 +86,14 @@ class OutboxEntry:
     def from_dict(cls, data: dict[str, Any]) -> OutboxEntry:
         # Backward compatibility: older entries used ``timestamp``.
         if "created_at" not in data and "timestamp" in data:
-            data = dict(data)
             data["created_at"] = data.pop("timestamp")
         if "recipients" not in data:
-            data = dict(data)
             data["recipients"] = None
         return cls(**data)
 
 
 def outbox_filename(entry: OutboxEntry) -> str:
-    return OUTBOX_FILENAME_TEMPLATE.format(tick=entry.tick, entry_id=entry.id)
+    return f"{entry.tick:08d}_{entry.id}.json"
 
 
 def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> Path:
@@ -121,8 +117,8 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        with open(entry_path, "rb") as f:
+            data = json.loads(f.read())
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning(
