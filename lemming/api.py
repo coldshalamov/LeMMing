@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +21,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -522,7 +522,11 @@ async def clone_agent(request: CloneAgentRequest) -> dict[str, str]:
     return {"status": "cloned", "path": str(target_dir.relative_to(BASE_PATH))}
 
 
-@app.get("/api/agents/{agent_name}/logs", response_model=list[LogEntry])
+@app.get(
+    "/api/agents/{agent_name}/logs",
+    response_model=list[LogEntry],
+    dependencies=[Depends(rate_limiter(limit=20, window=60))],
+)
 async def get_agent_logs(agent_name: str, limit: int = 100) -> list[dict[str, Any]]:
     if limit > MAX_LIMIT:
         raise HTTPException(status_code=400, detail=f"Limit cannot exceed {MAX_LIMIT}")
