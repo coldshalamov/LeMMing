@@ -16,3 +16,7 @@
 ## 2025-06-18 - Native Disabled Attributes Break Accessibility
 **Learning:** Native `disabled` attributes on buttons completely remove the element from the tab order and prevent standard tooltip (`title`) hover events from firing. This leaves screen reader and keyboard users guessing why they cannot submit a form.
 **Action:** Replace `disabled` attributes with `aria-disabled="true"`. To maintain correct visual and interactive states, you must manually handle styling (e.g., applying `opacity-50 cursor-not-allowed` while conditionally omitting `:hover` classes), add a descriptive `title` attribute, and intercept events (e.g., `e.preventDefault(); return;` in `onClick`).
+
+## 2025-06-18 - Native Disabled Attributes Break Accessibility
+**Learning:** Native `disabled` attributes on buttons completely remove the element from the tab order and prevent standard tooltip (`title`) hover events from firing. This leaves screen reader and keyboard users guessing why they cannot submit a form.
+**Action:** Replace `disabled` attributes with `aria-disabled="true"`. To maintain correct visual and interactive states, you must manually handle styling (e.g., applying `opacity-50 cursor-not-allowed` while conditionally omitting `:hover` classes), add a conditionally rendered descriptive `title` attribute, and intercept events (e.g., `e.preventDefault(); return;` in `onClick`).
