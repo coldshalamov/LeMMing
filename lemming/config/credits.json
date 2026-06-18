@@ -49,7 +49,7 @@
   "echo_cli": {
     "model": "cli-echo",
     "cost_per_action": 0.01,
-    "credits_left": 999.98,
+    "credits_left": 999.99,
     "max_credits": 1000.0,
     "soft_cap": 500.0
   }
