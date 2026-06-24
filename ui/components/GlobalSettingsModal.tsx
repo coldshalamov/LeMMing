@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
 interface GlobalSettingsModalProps {
@@ -36,6 +37,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
     }, [onClose]);
 
     const handleSave = async () => {
+        if (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) return;
         setStatus("loading");
         try {
             await updateEngineConfig(config);
@@ -159,14 +161,35 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                         >
                             Cancel
                         </button>
                         <button
-                            onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            onClick={(e) => {
+                                if (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                handleSave();
+                            }}
+                            aria-disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                            title={
+                                status === "loading"
+                                    ? "Saving configuration..."
+                                    : (!config.openai_api_key && !config.anthropic_api_key)
+                                        ? "Please enter at least one API key"
+                                        : "Save configuration"
+                            }
+                            className={clsx(
+                                "px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+                                (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) && "opacity-50",
+                                status === "loading"
+                                    ? "cursor-wait"
+                                    : (!config.openai_api_key && !config.anthropic_api_key)
+                                        ? "cursor-not-allowed"
+                                        : "cursor-pointer"
+                            )}
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
