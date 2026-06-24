@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2026-06-24 - Caching jsonschema Validator Instances
+**Learning:** Instantiating `jsonschema.Draft7Validator` inside a hot loop introduces significant overhead due to object initialization, schema parsing, and disk I/O, particularly when validation occurs frequently for the same static schemas.
+**Action:** Cache `Draft7Validator` instances in a module-level dictionary to reuse them across validation calls, drastically reducing the cumulative time spent in validation loops.
