@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## $(date +%Y-%m-%d) - Variable Shadowing of Security Modules
+**Vulnerability:** In `lemming/api.py`, a generic variable name `secrets` was used in the global namespace to load `secrets.json`. Because variables defined in `if` and `with` blocks leak into the surrounding scope in Python, this shadowed the built-in `secrets` module, causing `secrets.compare_digest` to raise an `AttributeError` on protected endpoints (a 500 error instead of 401).
+**Learning:** Using overly generic variable names (like `secrets`, `os`, `sys`) near the top level of a module can inadvertently shadow standard library imports, breaking security functionalities.
+**Prevention:** Always use distinct, descriptive variable names (e.g., `loaded_secrets`) for data objects, especially when they share names with standard library modules.
