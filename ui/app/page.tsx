@@ -50,8 +50,11 @@ export default function Dashboard() {
 
   const selectedAgent = agents?.find((a) => a.name === selectedAgentName);
 
-  const handleRunTick = async () => {
-    if (isTicking) return;
+  const handleRunTick = async (e?: React.MouseEvent) => {
+    if (isTicking) {
+      e?.preventDefault();
+      return;
+    }
     setIsTicking(true);
     try {
       await triggerTick();
@@ -275,14 +278,14 @@ export default function Dashboard() {
 
           <button
             onClick={handleRunTick}
-            disabled={isTicking}
+            aria-disabled={isTicking}
             className={clsx(
-              "w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50",
+              "w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg",
               isTicking
-                ? "bg-gray-600 text-gray-400"
+                ? "bg-gray-600 text-gray-400 opacity-50 cursor-wait"
                 : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)]",
             )}
-            title="Run one tick"
+            title={isTicking ? "Executing tick..." : "Run one tick"}
             aria-label="Run one tick"
           >
             {isTicking ? (
