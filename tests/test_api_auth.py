@@ -39,6 +39,10 @@ def test_admin_auth_not_configured(client: TestClient, tmp_path):
             resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
             assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
 
+            # Try send_message
+            resp = client.post("/api/messages", json={"target": "test", "text": "hello", "importance": "normal"})
+            assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+
 def test_admin_auth_configured_success(client: TestClient, tmp_path):
     """Verify access is allowed with correct key when configured."""
     with patch.dict(os.environ, {"LEMMING_ADMIN_KEY": "secret123"}), \
@@ -63,6 +67,10 @@ def test_admin_auth_configured_success(client: TestClient, tmp_path):
 
         # update_engine_config
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"}, headers=headers)
+        assert resp.status_code == 200
+
+        # send_message
+        resp = client.post("/api/messages", json={"target": "test", "text": "hello", "importance": "normal"}, headers=headers)
         assert resp.status_code == 200
 
 def test_admin_auth_configured_failure(client: TestClient, tmp_path):
@@ -91,6 +99,10 @@ def test_admin_auth_configured_failure(client: TestClient, tmp_path):
 
         # update_engine_config
         resp = client.post("/api/engine/config", json={"openai_api_key": "test"})
+        assert resp.status_code == 401
+
+        # send_message
+        resp = client.post("/api/messages", json={"target": "test", "text": "hello", "importance": "normal"})
         assert resp.status_code == 401
 
 def test_agent_creation_auth_configured(client: TestClient, tmp_path):
