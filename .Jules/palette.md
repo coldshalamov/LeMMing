@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## $(date +%Y-%m-%d) - Dynamic Aria-Disabled on Action Buttons
+**Learning:** Using the native `disabled` attribute removes interactive elements from the keyboard tab sequence, completely hiding their context (e.g., `aria-label`, `title` tooltips) from screen reader and keyboard users during loading states. Additionally, removing native `disabled` requires manual intervention to prevent pointer interactions (like `hover` styles) and execution via `e.preventDefault()`.
+**Action:** Replaced `disabled={true}` with `aria-disabled={true}` on the Run Tick button, explicitly guarding the click handler, and conditionally removing interactive Tailwind pseudo-classes (`hover:scale-105 active:scale-95`) while adding `cursor-wait` to maintain full accessibility and UX during async processing.
