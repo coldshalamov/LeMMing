@@ -82,58 +82,46 @@ export default function Dashboard() {
             selectedAgent={selectedAgentName}
             onSelectAgent={setSelectedAgentName}
             currentTick={visualTick}
-            className="w-full h-full border-none rounded-none bg-neo-bg"
           />
         )}
       </div>
 
-      {/* 2) Overlay HUD */}
-      <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between">
-        {/* Header Bar */}
-        <header className="flex items-center justify-between px-6 pt-4">
-          <div className="flex items-center gap-3 pointer-events-auto bg-black/40 backdrop-blur-md p-2 rounded-lg border border-white/5">
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-brand-cyan to-brand-purple flex items-center justify-center shadow-lg shadow-brand-cyan/20">
-              <Terminal className="text-white w-5 h-5" />
-            </div>
-            <h1 className="font-bold text-xl tracking-tight text-white">
-              LeMMing <span className="text-white/30 font-light">OVERMIND</span>
+      {/* 2) Top Header Bar (layer 1) */}
+      <div className="absolute top-0 inset-x-0 z-10 pointer-events-none flex flex-col justify-between h-full">
+        <header className="px-6 py-4 flex items-center justify-between pointer-events-none">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-white tracking-widest pointer-events-auto">
+              LeMMing <span className="text-white/30">OVERMIND</span>
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Stats Widget */}
-            <div className="pointer-events-auto bg-black/40 backdrop-blur-md px-4 py-2 rounded-lg border border-white/5 flex items-center gap-6 text-xs font-mono text-gray-400">
-              <div className="flex items-center gap-2">
-                <Clock size={14} className="text-brand-cyan" />
-                <span className="text-white">TICK: {visualTick}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Server size={14} className="text-brand-purple" />
-                <span>AGENTS: {status?.total_agents || 0}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Activity size={14} className="text-brand-lime" />
-                <span>
-                  CREDITS:{" "}
-                  {status?.total_credits !== undefined
-                    ? status.total_credits.toFixed(0)
-                    : 0}
-                </span>
+          <div className="flex items-center gap-6">
+            {/* Global Stats */}
+            <div className="flex items-center gap-6 bg-black/40 px-4 py-2 rounded-lg border border-white/5 pointer-events-auto backdrop-blur-md">
+              <div className="flex items-center gap-2" title="Current global tick" aria-label="Current global tick">
+                <Clock size={14} className="text-brand-cyan" aria-hidden="true" />
+                <span className="text-xs text-brand-cyan font-mono">TICK: {visualTick}</span>
               </div>
               <div className="w-px h-4 bg-white/10" />
-              <div
-                className={clsx(
-                  "flex items-center gap-2",
-                  isConnected ? "text-brand-cyan" : "text-red-400",
+              <div className="flex items-center gap-2" title="Active agents" aria-label="Active agents">
+                <Server size={14} className="text-brand-purple" aria-hidden="true" />
+                <span className="text-xs text-brand-purple font-mono">AGENTS: {agents?.length || 0}</span>
+              </div>
+              <div className="w-px h-4 bg-white/10" />
+              <div className="flex items-center gap-2" title="Total credits used" aria-label="Total credits used">
+                <Activity size={14} className="text-brand-lime" aria-hidden="true" />
+                <span className="text-xs text-brand-lime font-mono">CREDITS: 0</span>
+              </div>
+              <div className="w-px h-4 bg-white/10" />
+              <div className="flex items-center gap-2" title={isConnected ? "WebSocket connected" : "WebSocket disconnected"} aria-label={isConnected ? "WebSocket connected" : "WebSocket disconnected"}>
+                {isConnected ? (
+                  <Wifi size={14} className="text-brand-lime" aria-hidden="true" />
+                ) : (
+                  <WifiOff size={14} className="text-red-500 animate-pulse" aria-hidden="true" />
                 )}
-                title={
-                  isConnected
-                    ? "Connected to backend"
-                    : "Disconnected from backend"
-                }
-              >
-                {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
-                {isConnected ? "ONLINE" : "OFFLINE"}
+                <span className={clsx("text-xs font-mono", isConnected ? "text-brand-lime" : "text-red-500")}>
+                  {isConnected ? "ONLINE" : "OFFLINE"}
+                </span>
               </div>
             </div>
 
@@ -162,108 +150,91 @@ export default function Dashboard() {
         <div className="h-20" />
       </div>
 
-      {/* 3) Manager Sidebar (Left) */}
-      <div className="absolute top-24 left-6 bottom-24 w-[400px] z-20 pointer-events-none">
-        {messages && <ManagerChat messages={messages} />}
-      </div>
-
-      {/* 4) Agent Overlay (Top Right) */}
-      <div className="absolute top-20 right-6 bottom-24 w-[450px] pointer-events-none z-20 flex flex-col justify-start">
-        <AnimatePresence>
-          {selectedAgent ? (
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              className="pointer-events-auto bg-neo-panel/90 backdrop-blur-xl border border-neo-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-full"
-            >
-              {/* Compact Header */}
-              <div className="p-4 border-b border-white/5 flex justify-between items-start bg-black/20">
-                <div>
-                  <h2 className="text-lg font-bold text-white">
-                    {selectedAgent.name}
-                  </h2>
-                  <p className="text-xs text-brand-cyan font-mono uppercase">
-                    {selectedAgent.title}
-                  </p>
+      {/* 3) Left / Right Panels (layer 2) */}
+      <div className="absolute inset-0 z-20 pointer-events-none flex p-6 pt-24 pb-24 h-full">
+        {/* Left Side: Agent Detail */}
+        <div className="w-96 flex flex-col h-full gap-4">
+          <AnimatePresence mode="popLayout">
+            {selectedAgent ? (
+              <motion.div
+                key="agent-detail"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col pointer-events-auto shadow-2xl flex-1 min-h-0"
+              >
+                <div className="p-4 border-b border-white/5 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <Terminal className="text-brand-cyan" size={20} />
+                    <div>
+                      <h2 className="text-lg font-bold text-white tracking-wide">
+                        {selectedAgent.name}
+                      </h2>
+                      <p className="text-xs text-brand-cyan font-mono uppercase">
+                        {selectedAgent.title}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedAgentName(null)}
+                    className="text-white/20 hover:text-white transition-colors"
+                    title="Close"
+                    aria-label="Close agent details"
+                  >
+                    <Plus size={20} className="rotate-45" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedAgentName(null)}
-                  className="text-white/20 hover:text-white transition-colors"
-                  title="Close"
-                  aria-label="Close agent details"
-                >
-                  <Plus size={20} className="rotate-45" />
-                </button>
-              </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <AgentCard
-                  agent={selectedAgent}
-                  currentTick={visualTick}
-                  isSelected={true}
-                  variant="full"
-                />
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <AgentCard
+                    agent={selectedAgent}
+                    currentTick={visualTick}
+                    isSelected={true}
+                    variant="full"
+                  />
 
-                {/* Mini Logs */}
-                <div className="rounded border border-white/5 bg-black/20 p-3">
-                  <h4 className="text-[10px] font-mono text-white/40 uppercase mb-2">
-                    Recent Activity
-                  </h4>
-                  <div className="text-xs font-mono text-gray-400 space-y-1">
-                    {messages
-                      ?.filter((m) => m.agent === selectedAgent.name)
-                      .slice(0, 3)
-                      .map((m, i) => (
-                        <div
-                          key={i}
-                          className="opacity-70 truncate border-l-2 border-white/10 pl-2"
-                        >
-                          {m.payload.text || JSON.stringify(m.payload)}
-                        </div>
-                      )) || <div className="italic opacity-30">No recent activity</div>}
+                  {/* Mini Logs */}
+                  <div className="rounded border border-white/5 bg-black/20 p-3">
+                    <h4 className="text-[10px] font-mono text-white/40 uppercase mb-2">
+                      Recent Activity
+                    </h4>
+                    <div className="space-y-2">
+                      {messages
+                        ?.filter(
+                          (m) =>
+                            m.sender === selectedAgent.name ||
+                            m.recipient === selectedAgent.name
+                        )
+                        .slice(0, 5)
+                        .map((m, i) => (
+                          <div key={i} className="text-xs font-mono flex gap-2">
+                            <span className="text-white/30 shrink-0">T{m.tick}</span>
+                            <span className="text-white/50 truncate">
+                              {m.sender === selectedAgent.name ? "→" : "←"} {m.recipient === selectedAgent.name ? m.sender : m.recipient}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center flex-col text-white/20">
-              {!agents || agents.length === 0 ? (
-                <>
-                  <Terminal size={64} className="mb-4 opacity-20" />
-                  <p className="font-mono text-sm mb-4">
-                    SYSTEM_OFFLINE: NO AGENTS DETECTED
-                  </p>
-                  <Link
-                    href="/wizard"
-                    className="flex items-center gap-2 px-6 py-3 bg-brand-cyan text-black font-bold rounded hover:bg-cyan-300 transition-colors"
-                  >
-                    <Plus size={18} aria-hidden="true" /> INITIALIZE_FIRST_AGENT
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Activity size={64} className="mb-4 opacity-20" />
-                  <p className="font-mono text-sm">
-                    SELECT AN AGENT NODE TO INSPECT
-                  </p>
-                  <p className="font-mono text-xs mt-2 text-white/10">
-                    Use{" "}
-                    <span className="px-1.5 py-0.5 bg-white/10 rounded">TAB</span>{" "}
-                    to navigate graph
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
+        {/* Right Side: Global Log / Manager Chat */}
+        <div className="flex-1 flex justify-end">
+          <div className="w-[450px] pointer-events-auto h-full min-h-0 pb-6">
+            <ManagerChat />
+          </div>
+        </div>
       </div>
 
-      {/* 5) Bottom Control Bar */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-        <div className="flex items-center gap-4 p-2 pl-6 pr-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl">
-          <div className="flex flex-col" role="status" aria-live="polite">
-            <span className="text-[10px] font-mono text-brand-lime uppercase tracking-widest">
+      {/* 4) Bottom Control Bar (layer 3) */}
+      <div className="absolute bottom-6 inset-x-0 z-30 pointer-events-none flex justify-center">
+        <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-full py-2 px-6 flex items-center gap-6 pointer-events-auto shadow-2xl">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">
               System Status
             </span>
             <span className="text-sm font-bold text-white">
@@ -274,15 +245,21 @@ export default function Dashboard() {
           <div className="h-8 w-px bg-white/10 mx-2" />
 
           <button
-            onClick={handleRunTick}
-            disabled={isTicking}
+            onClick={(e) => {
+              if (isTicking) {
+                e.preventDefault();
+                return;
+              }
+              handleRunTick();
+            }}
+            aria-disabled={isTicking}
             className={clsx(
-              "w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50",
+              "w-12 h-12 rounded-full flex items-center justify-center transition-transform shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lime",
               isTicking
-                ? "bg-gray-600 text-gray-400"
-                : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)]",
+                ? "bg-gray-600 text-gray-400 cursor-wait opacity-50"
+                : "bg-brand-lime text-black shadow-[0_0_20px_rgba(132,204,22,0.4)] hover:scale-105 active:scale-95",
             )}
-            title="Run one tick"
+            title={isTicking ? "Executing tick, please wait..." : "Run one tick"}
             aria-label="Run one tick"
           >
             {isTicking ? (
