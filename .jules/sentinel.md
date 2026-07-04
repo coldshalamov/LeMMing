@@ -24,11 +24,6 @@
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
 
 ## 2026-07-04 - Absolute Path Evasion via Platform Mismatch
-**Vulnerability:** The absolute path validation in ShellTool used the platform-dependent , which allowed cross-platform absolute path evasion (e.g., a Windows absolute path on a Linux system evaluated to False).
+**Vulnerability:** The absolute path validation in ShellTool used the platform-dependent `Path().is_absolute()`, which allowed cross-platform absolute path evasion (e.g., a Windows absolute path on a Linux system evaluated to False).
 **Learning:** Security checks that rely on standard library features like `pathlib.Path` can exhibit platform-dependent behavior that creates vulnerabilities in mixed or dynamic environments.
 **Prevention:** Use `PurePosixPath` and `PureWindowsPath` explicitly to ensure any absolute path pattern from either OS is blocked uniformly, regardless of the host OS.
-
-## 2026-07-04 - Absolute Path Evasion via Platform Mismatch
-**Vulnerability:** The absolute path validation in ShellTool used the platform-dependent Path().is_absolute(), which allowed cross-platform absolute path evasion.
-**Learning:** Security checks that rely on standard library features like pathlib.Path can exhibit platform-dependent behavior that creates vulnerabilities in mixed or dynamic environments.
-**Prevention:** Use PurePosixPath and PureWindowsPath explicitly to ensure any absolute path pattern from either OS is blocked uniformly, regardless of the host OS.
