@@ -341,8 +341,10 @@ class ShellTool(Tool):
 
             # Check for absolute paths
             # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
-            # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
-            if Path(arg).is_absolute():
+            # We use both PurePosixPath and PureWindowsPath to ensure cross-platform protection
+            # against absolute path evasion (e.g., bypassing Posix checks with C:\).
+            from pathlib import PurePosixPath, PureWindowsPath
+            if PurePosixPath(arg).is_absolute() or PureWindowsPath(arg).is_absolute():
                  return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
