@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2026-07-05 - [Batching File I/O in Hot Paths]
+**Learning:** Writing to disk synchronously in a hot path like `deduct_credits` scales linearly with the number of operations (e.g., agents running). Moving the I/O to a batch save at the end of the tick cycle (`run_tick`) converts O(N) disk writes to O(1).
+**Action:** Delay saving to disk until a logical batch boundary (like the end of a tick or run) when updating shared configuration or global state files.

@@ -19,7 +19,7 @@ from .messages import (
     write_outbox_entry,
 )
 from .models import call_llm
-from .org import deduct_credits, get_agent_credits, get_credits, get_org_config
+from .org import deduct_credits, get_agent_credits, get_credits, get_org_config, save_credits
 from .paths import get_config_dir, get_logs_dir, get_tick_file
 from .tools import ToolRegistry, ToolResult
 
@@ -541,6 +541,9 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
             extra={"event": "outbox_cleanup", "tick": tick, "entries_removed": removed},
         )
         log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
+
+    # Bolt Optimization: Batch save credits once per tick rather than per-agent action
+    save_credits(base_path)
 
     tick_duration_ms = int((time.time() - tick_start) * 1000)
     log_engine_event(
