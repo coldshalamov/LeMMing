@@ -163,3 +163,15 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         }, headers=headers)
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
+        import json
+        resume_data = {
+            "name": "source",
+            "title": "Src",
+            "short_description": "Src",
+            "model": {"key": "gpt"},
+            "permissions": {"read_outboxes": [], "tools": []},
+            "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+            "instructions": "test"
+        }
+        with open(source_dir / "resume.json", "w") as f:
+            json.dump(resume_data, f)
