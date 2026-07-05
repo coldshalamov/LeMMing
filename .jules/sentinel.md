@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2026-07-05 - Shadowed Built-in Module
+**Vulnerability:** The built-in `secrets` module was shadowed by a module-level variable named `secrets`, breaking `secrets.compare_digest()`.
+**Learning:** In Python, variables defined in `if`, `try`, or `with` blocks leak into the surrounding scope. A generic name like `secrets` at the module level overrides imported modules of the same name.
+**Prevention:** Avoid generic variable names that conflict with standard library modules (e.g., `secrets`, `logging`, `json`), especially in module-level scopes.
