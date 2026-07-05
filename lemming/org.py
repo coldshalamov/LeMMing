@@ -144,7 +144,8 @@ def deduct_credits(agent: str, amount: float, base_path: Path | None = None) -> 
         }
     credits_left = credits[agent].get("credits_left", 0.0) - amount
     credits[agent]["credits_left"] = round(credits_left, 4)
-    save_credits(base_path)
+    # Bolt Optimization: Removed synchronous save_credits() call.
+    # Saves are now batched per-tick to avoid O(N) I/O overhead.
 
 
 def save_credits(base_path: Path | None = None) -> None:

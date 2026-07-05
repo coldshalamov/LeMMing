@@ -1,9 +1,11 @@
 import os
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 from lemming import api
+
 
 @pytest.fixture
 def client() -> TestClient:
@@ -105,7 +107,13 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         # Create a source agent for cloning
         source_dir = agents_dir / "source"
         source_dir.mkdir()
-        (source_dir / "resume.json").write_text('{"name": "source", "title": "Src", "short_description": "Src", "model": {"key": "gpt"}, "permissions": {"read_outboxes": [], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}')
+        resume_content = (
+            '{"name": "source", "title": "Src", "short_description": "Src", '
+            '"model": {"key": "gpt"}, "permissions": {"read_outboxes": [], '
+            '"tools": []}, "schedule": {"run_every_n_ticks": 1, '
+            '"phase_offset": 0}, "instructions": "test"}'
+        )
+        (source_dir / "resume.json").write_text(resume_content)
         (source_dir / "outbox").mkdir()
         (source_dir / "memory").mkdir()
         (source_dir / "logs").mkdir()
@@ -161,3 +169,15 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         }, headers=headers)
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
+        import json
+        resume_data = {
+            "name": "source",
+            "title": "Src",
+            "short_description": "Src",
+            "model": {"key": "gpt"},
+            "permissions": {"read_outboxes": [], "tools": []},
+            "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
+            "instructions": "test"
+        }
+        with open(source_dir / "resume.json", "w") as f:
+            json.dump(resume_data, f)
