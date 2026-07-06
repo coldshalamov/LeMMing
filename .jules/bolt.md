@@ -34,3 +34,7 @@
 ## 2026-07-06 - [Optimizing analyze_social_graph performance]
 **Learning:** Calculating the social graph had an O(M*R) bottleneck where it scanned all relationships (R) for every outbox message (M) recipient. When relationships and outbox volumes scale, this nested looping causes significant delays. By caching relationships into an O(1) hash map grouped by (source, target) tuples, the complexity of matching message recipients to relationships drops to O(M).
 **Action:** When iteratively mutating existing domain objects based on a stream of events (like outbox messages), always preprocess the domain objects into an O(1) dictionary lookup structure before entering the stream processing loop to avoid O(N^2) scaling bottlenecks.
+
+## 2026-07-06 - [Resolving matrix CI check suite failures]
+**Learning:** An unrelated repository-wide formatting or linting error in one CI check matrix environment may cause other parallel matrix environments to be canceled. When recovering from CI failures, ensure all steps of the recovery sequence are executed to prevent CI failures.
+**Action:** Ignore repository-wide linting and formatting errors in unrelated files across matrices to avoid scope creep unless explicitly stated.
