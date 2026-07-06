@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2026-07-06 - [Optimizing analyze_social_graph performance]
+**Learning:** Calculating the social graph had an O(M*R) bottleneck where it scanned all relationships (R) for every outbox message (M) recipient. When relationships and outbox volumes scale, this nested looping causes significant delays. By caching relationships into an O(1) hash map grouped by (source, target) tuples, the complexity of matching message recipients to relationships drops to O(M).
+**Action:** When iteratively mutating existing domain objects based on a stream of events (like outbox messages), always preprocess the domain objects into an O(1) dictionary lookup structure before entering the stream processing loop to avoid O(N^2) scaling bottlenecks.
