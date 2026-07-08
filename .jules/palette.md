@@ -13,3 +13,6 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+## $(date +%Y-%m-%d) - Interactive Element Keyboard Accessibility
+**Learning:** Some custom UI modals (like ToolSelectorModal) build complex interactive interfaces utilizing `<button>` tags (for close actions, filters, and selectable cards) but occasionally miss defining explicit `focus-visible` styles, rendering keyboard navigation nearly invisible.
+**Action:** Consistently added `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan` (and appropriate offsets where needed) to all `<button>` elements within the Tool Selector to ensure strong, accessible visual focus indicators for keyboard users.
