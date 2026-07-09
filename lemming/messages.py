@@ -21,8 +21,8 @@ OUTBOX_FILENAME_TEMPLATE = "{tick:08d}_{entry_id}.json"
 # Caches for outbox operations to avoid repetitive filesystem scans
 # Key: outbox_dir_path -> (mtime, count)
 _outbox_count_cache: dict[Path, tuple[float, int]] = {}
-# Key: outbox_dir_path -> (mtime, list_of_filenames_sorted_desc)
-_outbox_files_cache: dict[Path, tuple[float, list[str]]] = {}
+# Key: outbox_dir_path -> (mtime, list_of_parsed_entries_sorted_desc)
+_outbox_files_cache: dict[Path, tuple[float, list[tuple[int, str]]]] = {}
 
 
 @dataclass
@@ -121,7 +121,7 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
+        with open(entry_path, encoding="utf-8") as f:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
@@ -188,7 +188,7 @@ def _scan_outbox_files_optimized(
 
         cached = _outbox_files_cache.get(outbox_dir)
         if cached and cached[0] == mtime:
-            filenames = cached[1]
+            parsed_entries = cached[1]
         else:
             # Cache miss or stale: scan all files
             with os.scandir(outbox_dir) as it:
@@ -201,21 +201,24 @@ def _scan_outbox_files_optimized(
                     reverse=True,
                 )
 
+            parsed_entries = []
+            for name in filenames:
+                tick = _tick_from_filename_str(name)
+                if tick != -1:
+                    parsed_entries.append((tick, name))
+
             # Simple eviction policy to prevent memory leaks
             if len(_outbox_files_cache) > 1000:
                 _outbox_files_cache.clear()
 
-            _outbox_files_cache[outbox_dir] = (mtime, filenames)
+            # Optimization: Store parsed (tick, name) tuples in cache to avoid re-parsing strings on every cache hit.
+            _outbox_files_cache[outbox_dir] = (mtime, parsed_entries)
 
         outbox_dir_str = str(outbox_dir)
 
         # Apply filters to cached list
         count = 0
-        for name in filenames:
-            tick = _tick_from_filename_str(name)
-            if tick == -1:
-                continue
-
+        for tick, name in parsed_entries:
             if since_tick is not None and tick < since_tick:
                 # Since list is sorted descending, we can stop early if looking for > since_tick
                 # Wait, "since_tick" means we want entries with tick >= since_tick.
