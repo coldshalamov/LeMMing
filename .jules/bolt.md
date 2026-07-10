@@ -24,9 +24,12 @@
 **Learning:** `pathlib.Path` instantiation has overhead that is noticeably slower in hot loops than plain strings with `os.path.join`. We can gain a performance improvement by bypassing `Path` instantiation in internal paths when we just need to pass it to Python's built-in `open()`.
 **Action:** When working in hot loops for file I/O operations like loading cached outbox entries, use `open()` with string paths instead of `Path` objects.
 
-## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
+## 2026-07-10 - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
-## $(date +%Y-%m-%d) - [ModelRegistry Caching]
+## 2026-07-10 - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2026-07-10 - [Eager Evaluation in dict.get()]
+**Learning:** Python evaluates the default argument in `dict.get(key, default)` eagerly. In `lemming/messages.py`, using `entry.payload.get("text", json.dumps(entry.payload))` was a bottleneck because `json.dumps()` executed on every call, even when "text" was present, adding unnecessary serialization overhead in loops.
+**Action:** When using computationally expensive operations for default values, use the lazy fallback pattern: `val["key"] if "key" in val else expensive_func()` or `val.get("key") or expensive_func()`.

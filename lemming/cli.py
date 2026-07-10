@@ -132,6 +132,7 @@ def inspect_cmd(base_path: Path, name: str, outbox_limit: int = 5) -> None:
     if entries:
         print("Recent outbox entries:")
         for entry in entries:
+            # Optimization: Avoid eager json.dumps evaluation when text is present in payload
             preview = entry.payload.get("text") or json.dumps(entry.payload)
             print(f"- [tick {entry.tick}] ({entry.kind}) {preview}")
     else:
@@ -216,7 +217,8 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
         return
 
     for entry in entries:
-        text = entry.payload.get("text", json.dumps(entry.payload))
+        # Optimization: Avoid eager json.dumps evaluation when text is present in payload
+        text = entry.payload["text"] if "text" in entry.payload else json.dumps(entry.payload)
         # Truncate long messages
         if len(text) > 100:
             text = text[:97] + "..."
@@ -392,7 +394,8 @@ def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
             if entries:
                 print(f"\n   Recent messages from '{target}':")
                 for entry in entries:
-                    text = entry.payload.get("text", json.dumps(entry.payload))
+                    # Optimization: Avoid eager json.dumps evaluation when text is present in payload
+                    text = entry.payload["text"] if "text" in entry.payload else json.dumps(entry.payload)
                     if len(text) > 150:
                         text = text[:147] + "..."
                     print(f"   [{entry.kind}] {text}")
@@ -408,7 +411,8 @@ def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
                 if entries:
                     print(f"\n   {target} → You:")
                     for entry in entries[:1]:  # Show most recent
-                        text = entry.payload.get("text", json.dumps(entry.payload))
+                        # Optimization: Avoid eager json.dumps evaluation when text is present in payload
+                        text = entry.payload["text"] if "text" in entry.payload else json.dumps(entry.payload)
                         print(f"   {text}")
             else:
                 print(f"   '{target}' did not run this tick (check schedule)")

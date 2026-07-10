@@ -454,7 +454,8 @@ def format_outbox_context(entries: list[OutboxEntry], max_chars: int = 8000) -> 
     lines = ["INCOMING MESSAGES:"]
     total = len(lines[0])
     for entry in entries:
-        text = entry.payload.get("text", json.dumps(entry.payload))
+        # Optimization: Avoid eager json.dumps evaluation when text is present in payload
+        text = entry.payload["text"] if "text" in entry.payload else json.dumps(entry.payload)
         line = f"\n[{entry.created_at}] From {entry.agent} ({entry.kind}): {text}"
         if total + len(line) > max_chars:
             lines.append("\n... (truncated)")
