@@ -12,7 +12,3 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
-
-## 2026-07-10 - Contextual Tooltips for Disabled Buttons
-**Learning:** Native `disabled` buttons can be confusing for users if the reason for being disabled isn't immediately obvious (e.g., missing API keys vs loading). While aria-disabled is sometimes needed to keep a button in the tab order, if keeping it native, providing dynamic `title` tooltips and contextual cursor states (`cursor-wait` vs `cursor-not-allowed`) significantly improves immediate clarity for sighted users.
-**Action:** Added conditional tooltips and cursor classes via `clsx` to the Global Settings save button while retaining the native disabled attribute and adding `focus-visible` utility rings.
