@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
 interface GlobalSettingsModalProps {
@@ -166,7 +167,17 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         <button
                             onClick={handleSave}
                             disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            title={
+                                status === "loading"
+                                    ? "Saving configuration..."
+                                    : !config.openai_api_key && !config.anthropic_api_key
+                                    ? "Please enter at least one API key to save"
+                                    : "Save system configuration"
+                            }
+                            className={clsx(
+                                "px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+                                status === "loading" ? "disabled:cursor-wait" : "disabled:cursor-not-allowed"
+                            )}
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
