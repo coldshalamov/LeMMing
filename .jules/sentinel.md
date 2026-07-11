@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2026-07-11 - Shadowed standard library module
+**Vulnerability:** The standard library module `secrets` was shadowed by a local variable when parsing `secrets.json`, causing `secrets.compare_digest` to throw an AttributeError.
+**Learning:** Using variable names that match imported modules (especially security-critical ones like `secrets`) can lead to unintended masking and runtime errors or logic bypasses.
+**Prevention:** Always use distinct variable names (e.g., `loaded_secrets`) when working with data that could conflict with imported modules, and rely on linters to detect shadowing.
