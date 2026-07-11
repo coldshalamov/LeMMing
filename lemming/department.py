@@ -15,10 +15,17 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
+
+# Optimization: Cache for DepartmentMetadata objects: path -> (mtime, DepartmentMetadata)
+_department_cache: dict[Path, tuple[float, DepartmentMetadata]] = {}
+
+
+def reset_departments_cache() -> None:
+    global _department_cache
+    _department_cache.clear()
 
 
 @dataclass
@@ -114,10 +121,28 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     departments: list[DepartmentMetadata] = []
     for dept_file in departments_dir.glob("*.json"):
         try:
+            # Optimization: check cache using stat to avoid parsing JSON if unmodified
+            mtime = dept_file.stat().st_mtime
+            if dept_file in _department_cache:
+                cached_mtime, cached_dept = _department_cache[dept_file]
+                if cached_mtime == mtime:
+                    departments.append(cached_dept)
+                    continue
+        except OSError:
+            pass  # Fallback to loading from disk
+
+        try:
             with dept_file.open("r", encoding="utf-8") as f:
                 data = json.load(f)
             dept = DepartmentMetadata.from_dict(data)
             departments.append(dept)
+
+            try:
+                mtime = dept_file.stat().st_mtime
+                _department_cache[dept_file] = (mtime, dept)
+            except OSError:
+                pass
+
             logger.info(
                 "department_discovered",
                 extra={"event": "department_discovered", "name": dept.name},

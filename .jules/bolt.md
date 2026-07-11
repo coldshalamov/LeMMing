@@ -30,3 +30,12 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2026-07-11 - [Department Discovery Bottleneck]
+**Learning:** Redundant file I/O operations and JSON parsing during `discover_departments` create significant overhead, especially during frequent calls by `analyze_social_graph`.
+**Action:** Use an `mtime`-based cache mapping file paths to `DepartmentMetadata` tuples, to avoid unnecessary JSON parsing on unaltered files.
+## 2026-07-11 - [Fix CI Linter Issues]
+**Learning:** Adding new code that ignores previous formatting requirements or having imports that become unused causes CI checks to fail.
+**Action:** When working on an agent and fixing other errors, make sure to execute all checks like ruff formatting, linting, and mypy prior to commit.
+## 2026-07-11 - [Fix CI matrix runs]
+**Learning:** We successfully resolved both Python 3.11 and Python 3.12 CI runs by addressing Black code formatting differences that ruffled tests code, removing unused test fixtures, and making string concatenation compliant across python platforms.
+**Action:** Always test across multiple python versions or environments using local simulations if multiple matrix builds are failing.
