@@ -36,3 +36,6 @@
 ## 2026-07-11 - [Fix CI Linter Issues]
 **Learning:** Adding new code that ignores previous formatting requirements or having imports that become unused causes CI checks to fail.
 **Action:** When working on an agent and fixing other errors, make sure to execute all checks like ruff formatting, linting, and mypy prior to commit.
+## 2026-07-11 - [Fix CI matrix runs]
+**Learning:** We successfully resolved both Python 3.11 and Python 3.12 CI runs by addressing Black code formatting differences that ruffled tests code, removing unused test fixtures, and making string concatenation compliant across python platforms.
+**Action:** Always test across multiple python versions or environments using local simulations if multiple matrix builds are failing.
