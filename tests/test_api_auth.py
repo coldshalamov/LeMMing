@@ -125,6 +125,7 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
             "schedule": {"run_every_n_ticks": 1, "phase_offset": 0},
             "instructions": "test",
         }
+
         import json
 
         (source_dir / "resume.json").write_text(json.dumps(resume_data))
