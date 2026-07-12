@@ -15,10 +15,12 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
+
+# Cache for Department objects: path -> (mtime, DepartmentMetadata)
+_department_cache: dict[Path, tuple[float, DepartmentMetadata]] = {}
 
 
 @dataclass
@@ -114,9 +116,26 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     departments: list[DepartmentMetadata] = []
     for dept_file in departments_dir.glob("*.json"):
         try:
+            # Optimization: check cache using stat to avoid parsing JSON if unmodified
+            try:
+                mtime = dept_file.stat().st_mtime
+                if dept_file in _department_cache:
+                    cached_mtime, cached_dept = _department_cache[dept_file]
+                    if cached_mtime == mtime:
+                        import copy
+
+                        departments.append(copy.deepcopy(cached_dept))
+                        continue
+            except OSError:
+                mtime = 0
+
             with dept_file.open("r", encoding="utf-8") as f:
                 data = json.load(f)
             dept = DepartmentMetadata.from_dict(data)
+
+            if mtime:
+                _department_cache[dept_file] = (mtime, dept)
+
             departments.append(dept)
             logger.info(
                 "department_discovered",
