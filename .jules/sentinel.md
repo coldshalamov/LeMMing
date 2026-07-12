@@ -22,3 +22,13 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2026-07-12 - Shadowing Standard Library Modules
+**Vulnerability:** A local variable assignment () globally shadowed the Python standard library  module, which had been imported at the top of the file. This caused a subsequent call to  to fail with an `AttributeError` on the dictionary, completely breaking the admin authentication system and leading to 500 errors.
+**Learning:** Python's namespace rules allow local variables to silently overwrite imported module names if they share the same scope, turning secure crypto functions into undefined methods on generic objects.
+**Prevention:** Never use standard library module names (like , , , ) as variable names. Always use descriptive prefixes like  or .
+
+## 2024-07-12 - Shadowing Standard Library Modules
+**Vulnerability:** A local variable assignment (`secrets = json.load(f)`) globally shadowed the Python standard library `secrets` module, which had been imported at the top of the file. This caused a subsequent call to `secrets.compare_digest()` to fail with an `AttributeError` on the dictionary, completely breaking the admin authentication system and leading to 500 errors.
+**Learning:** Python's namespace rules allow local variables to silently overwrite imported module names if they share the same scope, turning secure crypto functions into undefined methods on generic objects.
+**Prevention:** Never use standard library module names (like `secrets`, `os`, `sys`, `json`) as variable names. Always use descriptive prefixes like `loaded_secrets` or `file_secrets`.
