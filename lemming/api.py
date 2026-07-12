@@ -86,6 +86,7 @@ async def verify_admin_access(request: Request):
     request_key = request.headers.get("X-Admin-Key")
     # Use constant-time comparison to prevent timing attacks
     import secrets as py_secrets
+
     if not request_key or not py_secrets.compare_digest(request_key, admin_key):
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED,
