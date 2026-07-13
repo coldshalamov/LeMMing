@@ -173,4 +173,6 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         )
         assert resp.status_code == 201
         assert (agents_dir / "auth_cloned").exists()
+
+
 # noqa: E501
