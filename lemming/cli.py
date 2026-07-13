@@ -13,7 +13,6 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
-    save_org_structure,
     save_social_graph,
 )
 from .engine import load_tick, run_forever, run_once
@@ -416,7 +415,7 @@ def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
 
 def serve_cmd(host: str, port: int) -> None:
     try:
-        import uvicorn
+        import uvicorn  # type: ignore
     except ImportError:  # pragma: no cover - optional dependency
         print("uvicorn is not installed. Install with `pip install .[api]`.")
         sys.exit(1)
@@ -473,7 +472,7 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
     # Department management commands
-    dept_parser = subparsers.add_parser("department-list", help="List all departments")
+    subparsers.add_parser("department-list", help="List all departments")
 
     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
     dept_create_parser.add_argument("name", help="Department name")
