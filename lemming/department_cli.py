@@ -7,7 +7,7 @@ import logging
 import shutil
 from pathlib import Path
 
-import click
+import click  # type: ignore
 
 from .department import (
     DepartmentMetadata,
