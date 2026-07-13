@@ -13,3 +13,11 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2026-07-13 - Dashboard Interactive Elements Keyboard Accessibility & Disabled States
+**Learning:** Primary dashboard controls (like "Run Tick", "Global Settings", "New Unit", and modal close buttons) lacked visual focus indicators for keyboard navigation and explanatory text for disabled states during execution.
+**Action:** Always add explicit  (with brand colors and offsets if necessary) to all interactive dashboard components, and use dynamic  and  alongside  to provide feedback when primary buttons are locked during async operations.
+
+## 2026-07-13 - Dashboard Interactive Elements Keyboard Accessibility & Disabled States
+**Learning:** Primary dashboard controls (like "Run Tick", "Global Settings", "New Unit", and modal close buttons) lacked visual focus indicators for keyboard navigation and explanatory text for disabled states during execution.
+**Action:** Always add explicit `focus-visible:outline-none focus-visible:ring-2` (with brand colors and offsets if necessary) to all interactive dashboard components, and use dynamic `title` and `aria-label` alongside `disabled:cursor-wait` to provide feedback when primary buttons are locked during async operations.
