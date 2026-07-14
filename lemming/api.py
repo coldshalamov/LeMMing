@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import os
-import secrets
+import secrets as sec
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -85,7 +85,7 @@ async def verify_admin_access(request: Request):
     # If key is configured, enforce it
     request_key = request.headers.get("X-Admin-Key")
     # Use constant-time comparison to prevent timing attacks
-    if not request_key or not secrets.compare_digest(request_key, admin_key):
+    if not request_key or not sec.compare_digest(request_key, admin_key):
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin key",
