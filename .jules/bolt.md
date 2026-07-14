@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2024-05-27 - [O(1) hash map lookup for analyze_social_graph]
+**Learning:** Nested iterations in social graph computation `analyze_social_graph` and hot-path looping to check relationship matches using `.glob("*.json")` can be significantly optimized.
+**Action:** Replaced `pathlib.Path.glob` with `os.scandir` combined with `endswith(".json")`, bypassing full `pathlib` generation. Swapped the O(N) lookup in list with an O(1) dict lookup pre-mapped using `rel_index = {(rel.source, rel.target): rel}` to speed up relationship verification significantly.
