@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from jsonschema import Draft7Validator
+from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 
 class ValidationError(ValueError):
@@ -45,7 +46,7 @@ def _validate_against_schema(instance: Any, schema_name: str, context: str) -> N
         raise ValidationError(f"{context}: " + "; ".join(errors))
 
 
-def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
+def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[JSONSchemaValidationError]:
     schema_path = resources.files(__package__).joinpath("schemas", schema_name)
     with resources.as_file(schema_path) as path:
         schema = json.loads(path.read_text(encoding="utf-8"))
