@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -112,25 +111,30 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
         return []
 
     departments: list[DepartmentMetadata] = []
-    for dept_file in departments_dir.glob("*.json"):
-        try:
-            with dept_file.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            dept = DepartmentMetadata.from_dict(data)
-            departments.append(dept)
-            logger.info(
-                "department_discovered",
-                extra={"event": "department_discovered", "name": dept.name},
-            )
-        except Exception as exc:
-            logger.warning(
-                "department_load_failed",
-                extra={
-                    "event": "department_load_failed",
-                    "path": str(dept_file),
-                    "error": str(exc),
-                },
-            )
+    # Optimization: os.scandir is faster than pathlib.Path.glob in hot paths
+    try:
+        for entry in os.scandir(departments_dir):
+            if entry.name.endswith(".json") and entry.is_file():
+                try:
+                    with open(entry.path, encoding="utf-8") as f:
+                        data = json.load(f)
+                    dept = DepartmentMetadata.from_dict(data)
+                    departments.append(dept)
+                    logger.info(
+                        "department_discovered",
+                        extra={"event": "department_discovered", "name": dept.name},
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "department_load_failed",
+                        extra={
+                            "event": "department_load_failed",
+                            "path": str(entry.path),
+                            "error": str(exc),
+                        },
+                    )
+    except FileNotFoundError:
+        pass
 
     return departments
 
@@ -204,8 +208,12 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
                 )
 
     # Analyze recent outbox interactions to strengthen relationships
+    # Optimization: O(1) hash map lookup for relationships
+    rel_index = {(rel.source, rel.target): rel for rel in relationships}
+
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
+        outbox_dir_str = str(outbox_dir)
         if not outbox_dir.exists():
             continue
 
@@ -213,28 +221,32 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
+        # Optimization: os.scandir is faster than pathlib.Path.glob in hot paths
+        try:
+            for entry in os.scandir(outbox_dir_str):
+                if entry.name.endswith(".json") and entry.is_file():
+                    try:
+                        with open(entry.path, encoding="utf-8") as f:
+                            entry_data = json.load(f)
 
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
+                            # Partial load optimizations
+                            if entry_data.get("tick", 0) >= recent_tick_threshold:
+                                for target in entry_data.get("to", []):
+                                    if target:
+                                        interaction_counts[target] = interaction_counts.get(target, 0) + 1
+                    except Exception:
+                        continue
+        except FileNotFoundError:
+            continue
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
-            for rel in relationships:
-                if rel.source == agent.name and rel.target == target:
-                    rel.interaction_count += count
-                    rel.last_interaction_tick = current_tick
-                    # Increase strength based on interaction frequency
-                    rel.strength = min(1.0, rel.strength + (count * 0.05))
+            rel = rel_index.get((agent.name, target))
+            if rel:
+                rel.interaction_count += count
+                rel.last_interaction_tick = current_tick
+                # Increase strength based on interaction frequency
+                rel.strength = min(1.0, rel.strength + (count * 0.05))
 
     return relationships
 
