@@ -90,7 +90,10 @@ def test_shell_tool_sandbox_arguments(tmp_path):
     assert "directory traversal" in result.error.lower()
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)")
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)",
+)
 def test_shell_tool_absolute_path_argument(tmp_path):
     """Ensure ShellTool blocks absolute paths in arguments."""
     base_path = tmp_path / "lemming"
