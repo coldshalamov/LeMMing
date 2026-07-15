@@ -9,16 +9,25 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
+
+# Cache for Department objects: path -> (mtime, DepartmentMetadata)
+_departments_cache: dict[str, tuple[float, DepartmentMetadata]] = {}
+
+
+def reset_departments_cache() -> None:
+    """Reset the department cache."""
+    global _departments_cache
+    _departments_cache.clear()
 
 
 @dataclass
@@ -108,15 +117,38 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     Each department.json contains metadata about a group of agents.
     """
     departments_dir = base_path / "departments"
-    if not departments_dir.exists():
+
+    # Optimization: Use os.scandir instead of Path.glob for performance,
+    # and catch OSError directly instead of checking .exists() first.
+    try:
+        with os.scandir(departments_dir) as it:
+            entries = list(it)
+    except OSError:
         return []
 
     departments: list[DepartmentMetadata] = []
-    for dept_file in departments_dir.glob("*.json"):
+    for entry in entries:
+        if not entry.name.endswith(".json") or not entry.is_file():
+            continue
+
         try:
-            with dept_file.open("r", encoding="utf-8") as f:
+            # Optimization: cache based on file mtime to avoid redundant disk I/O and JSON parsing
+            path_str = entry.path
+            mtime = entry.stat().st_mtime
+
+            if path_str in _departments_cache:
+                cached_mtime, cached_dept = _departments_cache[path_str]
+                if cached_mtime == mtime:
+                    departments.append(cached_dept)
+                    continue
+
+            with open(path_str, encoding="utf-8") as f:
                 data = json.load(f)
             dept = DepartmentMetadata.from_dict(data)
+
+            # Update cache
+            _departments_cache[path_str] = (mtime, dept)
+
             departments.append(dept)
             logger.info(
                 "department_discovered",
@@ -127,7 +159,7 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
                 "department_load_failed",
                 extra={
                     "event": "department_load_failed",
-                    "path": str(dept_file),
+                    "path": path_str,
                     "error": str(exc),
                 },
             )
