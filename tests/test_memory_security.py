@@ -4,6 +4,7 @@ import pytest
 from lemming.tools import MemoryWriteTool, MemoryReadTool, ToolResult
 from lemming.memory import validate_memory_key
 
+
 class TestMemorySecurity:
     @pytest.fixture
     def test_env(self, tmp_path):
@@ -43,7 +44,7 @@ class TestMemorySecurity:
         result = tool.execute(agent_name, base_path, key=evil_key)
 
         assert not result.success
-        assert result.output == "" # Memory not found or invalid key returns None -> Memory not found
+        assert result.output == ""  # Memory not found or invalid key returns None -> Memory not found
 
     def test_memory_key_validation(self):
         # Valid keys

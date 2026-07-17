@@ -88,7 +88,12 @@ def test_shell_tool_sandbox_arguments(tmp_path):
 
 import os
 import pytest
-@pytest.mark.skipif(os.name == 'nt', reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)")
+
+
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)",
+)
 def test_shell_tool_absolute_path_argument(tmp_path):
     """Ensure ShellTool blocks absolute paths in arguments."""
     base_path = tmp_path / "lemming"
@@ -102,13 +107,14 @@ def test_shell_tool_absolute_path_argument(tmp_path):
 
     # Attempt absolute path
     import os
-    if os.name == 'nt':
+
+    if os.name == "nt":
         # Windows: Drive + Root (e.g. C:\Windows)
         abs_path = "C:\\Windows\\System32\\drivers\\etc\\hosts"
     else:
         # Unix: Root (e.g. /etc/passwd)
         abs_path = "/etc/passwd"
-        
+
     command = f"echo {abs_path}"
 
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
@@ -154,3 +160,24 @@ def test_shell_tool_pipe_bypass(tmp_path):
         assert "; echo world" in result.output
         assert "hello" in result.output
         assert result.output.strip() == "hello; echo world"
+
+
+def test_shell_tool_arg_injection(tmp_path):
+    """Ensure ShellTool blocks argument injection."""
+    base_path = tmp_path / "lemming"
+    agents_dir = base_path / "agents"
+    agent_name = "tester"
+    agent_dir = agents_dir / agent_name
+    workspace = agent_dir / "workspace"
+    workspace.mkdir(parents=True)
+
+    tool = ShellTool()
+
+    # Attempt argument injection
+    command = "grep --file=/etc/passwd dummy.txt"
+
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
+
+    assert not result.success
+    assert "security violation" in result.error.lower()
+    assert "argument injection" in result.error.lower()

@@ -22,3 +22,7 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+## 2024-05-29 - Argument Injection in Sandboxed ShellTool
+**Vulnerability:** The `ShellTool` allows executing specific shell commands like `grep`, and applies path restrictions using `Path.is_absolute()`. However, users can bypass this check by providing arguments like `--file=/etc/passwd` because they begin with `--` and are not seen as absolute paths.
+**Learning:** Argument Injection affects more than just command-line wrappers. When sandboxing a shell environment, restricting allowed commands and directory traversal is insufficient if a user can inject flags that instruct the command to read or execute arbitrary files.
+**Prevention:** Block any argument starting with `-` within the shell sandbox validation to comprehensively prevent flag injection.
