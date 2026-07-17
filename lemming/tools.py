@@ -444,10 +444,8 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
         if not (
