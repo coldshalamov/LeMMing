@@ -1,6 +1,6 @@
 import pytest
-from pathlib import Path
-from lemming.memory import save_memory, load_memory, delete_memory, list_memories, archive_old_memories
+
+from lemming.memory import archive_old_memories, delete_memory, list_memories, load_memory, save_memory
 
 
 class TestMemoryPerfBehavior:
