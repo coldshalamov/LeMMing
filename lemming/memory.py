@@ -31,7 +31,9 @@ def validate_memory_key(key: str) -> None:
         )
 
 
-def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operation: str = 'set', tick: int | None = None) -> None:
+def save_memory(
+    base_path: Path, agent_name: str, key: str, value: Any, operation: str = "set", tick: int | None = None
+) -> None:
     """
     Save a memory entry for an agent.
 
