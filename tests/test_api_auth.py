@@ -112,8 +112,7 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
         # Create a source agent for cloning
         source_dir = agents_dir / "source"
         source_dir.mkdir()
-        (source_dir / "resume.json").write_text(
-            '''{
+        (source_dir / "resume.json").write_text("""{
   "name": "source",
   "title": "Src",
   "short_description": "Src",
@@ -129,8 +128,7 @@ def test_agent_creation_auth_configured(client: TestClient, tmp_path):
     "phase_offset": 0
   },
   "instructions": "test"
-}'''
-        )
+}""")
         (source_dir / "outbox").mkdir()
         (source_dir / "memory").mkdir()
         (source_dir / "logs").mkdir()
