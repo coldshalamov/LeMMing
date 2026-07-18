@@ -140,6 +140,7 @@ export default function Dashboard() {
             {/* Buttons */}
             <div className="pointer-events-auto flex items-center gap-3">
               <button
+                type="button"
                 onClick={() => setShowSettings(true)}
                 className="p-2 bg-black/40 hover:bg-white/5 text-gray-400 hover:text-white rounded-lg border border-white/5 transition-all"
                 title="Global Settings"
@@ -188,6 +189,7 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedAgentName(null)}
                   className="text-white/20 hover:text-white transition-colors"
                   title="Close"
@@ -274,6 +276,7 @@ export default function Dashboard() {
           <div className="h-8 w-px bg-white/10 mx-2" />
 
           <button
+            type="button"
             onClick={handleRunTick}
             disabled={isTicking}
             className={clsx(
