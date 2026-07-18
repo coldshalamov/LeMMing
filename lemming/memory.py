@@ -51,7 +51,14 @@ def save_memory(
     # in the write operation to handle missing directories, saving a stat call.
 
     memory_file = memory_dir / f"{key}.json"
-    entry = {'key': key, 'value': value, 'timestamp_utc': datetime.now(UTC).isoformat(), 'agent': agent_name, 'operation': operation, 'tick': tick}
+    entry = {
+        "key": key,
+        "value": value,
+        "timestamp_utc": datetime.now(UTC).isoformat(),
+        "agent": agent_name,
+        "operation": operation,
+        "tick": tick,
+    }
     # Handle different operations
     if operation == "append":
         # Load existing value and append
