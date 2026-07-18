@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## $(date +%Y-%m-%d) - [Optimizing Outbox Parsing]
+**Learning:** Extracting metadata directly from filenames (like `tick` from `00000000_id.json`) allows for early skipping of files without invoking `json.load` or object instantiation.
+**Action:** When filtering directory contents based on attributes reflected in the filenames, parse the filenames to pre-filter items before performing heavy disk I/O and parsing.
