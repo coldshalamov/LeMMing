@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -213,19 +212,37 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
+        # Optimization: O(1) hash map lookup instead of nested loop for valid targets
+        valid_targets = {rel.target for rel in relationships if rel.source == agent.name}
+        outbox_dir_str = str(outbox_dir)
 
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
+        try:
+            # Optimization: Use os.scandir instead of Path.glob to avoid Path instantiation overhead
+            with os.scandir(outbox_dir_str) as it:
+                for entry in it:
+                    if not entry.name.endswith(".json") or not entry.is_file():
+                        continue
+
+                    try:
+                        # Optimization: Extract metadata directly from filename to avoid full JSON parsing
+                        # and dataclass instantiation (OutboxEntry.from_dict) for files we might skip
+                        tick_str = entry.name.split("_")[0]
+                        if not tick_str.isdigit():
+                            continue
+
+                        tick = int(tick_str)
+                        if tick >= recent_tick_threshold:
+                            with open(entry.path, encoding="utf-8") as f:
+                                entry_data = json.load(f)
+
+                                # Optimization: Iterate over recipients and check against hash set
+                                for target in entry_data.get("to", []):
+                                    if target in valid_targets:
+                                        interaction_counts[target] = interaction_counts.get(target, 0) + 1
+                    except Exception:
+                        continue
+        except OSError:
+            pass
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
