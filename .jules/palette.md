@@ -13,3 +13,6 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+## 2025-07-19 - Form Buttons without Explicit Type
+**Learning:** React buttons inside or near forms default to `type="submit"`, which can cause accidental form submissions or page reloads, especially when testing keyboard accessibility or handling complex state in wizards.
+**Action:** Always explicitly specify `type="button"` for custom interactive buttons that are not intended to trigger form submissions, particularly in multi-step wizard interfaces.
