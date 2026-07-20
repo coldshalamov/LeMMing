@@ -13,3 +13,6 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+## 2024-05-24 - Phantom Buttons on Non-Interactive Log Messages
+**Learning:** Applying `role="button"` and `tabIndex={0}` unconditionally to elements that are only sometimes interactive creates "phantom buttons". This causes screen readers to announce them as buttons and includes them in the tab order, even when they do nothing when clicked.
+**Action:** Always conditionally apply `role="button"`, `tabIndex`, and `aria-expanded` based on the element's actual interactivity state (e.g., `role={canExpand ? "button" : undefined}`).
