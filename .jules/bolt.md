@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2024-05-27 - [Social Graph Tick Filtering & Nested Lookups]
+**Learning:** `analyze_social_graph` was reading, parsing, and instantiating `OutboxEntry` for every single file in the outbox just to filter by `tick >= recent_tick_threshold`. Additionally, for every valid entry, it looped through all relationships repeatedly. This caused an O(N*M) bottleneck during graph analysis.
+**Action:** Use `os.scandir` instead of `Path.glob` to avoid Path object overhead, and read `tick` directly from the parsed JSON dictionary to avoid `OutboxEntry` dataclass instantiation. Pre-compute O(1) hash sets for validation logic (like `valid_targets`) and intersect them with message recipients to avoid nested O(N*M) loops.
