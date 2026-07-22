@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -108,29 +107,34 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     Each department.json contains metadata about a group of agents.
     """
     departments_dir = base_path / "departments"
-    if not departments_dir.exists():
-        return []
 
     departments: list[DepartmentMetadata] = []
-    for dept_file in departments_dir.glob("*.json"):
-        try:
-            with dept_file.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            dept = DepartmentMetadata.from_dict(data)
-            departments.append(dept)
-            logger.info(
-                "department_discovered",
-                extra={"event": "department_discovered", "name": dept.name},
-            )
-        except Exception as exc:
-            logger.warning(
-                "department_load_failed",
-                extra={
-                    "event": "department_load_failed",
-                    "path": str(dept_file),
-                    "error": str(exc),
-                },
-            )
+    try:
+        # Optimization: Use os.scandir to avoid Path instantiations
+        with os.scandir(departments_dir) as it:
+            for entry in it:
+                if entry.is_file() and entry.name.endswith(".json"):
+                    try:
+                        # Optimization: Use open() with string paths
+                        with open(entry.path, encoding="utf-8") as f:
+                            data = json.load(f)
+                        dept = DepartmentMetadata.from_dict(data)
+                        departments.append(dept)
+                        logger.info(
+                            "department_discovered",
+                            extra={"event": "department_discovered", "name": dept.name},
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "department_load_failed",
+                            extra={
+                                "event": "department_load_failed",
+                                "path": entry.path,
+                                "error": str(exc),
+                            },
+                        )
+    except FileNotFoundError:
+        pass
 
     return departments
 
@@ -206,35 +210,43 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
     # Analyze recent outbox interactions to strengthen relationships
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
-        if not outbox_dir.exists():
-            continue
 
         # Count interactions with each recipient
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
+        # Optimization: O(1) hash map lookup to replace nested O(n²) list iterations
+        agent_rels = {rel.target: rel for rel in relationships if rel.source == agent.name}
 
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
+        try:
+            # Optimization: Use os.scandir to avoid Path instantiations
+            with os.scandir(outbox_dir) as it:
+                for entry in it:
+                    if entry.is_file() and entry.name.endswith(".json"):
+                        try:
+                            # Optimization: Use open() with string paths instead of Path objects
+                            with open(entry.path, encoding="utf-8") as f:
+                                entry_data = json.load(f)
+
+                                # Optimization: Extract metadata directly from dict instead of OutboxEntry.from_dict
+                                tick = entry_data.get("tick")
+                                if tick is not None and tick >= recent_tick_threshold:
+                                    for target in entry_data.get("to", []) or []:
+                                        if target in agent_rels:
+                                            interaction_counts[target] = interaction_counts.get(target, 0) + 1
+                        except Exception:
+                            continue
+        except FileNotFoundError:
+            continue
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
-            for rel in relationships:
-                if rel.source == agent.name and rel.target == target:
-                    rel.interaction_count += count
-                    rel.last_interaction_tick = current_tick
-                    # Increase strength based on interaction frequency
-                    rel.strength = min(1.0, rel.strength + (count * 0.05))
+            rel = agent_rels.get(target)
+            if rel:
+                rel.interaction_count += count
+                rel.last_interaction_tick = current_tick
+                # Optimization: Increase strength based on interaction frequency without O(n) scan
+                rel.strength = min(1.0, rel.strength + (count * 0.05))
 
     return relationships
 
