@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## $(date +%Y-%m-%d) - [O(1) Hash Map and EAFP in Social Graph Analysis]
+**Learning:** In `analyze_social_graph`, processing nested loops across `relationships` lists during JSON file iterations caused O(N^2) complexity bottlenecks. Instantiating full `OutboxEntry` dataclass objects just to access a single `tick` field also introduced unnecessary overhead, as did `Path.glob` and `.exists()` checks.
+**Action:** Replace nested list scans with O(1) hash map lookups. Use EAFP with `os.scandir` instead of `.exists()` and `.glob()`. Access fields directly from dictionaries instead of full object instantiations when only a few keys are needed.
