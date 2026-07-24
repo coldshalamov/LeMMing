@@ -254,30 +254,30 @@ All state is:
 
 ```python
 # tests/test_department.py
--test_department_metadata_validation
--test_social_relationship_creation
--test_discover_departments
--test_analyze_social_graph
--test_department_agent_membership
+- test_department_metadata_validation
+- test_social_relationship_creation
+- test_discover_departments
+- test_analyze_social_graph
+- test_department_agent_membership
 
 # tests/test_department_cli.py
--test_department_list
--test_department_create
--test_department_show
--test_department_export
--test_department_analyze
--test_department_package
--test_department_import
+- test_department_list
+- test_department_create
+- test_department_show
+- test_department_export
+- test_department_analyze
+- test_department_package
+- test_department_import
 ```
 
 ### Integration Tests to Add
 
 ```python
 # tests/integration/test_department_workflow.py
--test_create_and_list_department
--test_package_and_import_department
--test_social_graph_evolution
--test_export_organization
+- test_create_and_list_department
+- test_package_and_import_department
+- test_social_graph_evolution
+- test_export_organization
 ```
 
 ### Manual Testing Checklist

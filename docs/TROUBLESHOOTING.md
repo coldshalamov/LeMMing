@@ -420,7 +420,9 @@ openai.RateLimitError: Rate limit exceeded
 from lemming.providers import RetryingLLMProvider, OpenAIProvider, CircuitBreaker
 
 provider = RetryingLLMProvider(
-    OpenAIProvider(), max_retries=3, circuit_breaker=CircuitBreaker(failure_threshold=5, recovery_timeout=60)
+    OpenAIProvider(),
+    max_retries=3,
+    circuit_breaker=CircuitBreaker(failure_threshold=5, recovery_timeout=60)
 )
 ```
 
@@ -555,7 +557,7 @@ append_memory_event(
     agent_name,
     "event_log",
     "Event description",
-    max_entries=100,  # Auto-compact
+    max_entries=100  # Auto-compact
 )
 ```
 
@@ -647,7 +649,7 @@ incoming = collect_readable_outboxes(
     base_path,
     agent.name,
     agent.permissions.read_outboxes,
-    limit=10,  # Reduce from 30
+    limit=10  # Reduce from 30
 )
 ```
 
@@ -797,7 +799,6 @@ print(agent)
 
 # Check schedule
 from lemming.engine import should_run
-
 print(should_run(agent, tick=10))
 
 # Read outbox
@@ -807,7 +808,6 @@ for entry in entries:
 
 # Run single tick with debugging
 import logging
-
 logging.basicConfig(level=logging.DEBUG)
 results = run_tick(base_path, tick=1)
 print(results)

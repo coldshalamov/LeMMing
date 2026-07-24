@@ -462,7 +462,6 @@ LeMMing/
 ```python
 from lemming.tools import Tool, ToolRegistry, ToolResult
 
-
 class CustomTool(Tool):
     name = "custom_tool"
     description = "Does something custom"
@@ -470,7 +469,6 @@ class CustomTool(Tool):
     def execute(self, agent_name: str, base_path: Path, **kwargs) -> ToolResult:
         # Your logic here
         return ToolResult(True, "Success")
-
 
 ToolRegistry.register(CustomTool())
 ```
@@ -480,12 +478,10 @@ ToolRegistry.register(CustomTool())
 ```python
 from lemming.providers import LLMProvider, register_provider
 
-
 class CustomProvider(LLMProvider):
     def call(self, model_name, messages, temperature, **kwargs) -> str:
         # Your provider logic
         return response_text
-
 
 register_provider("custom", CustomProvider)
 ```

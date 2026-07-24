@@ -48,10 +48,18 @@ To bridge this gap, the `CLIProvider` will automatically wrap raw text output in
 # Pseudo-code for CLIProvider wrapper
 output = process.read_output()
 try:
-    return json.loads(output)  # specific CLI agents might speak JSON
+    return json.loads(output) # specific CLI agents might speak JSON
 except JSONDecodeError:
     # Wrap raw text
-    return json.dumps({"outbox_entries": [{"kind": "message", "payload": {"text": output}, "tags": ["cli_output"]}]})
+    return json.dumps({
+        "outbox_entries": [
+            {
+                "kind": "message",
+                "payload": {"text": output},
+                "tags": ["cli_output"]
+            }
+        ]
+    })
 ```
 
 ## 2. Modular Manager Agent

@@ -71,7 +71,7 @@ entry = {
     "key": key,
     "value": value,
     "timestamp": datetime.now(UTC).isoformat(),  # Missing _utc suffix
-    "agent": agent_name,  # Extra field (fine)
+    "agent": agent_name  # Extra field (fine)
     # MISSING: "operation" field
     # MISSING: "tick" field
 }
