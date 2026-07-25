@@ -8,6 +8,7 @@ from lemming.paths import get_agents_dir, get_outbox_dir
 
 BASE_PATH = Path("benchmark_env_opt")
 
+
 def setup_env(num_agents=50, msgs_per_agent=100):
     if BASE_PATH.exists():
         shutil.rmtree(BASE_PATH)
@@ -36,12 +37,14 @@ def setup_env(num_agents=50, msgs_per_agent=100):
 
     return agents
 
+
 def benchmark_optimized(agents, limit=50):
     start = time.time()
     result = read_multi_agent_outbox_entries(BASE_PATH, agents, limit=limit)
     duration = time.time() - start
     print(f"Optimized approach: {duration:.4f}s")
     return len(result)
+
 
 if __name__ == "__main__":
     agents = setup_env(num_agents=50, msgs_per_agent=100)
