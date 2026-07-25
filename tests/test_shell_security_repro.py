@@ -1,8 +1,10 @@
-from lemming.tools import ShellTool
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
 import pytest
+
+from lemming.tools import ShellTool
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Relies on Unix commands (cat, ls) not available as executables on Windows")
