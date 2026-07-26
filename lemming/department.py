@@ -7,16 +7,17 @@ social organization.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,9 @@ def get_department_file(base_path: Path, department_name: str) -> Path:
     return base_path / "departments" / f"{department_name}.json"
 
 
+_dept_cache: dict[str, tuple[float, DepartmentMetadata]] = {}
+
+
 def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     """Discover all departments from department.json files.
 
@@ -108,29 +112,51 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     Each department.json contains metadata about a group of agents.
     """
     departments_dir = base_path / "departments"
-    if not departments_dir.exists():
-        return []
-
     departments: list[DepartmentMetadata] = []
-    for dept_file in departments_dir.glob("*.json"):
-        try:
-            with dept_file.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            dept = DepartmentMetadata.from_dict(data)
-            departments.append(dept)
-            logger.info(
-                "department_discovered",
-                extra={"event": "department_discovered", "name": dept.name},
-            )
-        except Exception as exc:
-            logger.warning(
-                "department_load_failed",
-                extra={
-                    "event": "department_load_failed",
-                    "path": str(dept_file),
-                    "error": str(exc),
-                },
-            )
+
+    try:
+        # Optimization: Use os.scandir instead of Path.glob and avoid .exists() check
+        with os.scandir(departments_dir) as it:
+            for entry in it:
+                if entry.is_file() and entry.name.endswith(".json"):
+                    path_str = entry.path
+
+                    try:
+                        mtime = entry.stat().st_mtime
+                        # Optimization: Cache parsed objects using file modification time
+                        if path_str in _dept_cache:
+                            cached_mtime, cached_dept = _dept_cache[path_str]
+                            if cached_mtime == mtime:
+                                # Optimization: Return deepcopy to avoid state poisoning
+                                departments.append(copy.deepcopy(cached_dept))
+                                continue
+                    except OSError:
+                        mtime = 0
+
+                    try:
+                        with open(path_str, encoding="utf-8") as f:
+                            data = json.load(f)
+                        dept = DepartmentMetadata.from_dict(data)
+                        departments.append(dept)
+
+                        if mtime:
+                            _dept_cache[path_str] = (mtime, dept)
+
+                        logger.info(
+                            "department_discovered",
+                            extra={"event": "department_discovered", "name": dept.name},
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "department_load_failed",
+                            extra={
+                                "event": "department_load_failed",
+                                "path": path_str,
+                                "error": str(exc),
+                            },
+                        )
+    except OSError:
+        pass
 
     return departments
 

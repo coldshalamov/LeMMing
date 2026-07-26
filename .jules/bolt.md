@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## $(date +%Y-%m-%d) - [DepartmentMetadata Caching]
+**Learning:** `discover_departments` recursively iterated through `departments/` using `Path.glob` and parsed JSON configurations repeatedly. Pathlib's `.exists()` and `.glob()` overheads combined with parsing created a slow operation in hot loops.
+**Action:** Replaced `Path.glob` with `os.scandir` to bypass instantiation overhead. Handled the `exists` check seamlessly using `try... except OSError` and implemented a state-safe deepcopy cache using `st_mtime` to mitigate repetitive I/O and parsing overheads.
