@@ -95,11 +95,14 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className="flex items-start gap-2 cursor-pointer group"
+        className={clsx(
+          "flex items-start gap-2 group",
+          canExpand && "cursor-pointer",
+        )}
         onClick={() => canExpand && setExpanded(!expanded)}
-        role="button"
-        aria-expanded={expanded}
-        tabIndex={0}
+        role={canExpand ? "button" : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        tabIndex={canExpand ? 0 : undefined}
         onKeyDown={(e) => {
           if (canExpand && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
@@ -127,7 +130,7 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
               "absolute top-4 right-4 p-1.5 rounded border border-white/10 transition-all z-10",
               isCopied
                 ? "bg-green-500/10 text-green-400 border-green-500/20"
-                : "bg-black/40 text-gray-400 hover:text-white hover:bg-white/10 opacity-0 group-hover/code:opacity-100 focus:opacity-100"
+                : "bg-black/40 text-gray-400 hover:text-white hover:bg-white/10 opacity-0 group-hover/code:opacity-100 focus:opacity-100",
             )}
             aria-label={isCopied ? "Copied" : "Copy JSON payload"}
             title="Copy JSON"
