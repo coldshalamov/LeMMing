@@ -13,3 +13,6 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+## 2025-05-25 - Conditional Semantics for Expandable Content
+**Learning:** Adding `role="button"` and `tabIndex={0}` to all items in a list (like log messages) creates a poor experience for screen reader and keyboard users if some items are actually static/non-interactive (e.g., cannot be expanded).
+**Action:** When a UI element's interactivity is conditional (like `canExpand`), ensure that its interactive semantic attributes (`role`, `tabIndex`, `aria-expanded`, cursor styles) are conditionally applied as well, returning `undefined` (or conditionally adding classes) rather than false/0 when it is static.
