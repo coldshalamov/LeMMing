@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import os
-import secrets
+import secrets as _secrets
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            secrets_dict = json.load(f)
+            for k, v in secrets_dict.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -85,7 +85,7 @@ async def verify_admin_access(request: Request):
     # If key is configured, enforce it
     request_key = request.headers.get("X-Admin-Key")
     # Use constant-time comparison to prevent timing attacks
-    if not request_key or not secrets.compare_digest(request_key, admin_key):
+    if not request_key or not _secrets.compare_digest(request_key, admin_key):
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin key",
