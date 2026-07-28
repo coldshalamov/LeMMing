@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2024-07-27 - Optimize social graph analysis in backend
+**Learning:** In performance-critical Python backend paths, iterating and parsing JSON files using `os.scandir` combined with O(1) hash map lookups, and reading metadata directly from parsed dictionaries (rather than full dataclass instantiation), avoids expensive overhead.
+**Action:** Replace nested loops with O(1) lookups, use `os.scandir` instead of `Path.glob`, and extract metadata explicitly from dictionary attributes instead of instantiating dataclasses in hot file-parsing logic.
