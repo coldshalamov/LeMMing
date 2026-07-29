@@ -95,11 +95,14 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className="flex items-start gap-2 cursor-pointer group"
+        className={clsx(
+          "flex items-start gap-2 rounded",
+          canExpand && "cursor-pointer group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+        )}
         onClick={() => canExpand && setExpanded(!expanded)}
-        role="button"
-        aria-expanded={expanded}
-        tabIndex={0}
+        role={canExpand ? "button" : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        tabIndex={canExpand ? 0 : undefined}
         onKeyDown={(e) => {
           if (canExpand && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
@@ -122,9 +125,10 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
       {expanded && (
         <div className="relative pl-6 pr-2 pb-2 text-[10px] font-mono text-gray-500 overflow-x-auto group/code">
           <button
+            type="button"
             onClick={handleCopy}
             className={clsx(
-              "absolute top-4 right-4 p-1.5 rounded border border-white/10 transition-all z-10",
+              "absolute top-4 right-4 p-1.5 rounded border border-white/10 transition-all z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
               isCopied
                 ? "bg-green-500/10 text-green-400 border-green-500/20"
                 : "bg-black/40 text-gray-400 hover:text-white hover:bg-white/10 opacity-0 group-hover/code:opacity-100 focus:opacity-100"
