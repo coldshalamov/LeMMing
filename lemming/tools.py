@@ -7,6 +7,7 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -359,11 +360,18 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
+            # Sanitize env
+            run_env = os.environ.copy()
+            keys_to_remove = [k for k in run_env if any(secret in k.upper() for secret in ["API_KEY", "TOKEN", "SECRET", "PASSWORD"])]
+            for k in keys_to_remove:
+                run_env.pop(k, None)
+
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=run_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
