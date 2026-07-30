@@ -654,7 +654,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     if SECRETS_PATH.exists():
         try:
             with open(SECRETS_PATH) as f:
-                current_loaded_secrets = json.load(f)
+                current_secrets = json.load(f)
         except Exception:
             pass
 
