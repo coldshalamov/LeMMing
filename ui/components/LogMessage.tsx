@@ -95,11 +95,11 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className={clsx("flex items-start gap-2 group", canExpand && "cursor-pointer")}
+        className="flex items-start gap-2 cursor-pointer group"
         onClick={() => canExpand && setExpanded(!expanded)}
-        role={canExpand ? "button" : undefined}
-        aria-expanded={canExpand ? expanded : undefined}
-        tabIndex={canExpand ? 0 : undefined}
+        role="button"
+        aria-expanded={expanded}
+        tabIndex={0}
         onKeyDown={(e) => {
           if (canExpand && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
