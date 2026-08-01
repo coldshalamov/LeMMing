@@ -8,7 +8,7 @@ import secrets
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi import status as http_status
@@ -40,7 +40,8 @@ if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
             secrets = json.load(f)
-            for k, v in secrets.items():
+            secrets_dict = cast(dict[str, Any], secrets)
+            for k, v in secrets_dict.items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
