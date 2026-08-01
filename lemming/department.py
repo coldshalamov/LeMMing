@@ -121,10 +121,12 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     try:
         with os.scandir(departments_dir) as entries:
             for entry in entries:
-                if not entry.name.endswith(".json") or not entry.is_file():
+                if not entry.name.endswith(".json"):
                     continue
 
                 try:
+                    if not entry.is_file():
+                        continue
                     mtime = entry.stat().st_mtime
                     if entry.path in _department_cache:
                         cached_mtime, cached_dept = _department_cache[entry.path]

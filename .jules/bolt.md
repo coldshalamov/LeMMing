@@ -33,6 +33,3 @@
 ## 2024-07-27 - [Optimizing Department Discovery]
 **Learning:** `discover_departments` parses identical `department.json` files repeatedly on scans, incurring large JSON parsing and disk reading overheads. `st_mtime` checking and falling back to `os.scandir` over `Path.glob` avoids this processing overhead.
 **Action:** When scanning and deserializing structures across configurations or state, integrate an `mtime`-based caching layer ensuring cache-poisoning safety with `copy.deepcopy()`.
-## 2024-07-27 - [Linting Scope Awareness]
-**Learning:** Running `ruff check --fix` and formatting indiscriminately across the repository modifies files outside the planned scope. The CI in this repo enforces zero linting/formatting errors globally across both python 3.11 and 3.12 versions which can fail when type annotations or unused imports remain.
-**Action:** When fixing existing CI lint errors across files, review and resolve `mypy` failures globally, checking type stubs and dependencies, to avoid subsequent CI pipeline blocks.
