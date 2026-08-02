@@ -1,3 +1,7 @@
+import os
+
+import pytest
+
 from lemming.tools import CreateAgentTool, ShellTool
 
 
@@ -86,9 +90,10 @@ def test_shell_tool_sandbox_arguments(tmp_path):
     assert "directory traversal" in result.error.lower()
 
 
-import os
-import pytest
-@pytest.mark.skipif(os.name == 'nt', reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)")
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)",
+)
 def test_shell_tool_absolute_path_argument(tmp_path):
     """Ensure ShellTool blocks absolute paths in arguments."""
     base_path = tmp_path / "lemming"
@@ -102,13 +107,14 @@ def test_shell_tool_absolute_path_argument(tmp_path):
 
     # Attempt absolute path
     import os
-    if os.name == 'nt':
+
+    if os.name == "nt":
         # Windows: Drive + Root (e.g. C:\Windows)
         abs_path = "C:\\Windows\\System32\\drivers\\etc\\hosts"
     else:
         # Unix: Root (e.g. /etc/passwd)
         abs_path = "/etc/passwd"
-        
+
     command = f"echo {abs_path}"
 
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
@@ -154,3 +160,29 @@ def test_shell_tool_pipe_bypass(tmp_path):
         assert "; echo world" in result.output
         assert "hello" in result.output
         assert result.output.strip() == "hello; echo world"
+
+
+def test_shell_tool_environment_sanitization(tmp_path):
+    """Ensure ShellTool does not leak sensitive environment variables to child processes."""
+    import os
+
+    base_path = tmp_path / "lemming"
+    agents_dir = base_path / "agents"
+    agent_name = "tester"
+    agent_dir = agents_dir / agent_name
+    workspace = agent_dir / "workspace"
+    workspace.mkdir(parents=True)
+
+    tool = ShellTool()
+
+    os.environ["SUPER_SECRET_API_KEY"] = "this_should_be_hidden"
+
+    try:
+        command = "jq -n env"
+        result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
+
+        assert result.success
+        assert "SUPER_SECRET_API_KEY" not in result.output
+        assert "this_should_be_hidden" not in result.output
+    finally:
+        del os.environ["SUPER_SECRET_API_KEY"]
