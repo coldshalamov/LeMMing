@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +177,8 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
     agents = discover_agents(base_path)
     relationships: list[SocialRelationship] = []
 
+    rel_map: dict[str, dict[str, SocialRelationship]] = {}
+
     # Build relationships from permissions
     for agent in agents:
         for target_name in agent.permissions.read_outboxes:
@@ -185,56 +186,62 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
                 # Wildcard: agent reads all outboxes
                 for other in agents:
                     if other.name != agent.name:
-                        relationships.append(
-                            SocialRelationship(
-                                source=agent.name,
-                                target=other.name,
-                                relationship_type="informed_by",
-                                strength=0.8,
-                            )
+                        rel = SocialRelationship(
+                            source=agent.name,
+                            target=other.name,
+                            relationship_type="informed_by",
+                            strength=0.8,
                         )
+                        relationships.append(rel)
+                        rel_map.setdefault(agent.name, {})[other.name] = rel
             elif target_name != agent.name:
-                relationships.append(
-                    SocialRelationship(
-                        source=agent.name,
-                        target=target_name,
-                        relationship_type="informed_by",
-                        strength=0.7,
-                    )
+                rel = SocialRelationship(
+                    source=agent.name,
+                    target=target_name,
+                    relationship_type="informed_by",
+                    strength=0.7,
                 )
+                relationships.append(rel)
+                rel_map.setdefault(agent.name, {})[target_name] = rel
 
     # Analyze recent outbox interactions to strengthen relationships
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
-        if not outbox_dir.exists():
+        try:
+            with os.scandir(outbox_dir) as it:
+                interaction_counts: dict[str, int] = {}
+                recent_tick_threshold = max(0, current_tick - 100)
+
+                for entry in it:
+                    if entry.name.endswith(".json"):
+                        try:
+                            tick_str = entry.name.split("_")[0]
+                            if int(tick_str) < recent_tick_threshold:
+                                continue
+                        except ValueError:
+                            pass
+
+                        try:
+                            with open(entry.path, encoding="utf-8") as f:
+                                entry_data = json.load(f)
+
+                            if entry_data.get("tick", 0) >= recent_tick_threshold:
+                                to_list = entry_data.get("to", [])
+                                source_rels = rel_map.get(agent.name, {})
+                                for target in to_list:
+                                    if target in source_rels:
+                                        interaction_counts[target] = interaction_counts.get(target, 0) + 1
+                        except Exception:
+                            continue
+
+                for target, count in interaction_counts.items():
+                    rel_opt = rel_map.get(agent.name, {}).get(target)
+                    if rel_opt:
+                        rel_opt.interaction_count += count
+                        rel_opt.last_interaction_tick = current_tick
+                        rel_opt.strength = min(1.0, rel_opt.strength + (count * 0.05))
+        except OSError:
             continue
-
-        # Count interactions with each recipient
-        interaction_counts: dict[str, int] = {}
-        recent_tick_threshold = max(0, current_tick - 100)
-
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
-
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
-
-        # Update relationship strengths based on interaction frequency
-        for target, count in interaction_counts.items():
-            for rel in relationships:
-                if rel.source == agent.name and rel.target == target:
-                    rel.interaction_count += count
-                    rel.last_interaction_tick = current_tick
-                    # Increase strength based on interaction frequency
-                    rel.strength = min(1.0, rel.strength + (count * 0.05))
 
     return relationships
 
