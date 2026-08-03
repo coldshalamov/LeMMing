@@ -1,9 +1,6 @@
-from unittest.mock import MagicMock, patch
-
 import pytest
-
+from unittest.mock import patch, MagicMock
 from lemming.providers import CLIProvider
-
 
 def test_cli_provider_arg_injection():
     """Verify that CLIProvider raises ValueError when prompt starts with '-'."""
