@@ -7,18 +7,22 @@ social organization.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
+
+# Cache for DepartmentMetadata objects: path -> (mtime, DepartmentMetadata)
+_department_cache: dict[str, tuple[float, DepartmentMetadata]] = {}
 
 
 @dataclass
@@ -108,29 +112,43 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     Each department.json contains metadata about a group of agents.
     """
     departments_dir = base_path / "departments"
-    if not departments_dir.exists():
-        return []
 
     departments: list[DepartmentMetadata] = []
-    for dept_file in departments_dir.glob("*.json"):
-        try:
-            with dept_file.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            dept = DepartmentMetadata.from_dict(data)
-            departments.append(dept)
-            logger.info(
-                "department_discovered",
-                extra={"event": "department_discovered", "name": dept.name},
-            )
-        except Exception as exc:
-            logger.warning(
-                "department_load_failed",
-                extra={
-                    "event": "department_load_failed",
-                    "path": str(dept_file),
-                    "error": str(exc),
-                },
-            )
+    try:
+        with os.scandir(departments_dir) as entries:
+            for entry in entries:
+                if entry.name.endswith(".json") and entry.is_file():
+                    try:
+                        path_str = entry.path
+                        mtime = entry.stat().st_mtime
+
+                        cached = _department_cache.get(path_str)
+                        if cached is not None and cached[0] == mtime:
+                            departments.append(copy.deepcopy(cached[1]))
+                            continue
+
+                        with open(path_str, encoding="utf-8") as f:
+                            data = json.load(f)
+                        dept = DepartmentMetadata.from_dict(data)
+
+                        _department_cache[path_str] = (mtime, dept)
+                        departments.append(copy.deepcopy(dept))
+
+                        logger.info(
+                            "department_discovered",
+                            extra={"event": "department_discovered", "name": dept.name},
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "department_load_failed",
+                            extra={
+                                "event": "department_load_failed",
+                                "path": path_str,
+                                "error": str(exc),
+                            },
+                        )
+    except OSError:
+        pass
 
     return departments
 
