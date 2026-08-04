@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-07-27 - Subprocess Environment Secret Leakage
+**Vulnerability:** Invoking `subprocess.run` without an explicit `env` argument (or copying `os.environ` without filtering) implicitly passes the entire parent environment to the child process. This leaks sensitive API keys and secrets to any tool or CLI command executed by the backend.
+**Learning:** By default, child processes inherit the full environment. Explicitly restricting the environment passed to `subprocess.run` is necessary to maintain security boundaries. Also, when merging explicit configurations, sanitization must occur *before* the merge to avoid silently dropping intentional configuration.
+**Prevention:** Always pass a sanitized `env` dictionary to `subprocess.run` by filtering out keys containing 'API_KEY', 'TOKEN', 'SECRET', or 'PASSWORD' from `os.environ.copy()`.
