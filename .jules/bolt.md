@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2024-07-27 - [Department Discovery st_mtime Caching]
+**Learning:** `discover_departments` recursively parsed identical `department.json` files using `glob()` which instantiated expensive `pathlib.Path` objects and performed redundant I/O reads. Using `os.scandir` and bypassing disk reads by checking `st_mtime` alongside returning a `copy.deepcopy` of cached instances avoids overheads while protecting mutable cached list fields like `tags` and `dependencies`.
+**Action:** When working on metadata loaders mapping to filesystem definitions, replace `glob()` with `os.scandir` in EAFP try blocks, and check if `st_mtime` allows skipping disk operations. Use `copy.deepcopy` to protect the mutable dataclass state within caches.
