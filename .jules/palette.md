@@ -17,3 +17,7 @@
 ## 2024-07-27 - Conditionally Interactive Elements
 **Learning:** Applying `role="button"` and `tabIndex={0}` statically to conditionally interactive elements creates "phantom buttons" for screen reader and keyboard users, resulting in dead ends and confusion.
 **Action:** Conditionally apply accessibility attributes (`role`, `tabIndex`, `aria-expanded`) and visual cues (like `cursor-pointer`) so they are only present when the element is actively interactable.
+
+## 2024-07-27 - Conditionally Interactive Elements
+**Learning:** Applying `role="button"` and `tabIndex={0}` statically to conditionally interactive elements creates "phantom buttons" for screen reader and keyboard users, resulting in dead ends and confusion.
+**Action:** Conditionally apply accessibility attributes (`role`, `tabIndex`, `aria-expanded`) and visual cues (like `cursor-pointer`) so they are only present when the element is actively interactable.
