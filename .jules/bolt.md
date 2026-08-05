@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2024-07-27 - [Department Discovery Caching]
+**Learning:** Repetitive parsing of department configurations without caching can introduce overhead. Leveraging `os.scandir` instead of `glob` alongside an `st_mtime` based cache avoids repetitive I/O blockings.
+**Action:** Ensure frequently polled configuration folders read files optimistically via `st_mtime` metadata checks rather than doing full disk parsing every call.
