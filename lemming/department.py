@@ -7,16 +7,17 @@ social organization.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,9 @@ def get_department_file(base_path: Path, department_name: str) -> Path:
     return base_path / "departments" / f"{department_name}.json"
 
 
+_department_file_cache: dict[str, tuple[float, DepartmentMetadata]] = {}
+
+
 def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     """Discover all departments from department.json files.
 
@@ -108,16 +112,34 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
     Each department.json contains metadata about a group of agents.
     """
     departments_dir = base_path / "departments"
-    if not departments_dir.exists():
+    try:
+        entries = list(os.scandir(departments_dir))
+    except (OSError, FileNotFoundError):
         return []
 
     departments: list[DepartmentMetadata] = []
-    for dept_file in departments_dir.glob("*.json"):
+    for entry in entries:
+        if not entry.is_file() or not entry.name.endswith(".json"):
+            continue
+
+        path_str = entry.path
         try:
-            with dept_file.open("r", encoding="utf-8") as f:
+            stat = entry.stat()
+            mtime = stat.st_mtime
+        except OSError:
+            continue
+
+        cached = _department_file_cache.get(path_str)
+        if cached is not None and cached[0] == mtime:
+            departments.append(copy.deepcopy(cached[1]))
+            continue
+
+        try:
+            with open(path_str, encoding="utf-8") as f:
                 data = json.load(f)
             dept = DepartmentMetadata.from_dict(data)
-            departments.append(dept)
+            _department_file_cache[path_str] = (mtime, dept)
+            departments.append(copy.deepcopy(dept))
             logger.info(
                 "department_discovered",
                 extra={"event": "department_discovered", "name": dept.name},
@@ -127,7 +149,7 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
                 "department_load_failed",
                 extra={
                     "event": "department_load_failed",
-                    "path": str(dept_file),
+                    "path": path_str,
                     "error": str(exc),
                 },
             )
