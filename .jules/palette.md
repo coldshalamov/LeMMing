@@ -13,3 +13,11 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2024-07-27 - Conditionally Interactive Elements
+**Learning:** Applying `role="button"` and `tabIndex={0}` statically to conditionally interactive elements creates "phantom buttons" for screen reader and keyboard users, resulting in dead ends and confusion.
+**Action:** Conditionally apply accessibility attributes (`role`, `tabIndex`, `aria-expanded`) and visual cues (like `cursor-pointer`) so they are only present when the element is actively interactable.
+
+## 2024-07-27 - Conditionally Interactive Elements
+**Learning:** Applying `role="button"` and `tabIndex={0}` statically to conditionally interactive elements creates "phantom buttons" for screen reader and keyboard users, resulting in dead ends and confusion.
+**Action:** Conditionally apply accessibility attributes (`role`, `tabIndex`, `aria-expanded`) and visual cues (like `cursor-pointer`) so they are only present when the element is actively interactable.
