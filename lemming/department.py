@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
 
@@ -202,44 +202,38 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
                     )
                 )
 
-    # Index relationships for O(1) lookup: (source, target) -> rel
-    rel_dict = {(rel.source, rel.target): rel for rel in relationships}
-
     # Analyze recent outbox interactions to strengthen relationships
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
-        try:
-            outbox_entries = os.scandir(outbox_dir)
-        except OSError:
+        if not outbox_dir.exists():
             continue
 
         # Count interactions with each recipient
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_entries:
-            if outbox_file.name.endswith(".json"):
-                try:
-                    with open(outbox_file.path, encoding="utf-8") as f:
-                        entry_data = json.load(f)
+        for outbox_file in outbox_dir.glob("*.json"):
+            try:
+                with outbox_file.open("r", encoding="utf-8") as f:
+                    entry_data = json.load(f)
+                    entry = OutboxEntry.from_dict(entry_data)
 
-                        # Avoid full dataclass instantiation, get tick directly from dict
-                        if entry_data.get("tick", 0) >= recent_tick_threshold:
-                            # Update interaction counts
-                            for target in entry_data.get("to", []):
-                                if (agent.name, target) in rel_dict:
-                                    interaction_counts[target] = interaction_counts.get(target, 0) + 1
-                except Exception:
-                    continue
+                    if entry.tick >= recent_tick_threshold:
+                        # Update interaction counts
+                        for rel in relationships:
+                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
+                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
+            except Exception:
+                continue
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
-            rel = rel_dict.get((agent.name, target))
-            if rel:
-                rel.interaction_count += count
-                rel.last_interaction_tick = current_tick
-                # Increase strength based on interaction frequency
-                rel.strength = min(1.0, rel.strength + (count * 0.05))
+            for rel in relationships:
+                if rel.source == agent.name and rel.target == target:
+                    rel.interaction_count += count
+                    rel.last_interaction_tick = current_tick
+                    # Increase strength based on interaction frequency
+                    rel.strength = min(1.0, rel.strength + (count * 0.05))
 
     return relationships
 
