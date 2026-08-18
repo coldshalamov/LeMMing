@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2024-07-27 - Lazy Evaluation of Default Arguments
+**Learning:** `dict.get(key, default_value)` evaluates the `default_value` eagerly in Python. When `default_value` involves an expensive operation like `json.dumps()`, this can become a significant CPU bottleneck on hot paths even when the key is usually present.
+**Action:** Replace `dict.get("key", expensive_op())` with a conditional assignment `val = dict.get("key"); if val is None: val = expensive_op()` to ensure the expensive operation only executes when strictly necessary.

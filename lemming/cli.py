@@ -13,7 +13,6 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
-    save_org_structure,
     save_social_graph,
 )
 from .engine import load_tick, run_forever, run_once
@@ -132,7 +131,9 @@ def inspect_cmd(base_path: Path, name: str, outbox_limit: int = 5) -> None:
     if entries:
         print("Recent outbox entries:")
         for entry in entries:
-            preview = entry.payload.get("text") or json.dumps(entry.payload)
+            preview = entry.payload.get("text")
+            if not preview:
+                preview = json.dumps(entry.payload)
             print(f"- [tick {entry.tick}] ({entry.kind}) {preview}")
     else:
         print("No outbox entries found.")
@@ -216,7 +217,10 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
         return
 
     for entry in entries:
-        text = entry.payload.get("text", json.dumps(entry.payload))
+        # Optimization: conditional json.dumps evaluation
+        text = entry.payload.get("text")
+        if text is None:
+            text = json.dumps(entry.payload)
         # Truncate long messages
         if len(text) > 100:
             text = text[:97] + "..."
@@ -392,7 +396,10 @@ def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
             if entries:
                 print(f"\n   Recent messages from '{target}':")
                 for entry in entries:
-                    text = entry.payload.get("text", json.dumps(entry.payload))
+                    # Optimization: conditional json.dumps evaluation
+                    text = entry.payload.get("text")
+                    if text is None:
+                        text = json.dumps(entry.payload)
                     if len(text) > 150:
                         text = text[:147] + "..."
                     print(f"   [{entry.kind}] {text}")
@@ -408,7 +415,10 @@ def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
                 if entries:
                     print(f"\n   {target} → You:")
                     for entry in entries[:1]:  # Show most recent
-                        text = entry.payload.get("text", json.dumps(entry.payload))
+                        # Optimization: conditional json.dumps evaluation
+                        text = entry.payload.get("text")
+                        if text is None:
+                            text = json.dumps(entry.payload)
                         print(f"   {text}")
             else:
                 print(f"   '{target}' did not run this tick (check schedule)")
@@ -473,7 +483,7 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
     # Department management commands
-    dept_parser = subparsers.add_parser("department-list", help="List all departments")
+    subparsers.add_parser("department-list", help="List all departments")
 
     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
     dept_create_parser.add_argument("name", help="Department name")
