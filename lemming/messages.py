@@ -121,7 +121,7 @@ def write_outbox_entry(base_path: Path, agent_name: str, entry: OutboxEntry) -> 
 
 def _load_entry(entry_path: Path | str) -> OutboxEntry | None:
     try:
-        with open(entry_path, "r", encoding="utf-8") as f:
+        with open(entry_path, encoding="utf-8") as f:
             data = json.load(f)
         return OutboxEntry.from_dict(data)
     except Exception as exc:  # pragma: no cover - defensive
@@ -454,7 +454,10 @@ def format_outbox_context(entries: list[OutboxEntry], max_chars: int = 8000) -> 
     lines = ["INCOMING MESSAGES:"]
     total = len(lines[0])
     for entry in entries:
-        text = entry.payload.get("text", json.dumps(entry.payload))
+        # Optimization: conditional json.dumps evaluation
+        text = entry.payload.get("text")
+        if text is None:
+            text = json.dumps(entry.payload)
         line = f"\n[{entry.created_at}] From {entry.agent} ({entry.kind}): {text}"
         if total + len(line) > max_chars:
             lines.append("\n... (truncated)")
