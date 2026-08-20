@@ -30,3 +30,11 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2024-05-27 - [Department Discovery Optimization]
+**Learning:** The `discover_departments` function redundantly parsed all `department.json` files on every call.
+**Action:** Implemented an `mtime`-based cache keyed by the `departments` directory path itself, avoiding individual file stat overhead, and returning `copy.deepcopy` to prevent cache poisoning. Also replaced `Path.glob` with `os.scandir` for further efficiency.
+
+## 2024-05-27 - [Directory vs File Mtime Caching]
+**Learning:** Caching based on a directory's `mtime` breaks hot-reloading for edits to existing files, because directory `mtime` only updates on structural changes (creates/deletes/renames), not when content within a file changes.
+**Action:** When caching directory contents that need hot-reloading, cache per-file using `os.scandir` to cheaply access each file's `st_mtime` via `entry.stat()`.
