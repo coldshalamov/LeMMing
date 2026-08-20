@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2024-08-20 - Dynamic Disabled Cursors
+**Learning:** For asynchronous action buttons (like "Save" or "Submit"), using a generic `disabled:cursor-not-allowed` can confuse users if the button is disabled because it is currently processing rather than invalid.
+**Action:** When a button handles both loading and validation-disabled states, dynamically apply `disabled:cursor-wait` when processing and `disabled:cursor-not-allowed` when invalid, pairing this with a descriptive `title` tooltip explaining the exact reason for the disabled state.
