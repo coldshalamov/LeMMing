@@ -40,9 +40,10 @@ if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
             loaded_secrets = json.load(f)
-            for k, v in loaded_secrets.items():
-                if v and not os.environ.get(k):
-                    os.environ[k] = v
+            if isinstance(loaded_secrets, dict):
+                for k, v in loaded_secrets.items():
+                    if v and not os.environ.get(k):
+                        os.environ[k] = v
     except Exception:
         pass
 
