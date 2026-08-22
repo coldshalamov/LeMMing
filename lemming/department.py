@@ -15,8 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +203,10 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
                 )
 
     # Analyze recent outbox interactions to strengthen relationships
+
+    # Precompute a dictionary for O(1) lookups of relationships
+    rel_dict = {(rel.source, rel.target): rel for rel in relationships}
+
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
         if not outbox_dir.exists():
@@ -221,20 +224,20 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
 
                     if entry.tick >= recent_tick_threshold:
                         # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
+                        for target in entry_data.get("to", []):
+                            if (agent.name, target) in rel_dict:
+                                interaction_counts[target] = interaction_counts.get(target, 0) + 1
             except Exception:
                 continue
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
-            for rel in relationships:
-                if rel.source == agent.name and rel.target == target:
-                    rel.interaction_count += count
-                    rel.last_interaction_tick = current_tick
-                    # Increase strength based on interaction frequency
-                    rel.strength = min(1.0, rel.strength + (count * 0.05))
+            rel = rel_dict.get((agent.name, target))
+            if rel:
+                rel.interaction_count += count
+                rel.last_interaction_tick = current_tick
+                # Increase strength based on interaction frequency
+                rel.strength = min(1.0, rel.strength + (count * 0.05))
 
     return relationships
 
