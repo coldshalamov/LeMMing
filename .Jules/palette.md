@@ -12,6 +12,3 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
-## 2025-03-08 - Accessible Tooltips on Async Buttons
-**Learning:** Hardcoding static tooltips on dynamic async buttons causes a disjointed UX. When users hover over an async button that is disabled due to loading, they expect a tooltip explaining the loading state (e.g., "Saving configuration..."), not a generic title or validation message.
-**Action:** When adding or updating loading states, make sure `title` attributes (and if applicable, `aria-label`) are updated dynamically alongside `disabled` states and cursors.
