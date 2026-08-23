@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2025-03-08 - Tool Boundaries and Commit Pollution
+**Learning:** Running tools like `ruff check --fix` globally across the entire repository to resolve tangential CI failures or formatting warnings is a strict boundary violation for a UX agent. It creates massive commits (e.g., modifying 100+ backend Python files) that pollute the UI-focused pull request, significantly complicating code review and increasing the risk of unintended regressions in areas outside the agent's domain.
+**Action:** When fixing UX issues, restrict auto-formatting and linting commands strictly to the frontend directories (e.g., `cd ui && pnpm lint`) or explicitly limit them to the specific files modified during the task. Never execute global backend linting or formatting commands in a UX-targeted PR.
