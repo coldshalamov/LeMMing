@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2024-05-13 - Handling Enter Keys when using aria-disabled
+**Learning:** When converting a native `disabled` form button to `aria-disabled`, alternative submission triggers (such as `onKeyDown` 'Enter' handlers on textareas within the same form) must also explicitly evaluate the disabled state and return early, because removing the native `disabled` attribute might inadvertently re-enable keyboard-driven submissions that were previously blocked by the form context.
+**Action:** Added explicit early returns in `handleKeyDown` when using `aria-disabled` on the form's submit button.
