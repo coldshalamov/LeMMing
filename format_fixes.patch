@@ -1,0 +1,114 @@
+--- lemming/memory.py
++++ lemming/memory.py
+@@ -31,7 +31,14 @@
+         )
+
+
+-def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operation: str = 'set', tick: int | None = None) -> None:
++def save_memory(
++    base_path: Path,
++    agent_name: str,
++    key: str,
++    value: Any,
++    operation: str = 'set',
++    tick: int | None = None
++) -> None:
+     """
+     Save a memory entry for an agent.
+
+@@ -49,7 +56,14 @@
+     memory_dir.mkdir(parents=True, exist_ok=True)
+
+     memory_file = memory_dir / f"{key}.json"
+-    entry = {'key': key, 'value': value, 'timestamp_utc': datetime.now(UTC).isoformat(), 'agent': agent_name, 'operation': operation, 'tick': tick}
++    entry = {
++        'key': key,
++        'value': value,
++        'timestamp_utc': datetime.now(UTC).isoformat(),
++        'agent': agent_name,
++        'operation': operation,
++        'tick': tick
++    }
+     # Handle different operations
+     if operation == "append":
+         # Load existing value and append
+--- lemming/providers.py
++++ lemming/providers.py
+@@ -182,7 +182,14 @@
+ class CLIProvider(LLMProvider):
+     """CLI execution provider for wrapping local tools."""
+
+-    def __init__(self, command: list[str] | str, cwd: str | None = None, env: dict[str, str] | None = None, timeout: float = 60.0, prevent_arg_injection: bool = True):
++    def __init__(
++        self,
++        command: list[str] | str,
++        cwd: str | None = None,
++        env: dict[str, str] | None = None,
++        timeout: float = 60.0,
++        prevent_arg_injection: bool = True
++    ):
+         self.command = command
+         self.cwd = Path(cwd) if cwd else None
+         self.env = env
+@@ -202,8 +209,10 @@
+         if self.prevent_arg_injection and prompt.startswith("-"):
+             # We block any prompt starting with "-" to prevent it from being interpreted as a flag
+             # by the underlying tool (e.g. -n, --help, -c, etc.)
+-            raise ValueError(f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
+-                             "Disable 'prevent_arg_injection' in provider config if this is intended.")
++            raise ValueError(
++                f"Security violation: Prompt '{prompt}' starts with '-' which could be interpreted as a flag. "
++                "Disable 'prevent_arg_injection' in provider config if this is intended."
++            )
+
+         # Prepare command
+         cmd_args = self.command if isinstance(self.command, list) else shlex.split(self.command)
+--- lemming/tools.py
++++ lemming/tools.py
+@@ -451,8 +451,11 @@
+             workspace_dir.resolve()
+
+         # Security check: must be within workspace or shared
+-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
+-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
++        is_in_workspace = target_path.is_relative_to(workspace_dir.resolve())
++        is_in_shared = target_path.is_relative_to((base_path / "shared").resolve())
++
++        if not (is_in_workspace or is_in_shared):
++            return ToolResult(False, "", "Security violation: path is outside allowed directories")
+
+         if not target_path.exists():
+             return ToolResult(False, "", f"Directory '{path_str}' not found")
+--- tests/test_api_auth.py
++++ tests/test_api_auth.py
+@@ -107,7 +107,15 @@
+         source_dir = agents_dir / "source"
+         source_dir.mkdir()
+-        (source_dir / "resume.json").write_text('{"name": "source", "title": "Src", "short_description": "Src", "model": {"key": "gpt"}, "permissions": {"read_outboxes": [], "tools": []}, "schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}')
++        (source_dir / "resume.json").write_text(
++            '{"name": "source", "title": "Src", "short_description": "Src", '
++            '"model": {"key": "gpt"}, "permissions": {"read_outboxes": [], "tools": []}, '
++            '"schedule": {"run_every_n_ticks": 1, "phase_offset": 0}, "instructions": "test"}'
++        )
+         (source_dir / "outbox").mkdir()
+         (source_dir / "memory").mkdir()
+--- tests/test_tools_security.py
++++ tests/test_tools_security.py
+@@ -86,13 +86,11 @@
+     assert "security violation" in result.error.lower()
+     assert "directory traversal" in result.error.lower()
+
+-
+-import os
+-
+-import pytest
+-
+-
+-@pytest.mark.skipif(os.name == 'nt', reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)")
++@pytest.mark.skipif(
++    os.name == 'nt',
++    reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)"
++)
+ def test_shell_tool_absolute_path_argument(tmp_path):
+     """Ensure ShellTool blocks absolute paths in arguments."""
+     base_path = tmp_path / "lemming"
