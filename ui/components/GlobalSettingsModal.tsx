@@ -171,14 +171,13 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                 status === "loading"
                                     ? "Saving configuration..."
                                     : (!config.openai_api_key && !config.anthropic_api_key)
-                                        ? "Please enter at least one API key"
+                                        ? "Please enter at least one API key to save"
                                         : "Save configuration"
                             }
                             className={clsx(
                                 "px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50",
-                                status === "loading"
-                                    ? "disabled:cursor-wait"
-                                    : "disabled:cursor-not-allowed"
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+                                status === "loading" ? "disabled:cursor-wait" : "disabled:cursor-not-allowed"
                             )}
                         >
                             {status === "loading" ? (
