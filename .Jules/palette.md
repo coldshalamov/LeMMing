@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2025-03-08 - Stable UI State Testing
+**Learning:** When attempting to test or screenshot transient UI states (like loading spinners on a form submit button), standard wait timeouts are often unreliable because the operation completes too quickly.
+**Action:** Mock the underlying network request via `page.route` (e.g., `lambda route, request: None` or continuing selectively) to force the UI to hang in its loading state indefinitely, allowing for stable hover and screenshot actions.
