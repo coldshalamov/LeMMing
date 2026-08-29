@@ -181,7 +181,8 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         >
                             {status === "loading" ? (
                                 <>
-                                    <Loader2 size={16} className="animate-spin" /> SAVING...
+                                    <Loader2 size={16} className="animate-spin" />
+                                    <span>SAVING...</span>
                                 </>
                             ) : status === "success" ? (
                                 <>
