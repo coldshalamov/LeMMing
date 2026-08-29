@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +111,18 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
         return []
 
     departments: list[DepartmentMetadata] = []
-    for dept_file in departments_dir.glob("*.json"):
+
+    try:
+        # Optimization: use os.scandir generator for faster traversal and lower memory overhead
+        dept_files = (
+            entry.path for entry in os.scandir(departments_dir) if entry.is_file() and entry.name.endswith(".json")
+        )
+    except OSError:
+        dept_files = iter([])  # type: ignore[assignment]
+
+    for dept_file_path in dept_files:
         try:
-            with dept_file.open("r", encoding="utf-8") as f:
+            with open(dept_file_path, encoding="utf-8") as f:
                 data = json.load(f)
             dept = DepartmentMetadata.from_dict(data)
             departments.append(dept)
@@ -127,7 +135,7 @@ def discover_departments(base_path: Path) -> list[DepartmentMetadata]:
                 "department_load_failed",
                 extra={
                     "event": "department_load_failed",
-                    "path": str(dept_file),
+                    "path": str(dept_file_path),
                     "error": str(exc),
                 },
             )
@@ -213,13 +221,24 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
+        try:
+            # Optimization: use os.scandir generator for faster traversal and lower memory overhead
+            outbox_files = (
+                entry.path for entry in os.scandir(outbox_dir) if entry.is_file() and entry.name.endswith(".json")
+            )
+        except OSError:
+            outbox_files = iter([])  # type: ignore[assignment]
 
-                    if entry.tick >= recent_tick_threshold:
+        for outbox_file_path in outbox_files:
+            try:
+                with open(outbox_file_path, encoding="utf-8") as f:
+                    entry_data = json.load(f)
+
+                    # Optimization: avoid expensive instantiation of OutboxEntry
+                    # when we only need the tick and "to" fields for counting interactions
+                    tick = entry_data.get("tick", 0)
+
+                    if tick >= recent_tick_threshold:
                         # Update interaction counts
                         for rel in relationships:
                             if rel.source == agent.name and rel.target in entry_data.get("to", []):
