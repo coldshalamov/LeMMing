@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-25 - Playwright Modal and API Interception
+**Learning:** When using Playwright to verify loading states in modals (like a settings screen), simply matching `page.get_by_role("button", name="SAVING...")` can fail if the button structure changes during loading (e.g., adding an SVG spinner inside). Furthermore, intercepting `**/api/*` routes generically in Next.js might inadvertently block other critical frontend assets, causing timeouts.
+**Action:** When capturing transient loading states, selectively mock only the exact target API endpoint (e.g., `**/api/engine/config`) using `page.route` to prevent hanging unrelated frontend requests, and wait for robust inner locators (like `page.locator("button:disabled")` or specific SVG icons) rather than full text matching.
