@@ -33,3 +33,7 @@
 ## 2025-01-20 - [Resolving Global Linting Failures]
 **Learning:** Running `ruff check --fix .` can occasionally leave extraneous formatting that fails a subsequent run of `black` or `ruff` (for example, with line length E501 errors when strings are nested deeply). Some fixes may require breaking strings or applying `--unsafe-fixes` if unused variable assignments exist.
 **Action:** When fixing global linting pipelines, always run the linter multiple times or combine it with `black .` to ensure the final state satisfies all constraints, then explicitly run the test suite to ensure the fixes did not break application logic.
+
+## 2025-01-20 - [Resolving Global Linting Failures pt 2]
+**Learning:** Formatting tools (`black`) and linting tools (`ruff`) can occasionally conflict. When `ruff check --fix --unsafe-fixes .` is run, it can modify strings or nested structures that push line lengths over the limit (`E501`), which `black` may then refuse to cleanly wrap. Sometimes, manual string joining inside parentheses is needed to satisfy both formatters.
+**Action:** When working with nested multi-line dictionaries or strings in test files, use implicit string concatenation within parentheses to break lines explicitly and satisfy strict line-length limitations without breaking syntax.
