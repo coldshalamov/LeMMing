@@ -7,6 +7,7 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -14,6 +15,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from lemming.utils_security import sanitize_env_for_subprocess
 
 from . import memory
 from .paths import get_agent_dir, get_agents_dir, validate_agent_name
@@ -302,8 +305,7 @@ class ShellTool(Tool):
 
     name = "shell"
     description = (
-        "Execute a shell command in the agent's workspace directory. "
-        "Allowed: grep, ls, cat, echo, head, tail, jq."
+        "Execute a shell command in the agent's workspace directory. " "Allowed: grep, ls, cat, echo, head, tail, jq."
     )
 
     ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
@@ -335,7 +337,7 @@ class ShellTool(Tool):
 
         # Check arguments for traversal/absolute paths
         for arg in args[1:]:
-             # Check for directory traversal
+            # Check for directory traversal
             if ".." in arg:
                 return ToolResult(False, "", "Security violation: directory traversal detected in arguments")
 
@@ -343,7 +345,7 @@ class ShellTool(Tool):
             # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
             # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
             if Path(arg).is_absolute():
-                 return ToolResult(False, "", "Security violation: absolute path detected in arguments")
+                return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
         if agent_path:
@@ -364,6 +366,7 @@ class ShellTool(Tool):
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=sanitize_env_for_subprocess(os.environ.copy()),
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
@@ -375,7 +378,7 @@ class ShellTool(Tool):
             else:
                 return ToolResult(False, result.stdout, result.stderr)
         except FileNotFoundError:
-             return ToolResult(False, "", f"Command '{executable}' not found in system")
+            return ToolResult(False, "", f"Command '{executable}' not found in system")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out after 30 seconds")
         except Exception as e:
@@ -445,14 +448,17 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
+            (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
+            workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+        if not (
+            target_path.is_relative_to(workspace_dir.resolve())
+            or target_path.is_relative_to((base_path / "shared").resolve())
+        ):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
             return ToolResult(False, "", f"Directory '{path_str}' not found")
