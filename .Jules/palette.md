@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2024-05-12 - Aria-disabled Early Returns
+**Learning:** When replacing native `disabled` with `aria-disabled` on a button, you must also add a guard clause (early return) in the button's `onClick` handler (or form `onSubmit`) to actually block the action. Native `disabled` swallows click events, but `aria-disabled` does not, which can cause double-submission or state bugs if not handled explicitly.
+**Action:** Added `if (disabledCondition) return;` at the very beginning of the `handleSave` function in the global settings modal when switching to `aria-disabled`.
