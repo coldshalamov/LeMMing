@@ -30,6 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
-## 2025-01-20 - [Optimize outbox scanning in analyze_social_graph]
-**Learning:** Instantiating dataclasses inside tight filesystem scanning loops (like reading many `.json` messages) can introduce measurable processing overhead. By fetching needed values directly from the deserialized dictionary (`dict.get("tick")`) and switching `Path.glob` to the EAFP pattern with `os.scandir`, CPU cycles and I/O wait times are significantly reduced.
-**Action:** When rapidly processing large directories of JSON objects solely for simple aggregations, bypass heavy dataclass instantiations and prefer direct dictionary lookups alongside optimized `os.scandir` usage.
+## 2025-01-20 - [Resolving Global Linting Failures]
+**Learning:** Running `ruff check --fix .` can occasionally leave extraneous formatting that fails a subsequent run of `black` or `ruff` (for example, with line length E501 errors when strings are nested deeply). Some fixes may require breaking strings or applying `--unsafe-fixes` if unused variable assignments exist.
+**Action:** When fixing global linting pipelines, always run the linter multiple times or combine it with `black .` to ensure the final state satisfies all constraints, then explicitly run the test suite to ensure the fixes did not break application logic.
