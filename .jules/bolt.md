@@ -37,3 +37,7 @@
 ## 2025-01-20 - [Resolving Global Linting Failures pt 2]
 **Learning:** Formatting tools (`black`) and linting tools (`ruff`) can occasionally conflict. When `ruff check --fix --unsafe-fixes .` is run, it can modify strings or nested structures that push line lengths over the limit (`E501`), which `black` may then refuse to cleanly wrap. Sometimes, manual string joining inside parentheses is needed to satisfy both formatters.
 **Action:** When working with nested multi-line dictionaries or strings in test files, use implicit string concatenation within parentheses to break lines explicitly and satisfy strict line-length limitations without breaking syntax.
+
+## 2025-01-20 - [Fixing mypy types and linting pt 3]
+**Learning:** `json.load` returns `Any`, which causes typechecking issues down the line when expected types like `dict` are required. Casting or instantiating types around loosely typed functions ensures compliance. Also, `setup_logging` was not imported or found because it existed in `logging_config.py` rather than `cli.py` where it was mistakenly searched for.
+**Action:** Carefully wrap loosely typed library functions in explicit cast declarations when assigning variables, and trace function origins manually before replacing import statements to ensure missing attributes or imports aren't inadvertently created.

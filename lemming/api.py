@@ -8,7 +8,7 @@ import secrets
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi import status as http_status
@@ -39,8 +39,8 @@ SECRETS_PATH = Path(os.environ.get("LEMMING_BASE_PATH", Path(__file__).resolve()
 if SECRETS_PATH.exists():
     try:
         with open(SECRETS_PATH) as f:
-            secrets = json.load(f)
-            for k, v in secrets.items():
+            secrets_dict = dict(json.load(f))
+            for k, v in cast(dict[str, Any], secrets_dict).items():
                 if v and not os.environ.get(k):
                     os.environ[k] = v
     except Exception:
@@ -654,7 +654,7 @@ async def update_engine_config(config: EngineConfig) -> dict[str, str]:
     if SECRETS_PATH.exists():
         try:
             with open(SECRETS_PATH) as f:
-                current_secrets = json.load(f)
+                current_secrets_dict = dict(json.load(f))
         except Exception:
             pass
 
