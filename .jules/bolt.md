@@ -30,7 +30,3 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
-
-## $(date +%Y-%m-%d) - [Optimizing social graph analysis]
-**Learning:** Instantiating dataclasses (`OutboxEntry.from_dict`) on large JSON arrays inside loops and filtering via O(N) array comparisons (`glob` and nested `relationships` lists) scales poorly.
-**Action:** Avoid full model instantiations for selective field access, utilize filename hints (`_tick_from_filename_str`) to skip JSON parsing, use `os.scandir` instead of `glob`, and pre-index array structures to dictionaries for O(1) lookups during intensive operations.
