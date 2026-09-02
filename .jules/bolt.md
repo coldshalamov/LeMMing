@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## $(date +%Y-%m-%d) - [Social Graph Optimization]
+**Learning:** `analyze_social_graph` became an O(N^2) bottleneck for a large number of agents or outbox entries due to looping over relationships per message. Furthermore, repeated operations in this hot loop like Path.glob, Path instantiation, and full OutboxEntry dataclass instantiation added severe overhead.
+**Action:** When performing aggregations over arrays on disk-heavy paths, pre-index lookups into dictionaries (O(1)), use `os.scandir` instead of `glob`, bypass `pathlib` for simple reads, and avoid unneeded instantiations (extract target keys directly from dicts).
