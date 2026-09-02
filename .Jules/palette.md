@@ -12,7 +12,3 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
-
-## 2025-03-09 - Ensure Playwright verification scripts create directories
-**Learning:** When generating new scripts or artifacts (e.g., Playwright verification scripts, screenshots, or videos) in non-existent directories such as `/home/jules/verification/`, attempting to create a script directly using `cat << 'EOF' > /home/jules/verification/verify_ux.py` will fail with 'No such file or directory'.
-**Action:** Always explicitly create the directory structure using `mkdir -p /home/jules/verification/videos /home/jules/verification/screenshots` before attempting to write to them.
