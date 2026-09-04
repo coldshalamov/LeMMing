@@ -548,6 +548,11 @@ export default function WizardPage() {
                       <button
                         type="button"
                         onClick={() => setShowToolModal(true)}
+                        aria-label={
+                          formData.permissions.tools.length > 0
+                            ? `Edit ${formData.permissions.tools.length} selected capabilities`
+                            : "Select capabilities"
+                        }
                         className="w-full p-6 border-2 border-dashed border-white/20 rounded-xl hover:border-brand-cyan/50 hover:bg-white/5 transition-all group"
                       >
                         <div className="flex items-center justify-center gap-3 text-gray-400 group-hover:text-brand-cyan transition-colors">

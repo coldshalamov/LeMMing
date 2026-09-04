@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2025-05-25 - Dynamic Aria-Labels for Selection Buttons
+**Learning:** When a button triggers a modal to select a list of items (like tools or capabilities) and its visual content updates based on the number of selected items, the `aria-label` must also update dynamically to reflect the state change for screen readers.
+**Action:** Always use a conditional expression for the `aria-label` on selection trigger buttons (e.g., `aria-label={count > 0 ? "Edit X selected" : "Select items"}`) rather than a static label.
