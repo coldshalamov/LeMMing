@@ -1,8 +1,7 @@
 
+import pytest
 from dataclasses import asdict
-
 from lemming.messages import OutboxEntry
-
 
 def test_outbox_to_dict_correctness():
     """Verify that manual to_dict implementation matches asdict structure."""
