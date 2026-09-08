@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-09-08 - Environment Variable Leakage to Subprocesses
+**Vulnerability:** The `ShellTool` and `CLIProvider` tools executed `subprocess.run` either with no `env` specified (inheriting the full environment) or passing a raw copy of `os.environ`. This allows malicious agents to read host secrets like `OPENAI_API_KEY` by reading environment files (e.g. symlinking `/proc/self/environ` to the workspace and using `cat`) or running CLI commands like `env`.
+**Learning:** Default subprocess environment inheritance creates a critical attack vector in sandboxed systems. Any API key or secret in the host process environment becomes available to the child process.
+**Prevention:** Always explicitly pass a sanitized `env` dictionary to `subprocess.run` that filters out keys matching patterns like `API_KEY`, `PASSWORD`, `TOKEN`, `SECRET`, and `ADMIN_KEY` when spawning untrusted processes. For tools that merge user environments, ensure the base environment is sanitized before merging the explicit user config.
