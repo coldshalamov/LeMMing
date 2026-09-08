@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import shlex
+import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -359,11 +360,17 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
+            # Sanitize host environment to prevent secret leakage
+            sensitive_keys = {"API_KEY", "PASSWORD", "TOKEN", "SECRET", "ADMIN_KEY"}
+            base_env = os.environ.copy()
+            run_env = {k: v for k, v in base_env.items() if not any(s in k.upper() for s in sensitive_keys)}
+
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=run_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
