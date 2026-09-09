@@ -12,7 +12,7 @@ import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from . import memory
@@ -342,7 +342,7 @@ class ShellTool(Tool):
             # Check for absolute paths
             # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
             # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
-            if Path(arg).is_absolute():
+            if PurePosixPath(arg).is_absolute() or PureWindowsPath(arg).is_absolute():
                  return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
