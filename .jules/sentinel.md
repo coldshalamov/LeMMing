@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2024-05-29 - Cross-Platform Absolute Path Bypass
+**Vulnerability:** The sandbox absolute path check `Path(arg).is_absolute()` only checks against the host OS's native path format. On Linux, Windows absolute paths (`C:\`) bypass the check, and vice versa.
+**Learning:** `pathlib.Path` uses the host's OS path parsing rules. For security checks involving paths from potentially different environments, relying on host-specific checks can lead to bypasses.
+**Prevention:** Explicitly check both POSIX and Windows path formats using `PurePosixPath` and `PureWindowsPath` to ensure comprehensive cross-platform path validation.
