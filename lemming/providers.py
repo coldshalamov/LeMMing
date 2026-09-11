@@ -192,7 +192,7 @@ class CLIProvider(LLMProvider):
     def call(self, model_name: str, messages: list[dict[str, str]], temperature: float = 0.2, **kwargs: Any) -> str:
         """
         Execute the CLI command.
-        
+
         The last message content is treated as the input/prompt for the CLI tool.
         """
         # Get the latest prompt
