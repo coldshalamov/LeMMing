@@ -7,6 +7,7 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -357,6 +358,11 @@ class ShellTool(Tool):
         if not workspace_dir.exists():
             workspace_dir.mkdir(parents=True, exist_ok=True)
 
+        run_env = os.environ.copy()
+        keys_to_remove = [k for k in run_env if any(x in k.upper() for x in ("API_KEY", "TOKEN", "SECRET", "PASSWORD", "LEMMING_ADMIN"))]
+        for k in keys_to_remove:
+            del run_env[k]
+
         # Execute command in workspace
         try:
             # shell=False ensures we execute exactly what we parsed
@@ -364,6 +370,7 @@ class ShellTool(Tool):
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=run_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
