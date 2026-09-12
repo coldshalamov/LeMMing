@@ -10,6 +10,7 @@ import json
 import shlex
 import shutil
 import subprocess
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -359,11 +360,21 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
+            # Security: Filter out sensitive environment variables
+            run_env = os.environ.copy()
+            keys_to_remove = []
+            for k in run_env:
+                if any(secret in k.upper() for secret in ["API_KEY", "TOKEN", "SECRET", "PASSWORD", "LEMMING_ADMIN_KEY"]):
+                    keys_to_remove.append(k)
+            for k in keys_to_remove:
+                del run_env[k]
+
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=run_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
