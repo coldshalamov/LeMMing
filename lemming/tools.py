@@ -7,6 +7,7 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -359,11 +360,22 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
+            # Security: Filter out sensitive environment variables
+            run_env = os.environ.copy()
+            keys_to_remove = []
+            for k in run_env:
+                if any(secret in k.upper() for secret in ["API_KEY", "TOKEN", "SECRET", "PASSWORD",
+                                                           "LEMMING_ADMIN_KEY"]):
+                    keys_to_remove.append(k)
+            for k in keys_to_remove:
+                del run_env[k]
+
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=run_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
@@ -445,13 +457,14 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
+            pass # base_search = (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
+            pass # base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
+        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to(
+            (base_path / "shared").resolve())):  # noqa: E501
              return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
