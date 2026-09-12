@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
@@ -164,9 +165,25 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             Cancel
                         </button>
                         <button
-                            onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            onClick={(e) => {
+                                if (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                handleSave();
+                            }}
+                            aria-disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                            className={clsx(
+                                "px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors",
+                                (status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)) && "opacity-50 cursor-not-allowed"
+                            )}
+                            title={
+                                status === "loading"
+                                    ? "Saving configuration..."
+                                    : (!config.openai_api_key && !config.anthropic_api_key)
+                                        ? "At least one API key is required"
+                                        : "Save configuration"
+                            }
                         >
                             {status === "loading" ? "SAVING..." : status === "success" ? (
                                 <>
