@@ -1,12 +1,12 @@
-import time
 import shutil
-import uuid
-import json
+import time
 from pathlib import Path
-from lemming.messages import OutboxEntry, write_outbox_entry, read_outbox_entries
-from lemming.paths import get_agents_dir, get_outbox_dir
+
+from lemming.messages import OutboxEntry, read_outbox_entries, write_outbox_entry
+from lemming.paths import get_agents_dir
 
 BASE_PATH = Path("benchmark_env")
+
 
 def setup_env(num_agents=20, msgs_per_agent=100):
     if BASE_PATH.exists():
@@ -36,6 +36,7 @@ def setup_env(num_agents=20, msgs_per_agent=100):
 
     return agents
 
+
 def benchmark_naive(agents, limit=50):
     start = time.time()
     entries = []
@@ -49,8 +50,9 @@ def benchmark_naive(agents, limit=50):
     print(f"Naive approach: {duration:.4f}s")
     return len(result)
 
+
 if __name__ == "__main__":
-    agents = setup_env(num_agents=50, msgs_per_agent=50) # 2500 messages total
+    agents = setup_env(num_agents=50, msgs_per_agent=50)  # 2500 messages total
 
     print("Benchmarking...")
     count = benchmark_naive(agents, limit=50)
