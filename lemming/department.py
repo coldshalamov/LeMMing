@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -219,6 +218,7 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
         recent_tick_threshold = max(0, current_tick - 100)
 
         try:
+            import os
             # Optimization: use os.scandir instead of Path.glob
             with os.scandir(outbox_dir) as it:
                 for entry in it:
