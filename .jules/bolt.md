@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2024-05-27 - [O(1) lookups and Dict access in Hot Loops]
+**Learning:** In `analyze_social_graph`, parsing full `OutboxEntry` dataclasses and using O(N) nested loops for relationships caused severe performance degradation when analyzing thousands of messages.
+**Action:** Pre-index arrays into dictionaries for O(1) lookups (e.g., `rel_map = {(rel.source, rel.target): rel}`) and avoid instantiating full dataclasses when only a few dictionary keys (like `tick`) are needed from JSON data in hot loops. Use `os.scandir` instead of `Path.glob`.
