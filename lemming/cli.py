@@ -472,7 +472,7 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
     # Department management commands
-    subparsers.add_parser("department-list", help="List all departments")
+    dept_parser = subparsers.add_parser("department-list", help="List all departments")
 
     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
     dept_create_parser.add_argument("name", help="Department name")
