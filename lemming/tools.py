@@ -7,6 +7,7 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -359,11 +360,20 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
+            # Security: Filter out sensitive keys from the environment to prevent leaking secrets
+            # (like API keys) to the shell command (e.g., if agent runs 'jq env' or 'cat /proc/self/environ').
+            run_env = os.environ.copy()
+            _sensitive = ["API_KEY", "TOKEN", "SECRET", "PASSWORD"]
+            for k in list(run_env.keys()):
+                if any(s in k.upper() for s in _sensitive):
+                    del run_env[k]
+
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=run_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin

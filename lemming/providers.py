@@ -219,6 +219,14 @@ class CLIProvider(LLMProvider):
         try:
             # Merge env
             run_env = os.environ.copy()
+
+            # Security: Filter out sensitive keys from the environment to prevent leaking secrets
+            # (like API keys) to the CLI subprocess.
+            _sensitive = ["API_KEY", "TOKEN", "SECRET", "PASSWORD"]
+            for k in list(run_env.keys()):
+                if any(s in k.upper() for s in _sensitive):
+                    del run_env[k]
+
             if self.env:
                 run_env.update(self.env)
 
