@@ -219,6 +219,13 @@ class CLIProvider(LLMProvider):
         try:
             # Merge env
             run_env = os.environ.copy()
+
+            # Security filter: remove sensitive keys before merging explicit configurations
+            sensitive_keywords = ["API_KEY", "TOKEN", "ADMIN_KEY", "SECRET"]
+            keys_to_remove = [k for k in run_env if any(kw in k.upper() for kw in sensitive_keywords)]
+            for k in keys_to_remove:
+                run_env.pop(k, None)
+
             if self.env:
                 run_env.update(self.env)
 
