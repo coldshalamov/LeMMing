@@ -43,7 +43,7 @@ class TestMemorySecurity:
         result = tool.execute(agent_name, base_path, key=evil_key)
 
         assert not result.success
-        assert result.output == "" # Memory not found or invalid key returns None -> Memory not found
+        assert result.output == ""  # Memory not found or invalid key returns None -> Memory not found
 
     def test_memory_key_validation(self):
         # Valid keys
