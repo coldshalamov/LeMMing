@@ -240,7 +240,7 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
               <button
                 type="submit"
                 disabled={!inputValue.trim() || isSending}
-                aria-label={isSending ? "Sending message..." : "Send message"}
+                aria-label="Send message"
                 title={
                   isSending
                     ? "Sending message..."
