@@ -459,7 +459,8 @@ def run_agent(base_path: Path, agent: Agent, tick: int) -> dict[str, Any]:
         save_memory(base_path, agent.name, key, update.get("value"), operation=op, tick=tick)
 
     # Deduct credits
-    deduct_credits(agent.name, cost_per_action, base_path)
+    # Optimization: skip immediate disk write to avoid O(N) writes; batched at end of tick
+    deduct_credits(agent.name, cost_per_action, base_path, save=False)
 
     # Log notes to text file (for backward compatibility)
     notes = parsed.get("notes")
@@ -543,6 +544,8 @@ def run_tick(base_path: Path, tick: int) -> dict[str, Any]:
         log_engine_event("outbox_cleanup", tick=tick, entries_removed=removed)
 
     if firing_agents:
+        # Optimization: Batch disk I/O write operations at the end of the tick loop
+        # to avoid O(N) disk writes during deduct_credits for each firing agent.
         save_credits(base_path)
 
     tick_duration_ms = int((time.time() - tick_start) * 1000)
