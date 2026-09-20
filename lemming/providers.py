@@ -218,7 +218,8 @@ class CLIProvider(LLMProvider):
 
         try:
             # Merge env
-            run_env = os.environ.copy()
+            # Filter sensitive environment variables before execution
+            run_env = {k: v for k, v in os.environ.copy().items() if not any(secret in k.upper() for secret in ["KEY", "TOKEN", "SECRET", "PASS", "PASSWORD"])}
             if self.env:
                 run_env.update(self.env)
 

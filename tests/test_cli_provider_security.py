@@ -36,3 +36,14 @@ def test_cli_provider_allow_arg_injection_with_config():
         mock_run.assert_called_once()
         args = mock_run.call_args[0][0]
         assert args == ["echo", "-allowed_flag"]
+
+def test_cli_provider_hides_env_secrets(monkeypatch):
+    """Ensure CLIProvider does not leak sensitive environment variables."""
+    from lemming.providers import CLIProvider
+
+    monkeypatch.setenv("SUPER_SECRET_KEY", "password123")
+
+    provider = CLIProvider(command=["env"])
+    output = provider.call(model_name="cli", messages=[{"role": "user", "content": ""}])
+
+    assert "SUPER_SECRET_KEY" not in output

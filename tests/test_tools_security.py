@@ -154,3 +154,22 @@ def test_shell_tool_pipe_bypass(tmp_path):
         assert "; echo world" in result.output
         assert "hello" in result.output
         assert result.output.strip() == "hello; echo world"
+
+def test_shell_tool_hides_env_secrets(tmp_path, monkeypatch):
+    """Ensure ShellTool does not leak sensitive environment variables."""
+    base_path = tmp_path / "lemming"
+    agents_dir = base_path / "agents"
+    agent_name = "tester"
+    agent_dir = agents_dir / agent_name
+    workspace = agent_dir / "workspace"
+    workspace.mkdir(parents=True)
+    monkeypatch.setenv("SUPER_SECRET_KEY", "password123")
+
+    tool = ShellTool()
+    # Execute a command that dumps environment variables
+    tool.ALLOWED_COMMANDS.add("env")
+    result = tool.execute(agent_name=agent_name, base_path=base_path, command="env")
+    tool.ALLOWED_COMMANDS.remove("env")
+
+    assert result.success
+    assert "SUPER_SECRET_KEY" not in result.output
