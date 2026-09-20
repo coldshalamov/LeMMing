@@ -15,5 +15,5 @@
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
 
 ## 2025-05-26 - Static ARIA Labels for Dynamic Buttons
-**Learning:** When making a button (like a submit button) disabled with `aria-disabled` for accessibility, dynamically changing the `aria-label` (e.g., from "Send" to "Sending...") can cause screen readers to lose context or fail to announce the change properly.
-**Action:** Keep the `aria-label` static (e.g., "Send message") and use `aria-disabled` combined with a `title` attribute or a visually hidden live region to indicate the state change, while ensuring form submission is prevented via JS.
+**Learning:** When making a button disabled with `aria-disabled` for accessibility, dynamically changing the `aria-label` (e.g., from "Send" to "Sending...") can cause screen readers to lose context or fail to announce the change properly. An element's `aria-label` overrides its `title`, meaning screen readers won't announce the disabled reason in the tooltip.
+**Action:** Keep the `aria-label` static (e.g., "Send message") so the tooltip works, add an `aria-live` region inside the button (visually hidden via `sr-only`) to announce the dynamic state (e.g. "Sending..."), and prevent implicit form submission via `e.preventDefault()`.

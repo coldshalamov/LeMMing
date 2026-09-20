@@ -258,6 +258,10 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
                     : "aria-disabled:cursor-not-allowed",
                 )}
               >
+                {/* Visually hidden live region to announce state changes since we made aria-label static */}
+                <span className="sr-only" aria-live="polite">
+                  {isSending ? "Sending message..." : ""}
+                </span>
                 {isSending ? (
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
