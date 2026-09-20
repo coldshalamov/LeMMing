@@ -359,8 +359,9 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         import os
-        safe_env = {k: v for k, v in os.environ.items() if not any(secret in k.upper() for secret in ["KEY", "TOKEN", "SECRET", "PASS", "PASSWORD"])}
-
+        safe_env = {k: v for k, v in os.environ.items()
+                    if not any(secret in k.upper()
+                               for secret in ["KEY", "TOKEN", "SECRET", "PASS", "PASSWORD"])}
         try:
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(

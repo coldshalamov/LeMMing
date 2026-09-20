@@ -87,7 +87,10 @@ def test_shell_tool_sandbox_arguments(tmp_path):
 
 
 import os
+
 import pytest
+
+
 @pytest.mark.skipif(os.name == 'nt', reason="ShellTool uses Unix-style tools/commands not available as executables on Windows (e.g. echo)")
 def test_shell_tool_absolute_path_argument(tmp_path):
     """Ensure ShellTool blocks absolute paths in arguments."""
@@ -108,7 +111,7 @@ def test_shell_tool_absolute_path_argument(tmp_path):
     else:
         # Unix: Root (e.g. /etc/passwd)
         abs_path = "/etc/passwd"
-        
+
     command = f"echo {abs_path}"
 
     result = tool.execute(agent_name=agent_name, base_path=base_path, command=command)
@@ -166,7 +169,6 @@ def test_shell_tool_hides_env_secrets(tmp_path, monkeypatch):
     monkeypatch.setenv("SUPER_SECRET_KEY", "password123")
 
     tool = ShellTool()
-    # Execute a command that dumps environment variables
     tool.ALLOWED_COMMANDS.add("env")
     result = tool.execute(agent_name=agent_name, base_path=base_path, command="env")
     tool.ALLOWED_COMMANDS.remove("env")
