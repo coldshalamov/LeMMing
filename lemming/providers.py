@@ -112,7 +112,7 @@ class AnthropicProvider(LLMProvider):
             temperature=temperature,
             system=cast(Any, system),
             messages=cast(Any, other_messages),
-        )
+        )  # type: ignore[call-overload]
 
         content_blocks = cast(list[Any], response.content or [])
         text_block = next((block for block in content_blocks if getattr(block, "text", None)), None)
