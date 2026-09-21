@@ -30,6 +30,3 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
-## 2024-09-22 - [Social Graph Optimization]
-**Learning:** In nested loops iterating over objects, indexing lists into lookup dictionaries (e.g., `rel_map`) to provide O(1) access eliminates O(N) iterative checks. Bypassing `OutboxEntry.from_dict` parsing when only specific keys are required, and replacing `Path.glob` with `os.scandir` for directory traversal provides a significant 3.5x speedup for social graph analysis.
-**Action:** Pre-index objects into hash maps before repetitive lookups. Use `os.scandir` instead of `Path.glob()` for large directory iterations where Path objects aren't strictly required.
