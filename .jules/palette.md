@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2026-09-21 - Accessible Disabled Form Buttons
+**Learning:** Using the native `disabled` attribute on buttons removes them from the tab order, which can confuse keyboard users when a form field implies a subsequent action.
+**Action:** Replace `disabled` with `aria-disabled="true"` for form submission buttons, keep `aria-label` static for context, and dynamically explain the state in the `title` attribute. Ensure manual interception of `onClick` and keyboard events (like 'Enter') to prevent unintended submissions.
