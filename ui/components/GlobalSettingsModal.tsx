@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
@@ -168,7 +168,11 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                             disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
                             className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
                         >
-                            {status === "loading" ? "SAVING..." : status === "success" ? (
+                            {status === "loading" ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" /> SAVING...
+                                </>
+                            ) : status === "success" ? (
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
