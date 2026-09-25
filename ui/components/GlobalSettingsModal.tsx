@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
 
 interface GlobalSettingsModalProps {
@@ -159,16 +160,23 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan rounded"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSave}
                             disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            className={clsx(
+                                "px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neo-panel focus-visible:ring-brand-cyan",
+                                status === "loading" ? "disabled:cursor-wait" : "disabled:cursor-not-allowed"
+                            )}
                         >
-                            {status === "loading" ? "SAVING..." : status === "success" ? (
+                            {status === "loading" ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" /> SAVING...
+                                </>
+                            ) : status === "success" ? (
                                 <>
                                     <Check size={16} /> SAVED
                                 </>
