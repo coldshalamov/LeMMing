@@ -1,5 +1,7 @@
 import os
+
 from lemming.utils import get_safe_env
+
 
 def test_get_safe_env_strips_secrets():
     os.environ['OPENAI_API_KEY'] = 'secret'

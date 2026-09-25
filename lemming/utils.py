@@ -1,7 +1,7 @@
 import os
-from typing import Optional
 
-def get_safe_env(env: Optional[dict[str, str]] = None) -> dict[str, str]:
+
+def get_safe_env(env: dict[str, str] | None = None) -> dict[str, str]:
     """Return a safe copy of the environment variables.
 
     This prevents leaking sensitive variables (like API keys) to child processes.
