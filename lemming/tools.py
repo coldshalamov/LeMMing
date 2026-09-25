@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from . import memory
+from .utils import get_safe_env
 from .paths import get_agent_dir, get_agents_dir, validate_agent_name
 
 
@@ -364,6 +365,7 @@ class ShellTool(Tool):
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=get_safe_env(),
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin

@@ -9,6 +9,7 @@ import subprocess
 import shlex
 import json
 from abc import ABC, abstractmethod
+from lemming.utils import get_safe_env
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar, cast
@@ -218,9 +219,7 @@ class CLIProvider(LLMProvider):
 
         try:
             # Merge env
-            run_env = os.environ.copy()
-            if self.env:
-                run_env.update(self.env)
+            run_env = get_safe_env(self.env)
 
             result = subprocess.run(
                 cmd_args,
