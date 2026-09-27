@@ -1,9 +1,10 @@
-import shutil
 import time
+import shutil
+import uuid
+import json
 from pathlib import Path
-
-from lemming.messages import OutboxEntry, read_outbox_entries, write_outbox_entry
-from lemming.paths import get_agents_dir
+from lemming.messages import OutboxEntry, write_outbox_entry, read_outbox_entries
+from lemming.paths import get_agents_dir, get_outbox_dir
 
 BASE_PATH = Path("benchmark_env_heavy")
 
