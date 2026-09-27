@@ -10,6 +10,7 @@ import json
 import shlex
 import shutil
 import subprocess
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -302,11 +303,11 @@ class ShellTool(Tool):
 
     name = "shell"
     description = (
-        "Execute a shell command in the agent's workspace directory. "
-        "Allowed: grep, ls, cat, echo, head, tail, jq."
+        "Execute a shell command in the agent's workspace directory. " "Allowed: grep, ls, cat, echo, head, tail, jq."
     )
 
     ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
+    MAX_OUTPUT_SIZE = 50 * 1024  # 50KB
 
     def execute(self, agent_name: str, base_path: Path, **kwargs: Any) -> ToolResult:
         command = kwargs.get("command")
@@ -335,7 +336,7 @@ class ShellTool(Tool):
 
         # Check arguments for traversal/absolute paths
         for arg in args[1:]:
-             # Check for directory traversal
+            # Check for directory traversal
             if ".." in arg:
                 return ToolResult(False, "", "Security violation: directory traversal detected in arguments")
 
@@ -343,7 +344,7 @@ class ShellTool(Tool):
             # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
             # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
             if Path(arg).is_absolute():
-                 return ToolResult(False, "", "Security violation: absolute path detected in arguments")
+                return ToolResult(False, "", "Security violation: absolute path detected in arguments")
 
         # Get agent workspace directory
         if agent_path:
@@ -359,25 +360,64 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
-            # shell=False ensures we execute exactly what we parsed
-            result = subprocess.run(
+            process = subprocess.Popen(
                 args,
                 shell=False,
                 cwd=workspace_dir,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # Merge stderr into stdout for combined limit
                 text=True,
-                stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
-                timeout=30,  # 30 second timeout
+                stdin=subprocess.DEVNULL,
             )
 
-            if result.returncode == 0:
-                return ToolResult(True, result.stdout)
+            output_data = []
+            error_msg = []
+
+            def read_output():
+                total = 0
+                try:
+                    # Read in chunks
+                    while True:
+                        if process.stdout is None:
+                            break
+                        chunk = process.stdout.read(4096)
+                        if not chunk:
+                            break
+                        total += len(chunk)
+                        if total > self.MAX_OUTPUT_SIZE:
+                            error_msg.append(f"Command output exceeded limit of {self.MAX_OUTPUT_SIZE} bytes.")
+                            process.kill()
+                            break
+                        output_data.append(chunk)
+                except Exception:
+                    pass
+
+            # Use thread to read stdout while waiting
+            t = threading.Thread(target=read_output)
+            t.start()
+
+            try:
+                # Wait for process to finish or timeout
+                # 30 seconds matches original timeout
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                t.join(timeout=1)
+                return ToolResult(False, "".join(output_data), "Command timed out after 30 seconds")
+
+            t.join()
+
+            if error_msg:
+                return ToolResult(False, "".join(output_data), error_msg[0])
+
+            if process.returncode == 0:
+                return ToolResult(True, "".join(output_data))
             else:
-                return ToolResult(False, result.stdout, result.stderr)
+                # Return combined output + error message in failure case
+                return ToolResult(False, "".join(output_data), "Command failed")
+
         except FileNotFoundError:
-             return ToolResult(False, "", f"Command '{executable}' not found in system")
-        except subprocess.TimeoutExpired:
-            return ToolResult(False, "", "Command timed out after 30 seconds")
+            return ToolResult(False, "", f"Command '{executable}' not found in system")
         except Exception as e:
             return ToolResult(False, "", f"Failed to execute command: {e}")
 
@@ -445,14 +485,15 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+        is_in_workspace = target_path.is_relative_to(workspace_dir.resolve())
+        is_in_shared = target_path.is_relative_to((base_path / "shared").resolve())
+
+        if not (is_in_workspace or is_in_shared):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
             return ToolResult(False, "", f"Directory '{path_str}' not found")
