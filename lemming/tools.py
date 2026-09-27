@@ -358,12 +358,17 @@ class ShellTool(Tool):
             workspace_dir.mkdir(parents=True, exist_ok=True)
 
         # Execute command in workspace
+        import os
+        safe_env = {k: v for k, v in os.environ.items()
+                    if not any(secret in k.upper()
+                               for secret in ["KEY", "TOKEN", "SECRET", "PASS", "PASSWORD"])}
         try:
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=safe_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
@@ -445,13 +450,14 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
+            (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
+            workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
+        if not (target_path.is_relative_to(workspace_dir.resolve())
+                or target_path.is_relative_to((base_path / "shared").resolve())):
              return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
