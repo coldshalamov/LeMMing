@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2024-05-27 - [Batching Credits File Writes]
+**Learning:** In the file-based architecture, `deduct_credits` wrote the `credits.json` file for every agent action sequentially, causing N disk writes per tick.
+**Action:** Modifying `deduct_credits` to skip saving, and batching the disk I/O write for `credits.json` at the end of the `run_tick` loop avoids severe O(N) disk I/O bottlenecks. Always batch state writes for multiple agents per tick where possible.
