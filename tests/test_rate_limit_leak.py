@@ -28,6 +28,6 @@ async def test_rate_limiter_memory_cap():
         assert len(api._request_timestamps) == 100
 
         # Verify that the last added IP is present (FIFO eviction of OLD IPs)
-        assert "10.0.0.149" in api._request_timestamps
+        assert "10.0.0.149:global" in api._request_timestamps
         # Verify that the first added IP is gone
-        assert "10.0.0.0" not in api._request_timestamps
+        assert "10.0.0.0:global" not in api._request_timestamps
