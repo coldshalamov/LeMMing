@@ -302,8 +302,7 @@ class ShellTool(Tool):
 
     name = "shell"
     description = (
-        "Execute a shell command in the agent's workspace directory. "
-        "Allowed: grep, ls, cat, echo, head, tail, jq."
+        "Execute a shell command in the agent's workspace directory. " "Allowed: grep, ls, cat, echo, head, tail, jq."
     )
 
     ALLOWED_COMMANDS = {"grep", "ls", "cat", "echo", "head", "tail", "jq"}
@@ -335,7 +334,7 @@ class ShellTool(Tool):
 
         # Check arguments for traversal/absolute paths
         for arg in args[1:]:
-             # Check for directory traversal
+            # Check for directory traversal
             if ".." in arg:
                 return ToolResult(False, "", "Security violation: directory traversal detected in arguments")
 
@@ -343,7 +342,29 @@ class ShellTool(Tool):
             # We strictly prohibit absolute paths to ensure agents are confined to their workspace.
             # Using pathlib.Path.is_absolute covers both Unix (/) and Windows (C:\) absolute paths.
             if Path(arg).is_absolute():
-                 return ToolResult(False, "", "Security violation: absolute path detected in arguments")
+                return ToolResult(False, "", "Security violation: absolute path detected in arguments")
+
+            # Check for absolute paths inside flags (e.g. -f/etc/passwd or --file=/etc/passwd)
+            if arg.startswith("-"):
+                if "=" in arg:
+                    # Handle long options like --file=/etc/passwd
+                    _, value = arg.split("=", 1)
+                    # Also check for traversal in the value part
+                    if ".." in value:
+                        return ToolResult(False, "", "Security violation: directory traversal detected in flag value")
+                    if Path(value).is_absolute():
+                        return ToolResult(False, "", "Security violation: absolute path in flag value")
+                elif "/" in arg:
+                    # Handle short options or stuck flags like -f/etc/passwd.
+                    # If an argument starts with - and contains /, it's ambiguous and risky.
+                    # We block it to prevent bypassing the absolute path check.
+                    # Exception: legitimate relative paths in flags are rare without space separation.
+                    return ToolResult(
+                        False,
+                        "",
+                        "Security violation: potential absolute path in stuck flag. "
+                        "Use space to separate flag and argument.",
+                    )
 
         # Get agent workspace directory
         if agent_path:
@@ -375,7 +396,7 @@ class ShellTool(Tool):
             else:
                 return ToolResult(False, result.stdout, result.stderr)
         except FileNotFoundError:
-             return ToolResult(False, "", f"Command '{executable}' not found in system")
+            return ToolResult(False, "", f"Command '{executable}' not found in system")
         except subprocess.TimeoutExpired:
             return ToolResult(False, "", "Command timed out after 30 seconds")
         except Exception as e:
@@ -445,14 +466,15 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
-             return ToolResult(False, "", "Security violation: path is outside allowed directories")
+        is_in_workspace = target_path.is_relative_to(workspace_dir.resolve())
+        is_in_shared = target_path.is_relative_to((base_path / "shared").resolve())
+
+        if not (is_in_workspace or is_in_shared):
+            return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
             return ToolResult(False, "", f"Directory '{path_str}' not found")
