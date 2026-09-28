@@ -10,6 +10,7 @@ import {
   triggerTick,
 } from "@/lib/api";
 import { AgentCard } from "@/components/AgentCard";
+import { LogMessage } from "@/components/LogMessage";
 import { OrgGraphView } from "@/components/OrgGraph";
 import { ManagerChat } from "@/components/ManagerChat";
 import { GlobalSettingsModal } from "@/components/GlobalSettingsModal";
@@ -217,9 +218,9 @@ export default function Dashboard() {
                       .map((m, i) => (
                         <div
                           key={i}
-                          className="opacity-70 truncate border-l-2 border-white/10 pl-2"
+                          className="border-l-2 border-white/10 pl-2 py-0.5 opacity-90 hover:opacity-100 transition-opacity"
                         >
-                          {m.payload.text || JSON.stringify(m.payload)}
+                          <LogMessage payload={m.payload} kind={m.kind} />
                         </div>
                       )) || <div className="italic opacity-30">No recent activity</div>}
                   </div>
