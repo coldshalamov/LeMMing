@@ -49,7 +49,714 @@
   "echo_cli": {
     "model": "cli-echo",
     "cost_per_action": 0.01,
-    "credits_left": 999.99,
+    "credits_left": 999.98,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_0": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_1": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_2": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_3": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_4": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_5": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_6": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_7": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_8": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_9": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_10": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_11": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_12": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_13": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_14": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_15": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_16": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_17": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_18": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_19": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_20": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_21": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_22": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_23": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_24": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_25": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_26": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_27": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_28": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_29": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_30": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_31": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_32": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_33": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_34": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_35": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_36": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_37": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_38": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_39": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_40": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_41": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_42": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_43": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_44": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_45": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_46": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_47": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_48": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_49": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_50": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_51": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_52": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_53": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_54": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_55": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_56": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_57": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_58": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_59": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_60": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_61": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_62": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_63": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_64": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_65": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_66": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_67": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_68": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_69": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_70": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_71": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_72": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_73": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_74": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_75": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_76": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_77": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_78": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_79": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_80": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_81": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_82": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_83": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_84": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_85": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_86": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_87": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_88": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_89": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_90": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_91": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_92": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_93": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_94": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_95": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_96": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_97": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_98": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent_99": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -0.03,
+    "max_credits": 1000.0,
+    "soft_cap": 500.0
+  },
+  "agent": {
+    "model": "gpt-4.1-mini",
+    "cost_per_action": 0.01,
+    "credits_left": -1.0,
     "max_credits": 1000.0,
     "soft_cap": 500.0
   }
