@@ -17,6 +17,7 @@ from typing import Any
 
 from . import memory
 from .paths import get_agent_dir, get_agents_dir, validate_agent_name
+from .utils import get_safe_env
 
 
 def _is_path_allowed(
@@ -364,6 +365,7 @@ class ShellTool(Tool):
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=get_safe_env(),
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin
@@ -445,13 +447,15 @@ class FileListTool(Tool):
 
         if path_str.startswith("shared/"):
             target_path = (base_path / path_str).resolve()
-            base_search = (base_path / "shared").resolve()
+            (base_path / "shared").resolve()
         else:
             target_path = (workspace_dir / path_str).resolve()
-            base_search = workspace_dir.resolve()
+            workspace_dir.resolve()
 
         # Security check: must be within workspace or shared
-        if not (target_path.is_relative_to(workspace_dir.resolve()) or target_path.is_relative_to((base_path / "shared").resolve())):
+        is_in_workspace = target_path.is_relative_to(workspace_dir.resolve())
+        is_in_shared = target_path.is_relative_to((base_path / "shared").resolve())
+        if not (is_in_workspace or is_in_shared):
              return ToolResult(False, "", "Security violation: path is outside allowed directories")
 
         if not target_path.exists():
