@@ -22,3 +22,8 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+
+## 2026-06-08 - Variable Shadowing Breaking Security Checks
+**Vulnerability:** A global dictionary named `secrets` was used to store loaded JSON config, shadowing Python's built-in `secrets` module. This caused the `secrets.compare_digest` call in the admin authentication middleware to raise an AttributeError, effectively breaking the authentication check with a 500 Internal Server Error whenever an admin endpoint was accessed.
+**Learning:** Variable shadowing is especially dangerous in Python when the shadowed variable is a built-in module used for security-critical functions. Global variables are particularly susceptible.
+**Prevention:** Do not use module names (like `secrets`, `json`, `os`) as variable names, especially in the global scope. Use prefixed or more specific names (e.g., `_secrets_dict`).
