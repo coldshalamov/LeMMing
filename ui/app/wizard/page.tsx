@@ -272,11 +272,13 @@ export default function WizardPage() {
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
                         AGENT_SLUG (Folder Name)
+                        <span className="text-red-500 ml-1" aria-hidden="true">*</span>
                       </label>
                       <input
                         id="agent-slug"
                         type="text"
                         required
+                        aria-required="true"
                         value={formData.name}
                         onChange={(e) =>
                           setFormData({ ...formData, name: e.target.value })
@@ -292,11 +294,13 @@ export default function WizardPage() {
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
                         TITLE
+                        <span className="text-red-500 ml-1" aria-hidden="true">*</span>
                       </label>
                       <input
                         id="agent-title"
                         type="text"
                         required
+                        aria-required="true"
                         value={formData.title}
                         onChange={(e) =>
                           setFormData({ ...formData, title: e.target.value })
@@ -313,6 +317,7 @@ export default function WizardPage() {
                           className="block text-xs font-mono text-gray-400"
                         >
                           DESCRIPTION
+                          <span className="text-red-500 ml-1" aria-hidden="true">*</span>
                         </label>
                         <span
                           id="agent-desc-count"
@@ -329,6 +334,7 @@ export default function WizardPage() {
                       <textarea
                         id="agent-desc"
                         required
+                        aria-required="true"
                         aria-describedby="agent-desc-count"
                         value={formData.short_description}
                         onChange={(e) =>

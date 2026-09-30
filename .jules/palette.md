@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-26 - Form Accessibility: Required Fields
+**Learning:** When building single-page wizards, users are easily frustrated when a "Next" button is disabled without clear visual indicators of which fields are required. Relying solely on HTML5 `required` attributes is insufficient because validation tooltips only appear upon attempted submission, which isn't possible if the progression button is proactively disabled.
+**Action:** Always complement disabled progression states by adding explicit visual required indicators (e.g., `<span className="text-red-500" aria-hidden="true">*</span>`) to form labels and corresponding `aria-required="true"` attributes to the inputs themselves, ensuring both visual and screen reader users understand the requirements beforehand.
