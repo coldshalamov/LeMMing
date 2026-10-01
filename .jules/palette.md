@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-26 - Explaining Disabled States
+**Learning:** Disabled buttons without explanation can be frustrating for users, especially in forms where it's not immediately obvious what's missing. Standard `title` attributes provide a lightweight tooltip that improves usability.
+**Action:** When disabling form submission buttons based on validation state, always add a dynamic `title` attribute explaining exactly what the user needs to do to enable the button.
