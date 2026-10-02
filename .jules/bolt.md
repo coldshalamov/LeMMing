@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2024-05-28 - [Pre-filtering JSON outboxes by Filename]
+**Learning:** Using `Path.glob` and opening every JSON file to read the `tick` field for age filtering is slow. Using `os.scandir` combined with `_tick_from_filename_str` allows us to bypass the I/O bottleneck by pre-filtering files based on filename.
+**Action:** When filtering outbox messages by age/tick, always attempt to extract the tick from the filename before falling back to parsing the JSON payload.
