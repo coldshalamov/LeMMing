@@ -22,3 +22,7 @@
 **Vulnerability:** The `CLIProvider` wrapped local CLI tools and passed user input directly as arguments. This allowed users to inject flags (e.g., `-n`, `-r`) into tools, potentially altering their behavior or executing unsafe operations.
 **Learning:** Even when using `subprocess.run(shell=False)`, Argument Injection is possible if untrusted input starts with `-` and the tool interprets it as a flag.
 **Prevention:** Sanitize inputs to CLI wrappers by blocking leading dashes or using the `--` delimiter if supported by the tool.
+## 2024-04-05 - Insecure File Permissions on secrets.json
+**Vulnerability:** secrets.json was created without restricting file permissions, allowing local users to read sensitive API keys.
+**Learning:** os.open(..., os.O_CREAT) with mode 0o600 doesn't update permissions if the file already exists with weak permissions. `json.dump` followed by `os.chmod` secures both new and existing files.
+**Prevention:** Explicitly set 0o600 permissions using `os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)` after writing sensitive credentials to local files.
