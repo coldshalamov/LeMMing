@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-26 - Disabled Button Explanations
+**Learning:** Users often get stuck when a primary action button (like Save) is disabled without explaining why, leading to frustration and confusion about missing requirements.
+**Action:** Always provide a dynamic `title` attribute on disabled buttons that explains exactly why it's disabled and what the user needs to do to enable it, alongside adding `disabled:cursor-not-allowed` for visual hover feedback.
