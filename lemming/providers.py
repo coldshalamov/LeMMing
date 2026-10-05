@@ -106,13 +106,17 @@ class AnthropicProvider(LLMProvider):
         # Combine system messages
         system = "\n\n".join(system_messages) if system_messages else None
 
-        response = self.client.messages.create(
-            model=model_name,
-            max_tokens=kwargs.get("max_tokens", 4096),
-            temperature=temperature,
-            system=cast(Any, system),
-            messages=cast(Any, other_messages),
-        )
+        call_kwargs: dict[str, Any] = {
+            "model": model_name,
+            "max_tokens": kwargs.get("max_tokens", 4096),
+            "messages": cast(Any, other_messages),
+        }
+        if system:
+            call_kwargs["system"] = cast(Any, system)
+
+        call_kwargs["temperature"] = temperature
+
+        response = self.client.messages.create(**call_kwargs)
 
         content_blocks = cast(list[Any], response.content or [])
         text_block = next((block for block in content_blocks if getattr(block, "text", None)), None)

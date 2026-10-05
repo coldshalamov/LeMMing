@@ -21,7 +21,6 @@ from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
 from .org import derive_org_graph, get_agent_credits, get_credits, save_derived_org_graph
 from .paths import get_logs_dir
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 HUMAN_AGENT_NAME = "human"
