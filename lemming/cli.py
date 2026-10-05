@@ -13,7 +13,6 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
-    save_org_structure,
     save_social_graph,
 )
 from .engine import load_tick, run_forever, run_once
@@ -22,7 +21,6 @@ from .messages import OutboxEntry, read_outbox_entries, write_outbox_entry
 from .org import derive_org_graph, get_agent_credits, get_credits, save_derived_org_graph
 from .paths import get_logs_dir
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 HUMAN_AGENT_NAME = "human"
@@ -473,7 +471,7 @@ def build_parser() -> argparse.ArgumentParser:
     chat_parser.add_argument("--agent", help="Agent to chat with (default: example_planner)")
 
     # Department management commands
-    dept_parser = subparsers.add_parser("department-list", help="List all departments")
+    subparsers.add_parser("department-list", help="List all departments")
 
     dept_create_parser = subparsers.add_parser("department-create", help="Create a new department")
     dept_create_parser.add_argument("name", help="Department name")
