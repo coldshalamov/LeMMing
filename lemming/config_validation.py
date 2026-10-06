@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 from collections.abc import Iterable
 from importlib import resources
@@ -45,11 +46,21 @@ def _validate_against_schema(instance: Any, schema_name: str, context: str) -> N
         raise ValidationError(f"{context}: " + "; ".join(errors))
 
 
-def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
+@functools.cache
+def _get_validator(schema_name: str) -> Draft7Validator:
+    """
+    ⚡ Bolt Optimization:
+    Cache Draft7Validator instances by schema name to avoid repeated disk I/O,
+    JSON parsing, and object instantiation on every validation check.
+    """
     schema_path = resources.files(__package__).joinpath("schemas", schema_name)
     with resources.as_file(schema_path) as path:
         schema = json.loads(path.read_text(encoding="utf-8"))
-    validator = Draft7Validator(schema)
+    return Draft7Validator(schema)
+
+
+def _iter_schema_errors(schema_name: str, instance: Any) -> Iterable[Any]:
+    validator = _get_validator(schema_name)
     return validator.iter_errors(instance)
 
 
