@@ -7,6 +7,7 @@ All tools are registered in ToolRegistry for discovery and execution.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -358,11 +359,14 @@ class ShellTool(Tool):
 
         # Execute command in workspace
         try:
+            # Security Fix: Sanitized env to prevent leaking credentials to subprocesses
+            run_env = {"PATH": os.environ.get("PATH", "")}
             # shell=False ensures we execute exactly what we parsed
             result = subprocess.run(
                 args,
                 shell=False,
                 cwd=workspace_dir,
+                env=run_env,
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,  # Prevent hanging on stdin

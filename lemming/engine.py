@@ -150,9 +150,7 @@ def _build_prompt(base_path: Path, agent: Agent, tick: int) -> list[dict[str, st
         if incoming:
             # Just take the latest message's text as the prompt
             latest = incoming[0]
-            text = latest.payload.get("text")
-            if text is None:
-                text = json.dumps(latest.payload)
+            text = latest.payload.get("text", json.dumps(latest.payload))
             messages.append({"role": "user", "content": text})
         else:
             messages.append({"role": "user", "content": ""})
