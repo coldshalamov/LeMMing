@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2024-10-12 - [Pre-compiling Regex in Hot Paths]
+**Learning:** Re-compiling regexes in hot paths like `validate_agent_name` and `validate_path_prefix` with `re.match()` adds measurable overhead because these functions are called for every file operation in LeMMing's file-based architecture.
+**Action:** Always pre-compile regexes at the module level using `re.compile()` for strings that are evaluated frequently to save repetitive compilation overhead.
