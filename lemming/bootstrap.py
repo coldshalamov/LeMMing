@@ -7,6 +7,7 @@ or directories and never overwrite user edits.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -61,7 +62,9 @@ def create_example_agent(base_path: Path) -> bool:
     agents_dir = get_agents_dir(base_path)
     agents_dir.mkdir(parents=True, exist_ok=True)
 
-    existing = [d for d in agents_dir.iterdir() if d.is_dir() and d.name != "agent_template"]
+    # Optimization: Use os.scandir to avoid creating Path objects for all entries
+    with os.scandir(str(agents_dir)) as it:
+        existing = [d.name for d in it if d.is_dir() and d.name != "agent_template"]
     if existing:
         return False
 
