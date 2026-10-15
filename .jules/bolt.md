@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2026-10-15 - [Eager Evaluation in dict.get()]
+**Learning:** Eager evaluation of expensive fallback functions (like `json.dumps`) in `dict.get()` adds significant overhead in hot loops when the fallback is rarely used or expensive.
+**Action:** Always fetch the value first and conditionally evaluate the fallback (`val = d.get(key); if val is None: val = expensive()`) to prevent unnecessary performance hits in hot paths.
