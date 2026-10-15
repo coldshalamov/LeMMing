@@ -1,8 +1,8 @@
-import os
-import subprocess
 import sys
-
+import subprocess
+from pathlib import Path
 import pytest
+import os
 
 RUNNER_SCRIPT = """
 import sys
@@ -29,7 +29,6 @@ result = tool.execute(agent_name, base_path, command="cat")
 # Print output
 print(result.output, end="")
 """
-
 
 def test_shell_tool_stdin_isolation(tmp_path):
     """
@@ -58,7 +57,7 @@ def test_shell_tool_stdin_isolation(tmp_path):
         text=True,
         cwd=os.getcwd(),
         env=env,
-        timeout=5,
+        timeout=5
     )
 
     if proc.returncode != 0:
