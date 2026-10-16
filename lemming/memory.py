@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +32,9 @@ def validate_memory_key(key: str) -> None:
         )
 
 
-def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operation: str = 'set', tick: int | None = None) -> None:
+def save_memory(
+    base_path: Path, agent_name: str, key: str, value: Any, operation: str = "set", tick: int | None = None
+) -> None:
     """
     Save a memory entry for an agent.
 
@@ -49,7 +52,14 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operatio
     # in the write operation to handle missing directories, saving a stat call.
 
     memory_file = memory_dir / f"{key}.json"
-    entry = {'key': key, 'value': value, 'timestamp_utc': datetime.now(UTC).isoformat(), 'agent': agent_name, 'operation': operation, 'tick': tick}
+    entry = {
+        "key": key,
+        "value": value,
+        "timestamp_utc": datetime.now(UTC).isoformat(),
+        "agent": agent_name,
+        "operation": operation,
+        "tick": tick,
+    }
     # Handle different operations
     if operation == "append":
         # Load existing value and append
@@ -86,8 +96,6 @@ def save_memory(base_path: Path, agent_name: str, key: str, value: Any, operatio
         "memory_saved",
         extra={"event": "memory_saved", "agent": agent_name, "key": key},
     )
-
-
 
 
 def load_memory(base_path: Path, agent_name: str, key: str) -> Any | None:
@@ -273,6 +281,13 @@ def summarize_memory_events(base_path: Path, agent_name: str, key: str, limit: i
     return "\n".join(lines)
 
 
+@lru_cache(maxsize=1000)
+def _load_memory_summary_value(path: str, size: int, mtime_ns: int) -> Any:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("value")
+
+
 def get_memory_summary(base_path: Path, agent_name: str) -> dict[str, Any]:
     """
     Get a summary of all memories for an agent.
@@ -295,10 +310,9 @@ def get_memory_summary(base_path: Path, agent_name: str) -> dict[str, Any]:
                 if entry.is_file() and entry.name.endswith(".json"):
                     key = entry.name[:-5]
                     try:
-                        # Use entry.path to open directly, avoiding Path construction
-                        with open(entry.path, encoding="utf-8") as f:
-                            data = json.load(f)
-                        summary[key] = data.get("value")
+                        summary[key] = _load_memory_summary_value(
+                            entry.path, entry.stat().st_size, entry.stat().st_mtime_ns
+                        )
                     except Exception as exc:
                         logger.error(
                             "memory_load_failed",
