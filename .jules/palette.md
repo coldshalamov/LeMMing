@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-25 - Form Validation Disabled States
+**Learning:** When disabling submit buttons due to missing validation or loading state, users are often confused why they cannot proceed.
+**Action:** Always provide a dynamic `title` attribute to explain exactly why the button is disabled (e.g., missing fields vs loading). Furthermore, enhance the UX by adding Tailwind classes `disabled:cursor-wait` (for loading) or `disabled:cursor-not-allowed` (for validation) to provide immediate visual feedback.
