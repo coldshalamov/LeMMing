@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2026-10-07 - [Path.glob() overhead]
+**Learning:** Path.glob() and Path object instantiation cause significant overhead when listing and opening files in hot loops. Using os.scandir() with try...except FileNotFoundError and built-in open() bypasses these inefficiencies.
+**Action:** Replaced Path.glob() with os.scandir() and Path.open() with open(entry.path) in discover_departments and analyze_social_graph.
