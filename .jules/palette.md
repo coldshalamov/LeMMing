@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-10-06 - Enhancing Disabled State Context
+**Learning:** Users often experience friction when a primary action button (like a "Save" button in a modal) is disabled without immediate, clear explanation. Relying solely on a faded visual state leaves the user guessing what prerequisites are missing.
+**Action:** When disabling form submission buttons based on validation or loading state, always add a dynamic `title` attribute to provide a helpful tooltip explaining exactly *why* the button is disabled and what the user needs to do to enable it. Additionally, utilize Tailwind's `disabled:cursor-not-allowed` to provide immediate tactile feedback when the user hovers over the inactive element.
