@@ -109,9 +109,9 @@ class AnthropicProvider(LLMProvider):
         response = self.client.messages.create(
             model=model_name,
             max_tokens=kwargs.get("max_tokens", 4096),
-            temperature=temperature,
             system=cast(Any, system),
             messages=cast(Any, other_messages),
+            temperature=temperature,  # type: ignore
         )
 
         content_blocks = cast(list[Any], response.content or [])
