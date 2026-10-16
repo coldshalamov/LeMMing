@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## $(date +%Y-%m-%d) - [jsonschema Validation Overhead]
+**Learning:** Instantiating `Draft7Validator(schema)` for `jsonschema` dynamically reads the schema from disk, parses the JSON, and builds the validator object on every call. In hot paths (like repeatedly validating resume.json), this introduces significant unnecessary overhead.
+**Action:** Extract the validator instantiation into a separate helper and cache it using `@functools.cache` so the file I/O, JSON parsing, and object creation happen exactly once per schema. Note that Ruff rule UP033 enforces using `@functools.cache` over `@functools.lru_cache(maxsize=None)`.
