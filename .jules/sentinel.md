@@ -27,3 +27,8 @@
 **Vulnerability:** `ShellTool` passed `os.environ` (or didn't specify `env`, implying inheritance) when running commands via `subprocess.run()`. This allowed agents to execute tools like `jq -n env` to dump sensitive backend API keys.
 **Learning:** Sandboxed or untrusted commands must never inherit the parent application's full environment variables. However, backend components like `CLIProvider` often require the full environment to function correctly.
 **Prevention:** Explicitly pass a sanitized `env` dictionary retaining only necessary variables like `PATH` when executing untrusted tools via `subprocess.run()`.
+
+## 2024-10-17 - Missing Authentication on Configuration Read Endpoint
+**Vulnerability:** The `get_engine_config` endpoint (`GET /api/engine/config`) lacked the `verify_admin_access` dependency, allowing unauthenticated read access even when `LEMMING_ADMIN_KEY` was configured.
+**Learning:** Developers sometimes remember to secure write/mutating endpoints (like `update_engine_config`) but forget to secure corresponding read endpoints for the same resource, which can leak partial or masked configurations.
+**Prevention:** Apply consistent authentication dependencies across all operations (GET, POST, PUT, DELETE) for sensitive resources.
