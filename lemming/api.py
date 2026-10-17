@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status as http_status, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,7 +21,6 @@ from .messages import (
     OutboxEntry,
     count_outbox_entries,
     read_multi_agent_outbox_entries,
-    read_outbox_entries,
     write_outbox_entry,
 )
 from .models import ModelRegistry
@@ -635,7 +635,12 @@ async def trigger_tick() -> dict[str, Any]:
         raise HTTPException(status_code=500, detail="Engine tick failed")
 
 
-@app.get("/api/engine/config", response_model=EngineConfig)
+@app.get(
+    "/api/engine/config",
+    response_model=EngineConfig,
+    # Security Fix: Enforce authentication to prevent unauthorized configuration read access
+    dependencies=[Depends(verify_admin_access)],
+)
 async def get_engine_config() -> dict[str, Any]:
     """Get non-sensitive portion of config (masked)."""
     return {
