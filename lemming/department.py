@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -206,31 +205,43 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
     # Analyze recent outbox interactions to strengthen relationships
     for agent in agents:
         outbox_dir = base_path / "agents" / agent.name / "outbox"
-        if not outbox_dir.exists():
+
+        # Pre-filter relationships where this agent is the source
+        # to avoid O(N) iterations per outbox message
+        agent_rels = [rel for rel in relationships if rel.source == agent.name]
+        if not agent_rels:
             continue
 
         # Count interactions with each recipient
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
+        try:
+            with os.scandir(str(outbox_dir)) as it:
+                for entry in it:
+                    if entry.is_file() and entry.name.endswith(".json"):
+                        try:
+                            # Avoid Path construction by using entry.path
+                            with open(entry.path, encoding="utf-8") as f:
+                                entry_data = json.load(f)
 
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
+                            # Bypass full OutboxEntry domain object instantiation
+                            tick = entry_data.get("tick")
+                            if tick is not None and tick >= recent_tick_threshold:
+                                to_list = entry_data.get("to", [])
+                                # Update interaction counts
+                                for rel in agent_rels:
+                                    if rel.target in to_list:
+                                        interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
+                        except Exception:
+                            continue
+        except FileNotFoundError:
+            pass
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
-            for rel in relationships:
-                if rel.source == agent.name and rel.target == target:
+            for rel in agent_rels:
+                if rel.target == target:
                     rel.interaction_count += count
                     rel.last_interaction_tick = current_tick
                     # Increase strength based on interaction frequency
