@@ -468,9 +468,11 @@ class FileListTool(Tool):
 
         try:
             files = []
-            for item in target_path.iterdir():
-                suffix = "/" if item.is_dir() else ""
-                files.append(f"{item.name}{suffix}")
+            # Optimization: Use os.scandir to avoid creating Path objects and multiple stat calls.
+            with os.scandir(str(target_path)) as it:
+                for entry in it:
+                    suffix = "/" if entry.is_dir() else ""
+                    files.append(f"{entry.name}{suffix}")
             return ToolResult(True, "\n".join(files))
         except Exception as e:
             return ToolResult(False, "", f"Failed to list files: {e}")
