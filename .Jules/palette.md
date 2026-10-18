@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2024-05-12 - Explicit Tooltips for Form Submission
+**Learning:** For modal save buttons, relying purely on the disabled state (dimmed out) leaves users guessing why they cannot submit. We found users were unsure if their config had been accepted or what was missing.
+**Action:** Added explicit `title` tooltips for all states (disabled because of missing fields, disabled because of loading state, and active) as well as the `disabled:cursor-not-allowed` tailwind class for hover feedback.
