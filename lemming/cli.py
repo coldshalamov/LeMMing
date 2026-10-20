@@ -13,7 +13,6 @@ from .department import (
     analyze_social_graph,
     discover_departments,
     export_org_structure,
-    save_org_structure,
     save_social_graph,
 )
 from .engine import load_tick, run_forever, run_once
@@ -216,7 +215,10 @@ def inbox_cmd(base_path: Path, agent: str | None = None, limit: int = 20) -> Non
         return
 
     for entry in entries:
-        text = entry.payload.get("text", json.dumps(entry.payload))
+        # Optimization: Lazy evaluation of json.dumps
+        text = entry.payload.get("text")
+        if text is None:
+            text = json.dumps(entry.payload)
         # Truncate long messages
         if len(text) > 100:
             text = text[:97] + "..."
@@ -392,7 +394,10 @@ def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
             if entries:
                 print(f"\n   Recent messages from '{target}':")
                 for entry in entries:
-                    text = entry.payload.get("text", json.dumps(entry.payload))
+                    # Optimization: Lazy evaluation of json.dumps
+                    text = entry.payload.get("text")
+                    if text is None:
+                        text = json.dumps(entry.payload)
                     if len(text) > 150:
                         text = text[:147] + "..."
                     print(f"   [{entry.kind}] {text}")
@@ -408,7 +413,10 @@ def chat_cmd(base_path: Path, target_agent: str | None = None) -> None:
                 if entries:
                     print(f"\n   {target} → You:")
                     for entry in entries[:1]:  # Show most recent
-                        text = entry.payload.get("text", json.dumps(entry.payload))
+                        # Optimization: Lazy evaluation of json.dumps
+                        text = entry.payload.get("text")
+                        if text is None:
+                            text = json.dumps(entry.payload)
                         print(f"   {text}")
             else:
                 print(f"   '{target}' did not run this tick (check schedule)")
