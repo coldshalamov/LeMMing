@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## 2024-05-27 - [Batching Shared State Updates]
+**Learning:** In the LeMMing file-based architecture, incrementally updating shared state files like `credits.json` inside hot loops per agent causes severe O(N) disk I/O bottlenecks.
+**Action:** Pass an `auto_save=False` flag to individual updates and defer the batched write (`save_credits()`) to the end of the tick loop when `firing_agents` is non-empty.
