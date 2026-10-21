@@ -631,6 +631,7 @@ export default function WizardPage() {
                           </p>
                         </div>
                         <button
+                          type="button"
                           onClick={handleCopyConfig}
                           className="text-xs flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors"
                           aria-label="Copy agent configuration JSON to clipboard"
@@ -749,6 +750,7 @@ export default function WizardPage() {
                 {/* Footer Controls */}
                 <div className="flex justify-between pt-8 border-t border-white/5">
                   <button
+                    type="button"
                     onClick={handleBack}
                     className="px-6 py-2 rounded border border-neo-border text-gray-400 hover:text-white flex items-center gap-2"
                     title={stepIdx === 0 ? "Cancel wizard" : `Go back to ${STEPS[stepIdx - 1]?.label}`}
@@ -764,6 +766,7 @@ export default function WizardPage() {
 
                   {stepIdx < STEPS.length - 1 ? (
                     <button
+                      type="button"
                       onClick={handleNext}
                       className={clsx(
                         "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
@@ -783,6 +786,7 @@ export default function WizardPage() {
                     </button>
                   ) : (
                     <button
+                      type="button"
                       onClick={handleDeploy}
                       disabled={isDeploying}
                       className={clsx(

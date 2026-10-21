@@ -122,6 +122,7 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
       {expanded && (
         <div className="relative pl-6 pr-2 pb-2 text-[10px] font-mono text-gray-500 overflow-x-auto group/code">
           <button
+            type="button"
             onClick={handleCopy}
             className={clsx(
               "absolute top-4 right-4 p-1.5 rounded border border-white/10 transition-all z-10",
