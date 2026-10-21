@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-26 - Async Button Feedback
+**Learning:** When buttons have both validation requirements and async loading states, a generic disabled state leaves users guessing whether they made a mistake or if the system is just thinking.
+**Action:** For UX enhancements on async or loading buttons, apply dynamic cursor styles (e.g., `disabled:cursor-wait` during processing and `disabled:cursor-not-allowed` for validation failures) alongside descriptive `title` tooltips explaining the specific disabled reason, rather than relying on a static `cursor-not-allowed`.
