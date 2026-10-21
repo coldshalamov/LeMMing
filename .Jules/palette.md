@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2024-05-13 - Prevent Hover Styles on aria-disabled Elements
+**Learning:** When transitioning from a native `disabled` attribute to `aria-disabled`, Tailwind `hover:*` utilities will re-activate because the element natively accepts pointer events.
+**Action:** Explicitly neutralize hover pseudo-classes using `aria-disabled:hover:bg-<original-bg>` when implementing accessible disabled buttons to prevent misleading visual feedback on hover.
