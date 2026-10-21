@@ -117,6 +117,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     onClick={() => setShowPassword(prev => ({ ...prev, openai: !prev.openai }))}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                                     aria-label={showPassword.openai ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
+                                    title={showPassword.openai ? "Hide OpenAI API Key" : "Show OpenAI API Key"}
                                 >
                                     {showPassword.openai ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -148,6 +149,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                                     onClick={() => setShowPassword(prev => ({ ...prev, anthropic: !prev.anthropic }))}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                                     aria-label={showPassword.anthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
+                                    title={showPassword.anthropic ? "Hide Anthropic API Key" : "Show Anthropic API Key"}
                                 >
                                     {showPassword.anthropic ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -159,14 +161,15 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSave}
                             disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            title={status === "loading" ? "Saving configuration..." : (!config.openai_api_key && !config.anthropic_api_key) ? "Please enter at least one API key to save" : "Save configuration"}
+                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                         >
                             {status === "loading" ? (
                                 <>
