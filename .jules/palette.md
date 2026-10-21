@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2025-05-25 - Dynamic aria-label on disabled buttons
+**Learning:** When making a button accessible by converting native `disabled` to `aria-disabled`, changing the `aria-label` dynamically based on state causes screen readers to lose context. The label should remain static, and a dynamic `title` attribute should be used to provide context about why the button is disabled.
+**Action:** Keep `aria-label` static on buttons. Use `title` for dynamic tooltip explanations, and ensure keyboard handlers (like "Enter" on a textarea) explicitly check the disabled state when native `disabled` is removed.
