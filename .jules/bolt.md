@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## $(date +%Y-%m-%d) - [Batched Disk I/O Updates]
+**Learning:** In the LeMMing file-based architecture, when updating shared state across multiple agents in a single tick (e.g., `credits.json`), writing incrementally inside per-agent loops causes severe O(N) disk I/O bottlenecks.
+**Action:** When updating shared JSON files in engine loops, batch the updates and call the save operation (e.g., `save_credits(base_path)`) exactly once at the end of the loop, conditionally checking if any agents were processed (`if firing_agents:`).
