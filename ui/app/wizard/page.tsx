@@ -749,6 +749,7 @@ export default function WizardPage() {
                 {/* Footer Controls */}
                 <div className="flex justify-between pt-8 border-t border-white/5">
                   <button
+                    type="button"
                     onClick={handleBack}
                     className="px-6 py-2 rounded border border-neo-border text-gray-400 hover:text-white flex items-center gap-2"
                     title={stepIdx === 0 ? "Cancel wizard" : `Go back to ${STEPS[stepIdx - 1]?.label}`}
@@ -764,6 +765,7 @@ export default function WizardPage() {
 
                   {stepIdx < STEPS.length - 1 ? (
                     <button
+                      type="button"
                       onClick={handleNext}
                       className={clsx(
                         "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
@@ -777,12 +779,13 @@ export default function WizardPage() {
                           : "Please fill out all required fields"
                       }
                       aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
-                      aria-disabled={!canProceedToNextStep}
+                      disabled={!canProceedToNextStep}
                     >
                       Next <ArrowRight size={16} />
                     </button>
                   ) : (
                     <button
+                      type="button"
                       onClick={handleDeploy}
                       disabled={isDeploying}
                       className={clsx(
