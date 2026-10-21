@@ -85,3 +85,7 @@ scripts/toast_alt_enter.py
 benchmark_tmp/
 nul
 .pytest_temp/
+mock_base/
+mock_base_2/
+mock_base_3/
+mock_base_4/
