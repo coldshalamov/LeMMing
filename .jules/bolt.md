@@ -30,3 +30,6 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+## $(date +%Y-%m-%d) - [Department Social Graph Scanning Optimization]
+**Learning:** `analyze_social_graph` reads all outboxes for all agents to build relationships. Using `Path.glob()` and `OutboxEntry.from_dict()` for each message creates massive cumulative overhead in large departments due to `Path` object creation and dataclass validation for fields that aren't even used.
+**Action:** When scanning large directories for simple data extraction, use `with os.scandir(path) as entries:` and native `open()` along with direct dictionary access after `json.load()` to bypass expensive instantiations. Always use `scandir` as a context manager for proper resource cleanup.
