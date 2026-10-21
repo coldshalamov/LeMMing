@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## $(date +%Y-%m-%d) - [O(n^2) nested loop vs HashMap in Social Graph Analysis]
+**Learning:** In `analyze_social_graph`, processing every message outbox file to scan for relationships against all known relationships produced an O(n^2) loop (with `pathlib` overhead and full pydantic object instantiation to boot). Iterating JSON files via `os.scandir`, extracting minimal required fields directly (`json.load` dictionary lookup instead of `from_dict`), and keeping interactions mapped via O(1) hashes (`interaction_counts_all` and `rel_map`) improved benchmarking speeds significantly (~1.3s down to 0.25s).
+**Action:** When building association tables across multiple agents repeatedly every tick (or backward windows of ticks), build relationship maps outside the loop first, use sets for single-message duplicated lists, and avoid heavy object instantiation.
