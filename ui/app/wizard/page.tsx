@@ -271,7 +271,7 @@ export default function WizardPage() {
                         htmlFor="agent-slug"
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
-                        AGENT_SLUG (Folder Name)
+                        AGENT_SLUG (Folder Name) <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="agent-slug"
@@ -291,7 +291,7 @@ export default function WizardPage() {
                         htmlFor="agent-title"
                         className="block text-xs font-mono text-gray-400 mb-1"
                       >
-                        TITLE
+                        TITLE <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="agent-title"
@@ -312,7 +312,7 @@ export default function WizardPage() {
                           htmlFor="agent-desc"
                           className="block text-xs font-mono text-gray-400"
                         >
-                          DESCRIPTION
+                          DESCRIPTION <span className="text-red-500">*</span>
                         </label>
                         <span
                           id="agent-desc-count"
@@ -454,7 +454,7 @@ export default function WizardPage() {
                         id="instructions-label"
                         className="text-sm font-bold text-white mb-2"
                       >
-                        Instructions
+                        Instructions <span className="text-red-500">*</span>
                       </h4>
                       <p id="instructions-desc" className="text-xs text-gray-400">
                         This becomes the agent instruction block in the resume.
