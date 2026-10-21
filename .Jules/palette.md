@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2024-08-18 - Tooltips and Cursors for Async Buttons
+**Learning:** Hardcoding `cursor-not-allowed` on loading buttons confuses users into thinking the form is broken rather than processing. Providing a `cursor-wait` icon and a clear `title` tooltip explaining exactly why a button is disabled (e.g., "Saving configuration..." vs "Enter at least one API key") significantly improves clarity for screen reader and keyboard users.
+**Action:** Consistently apply dynamic `disabled:cursor-wait` or `disabled:cursor-not-allowed` states along with descriptive `title` tooltips for all async and conditional submit buttons.
