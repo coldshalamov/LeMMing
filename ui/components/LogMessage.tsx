@@ -95,11 +95,14 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
   return (
     <div className="flex flex-col gap-1 w-full min-w-0">
       <div
-        className="flex items-start gap-2 cursor-pointer group"
+        className={clsx(
+          "flex items-start gap-2 group",
+          canExpand && "cursor-pointer"
+        )}
         onClick={() => canExpand && setExpanded(!expanded)}
-        role="button"
-        aria-expanded={expanded}
-        tabIndex={0}
+        role={canExpand ? "button" : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        tabIndex={canExpand ? 0 : undefined}
         onKeyDown={(e) => {
           if (canExpand && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
@@ -122,6 +125,7 @@ export function LogMessage({ payload, kind }: LogMessageProps) {
       {expanded && (
         <div className="relative pl-6 pr-2 pb-2 text-[10px] font-mono text-gray-500 overflow-x-auto group/code">
           <button
+            type="button"
             onClick={handleCopy}
             className={clsx(
               "absolute top-4 right-4 p-1.5 rounded border border-white/10 transition-all z-10",
