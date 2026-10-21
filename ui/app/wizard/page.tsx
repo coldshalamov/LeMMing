@@ -764,6 +764,7 @@ export default function WizardPage() {
 
                   {stepIdx < STEPS.length - 1 ? (
                     <button
+                      type="button"
                       onClick={handleNext}
                       className={clsx(
                         "px-6 py-2 rounded font-bold flex items-center gap-2 transition-colors",
@@ -777,7 +778,7 @@ export default function WizardPage() {
                           : "Please fill out all required fields"
                       }
                       aria-label={`Continue to ${STEPS[stepIdx + 1]?.label} step`}
-                      aria-disabled={!canProceedToNextStep}
+                      disabled={!canProceedToNextStep}
                     >
                       Next <ArrowRight size={16} />
                     </button>
