@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2024-05-15 - Accessible ManagerChat Submit Button
+**Learning:** Changing the `aria-label` entirely based on a button's disabled state (e.g. from "Send message" to "Sending message...") removes crucial context for screen reader users. Also, using the native `disabled` attribute takes the button out of the tab order, hiding it completely from keyboard-only and screen reader users. It's better to use `aria-disabled="true"`, maintain a static `aria-label`, update the `title` attribute dynamically to explain the state, and use custom Tailwind classes like `opacity-50` and `cursor-not-allowed` to visually style it, while calling `e.preventDefault()` in `onClick` to actually stop submission.
+**Action:** Replaced the native `disabled` attribute on the ManagerChat submit button with `aria-disabled` and applied static `aria-label`s, relying on the `title` for dynamic status text, ensuring full discoverability and context retention.
