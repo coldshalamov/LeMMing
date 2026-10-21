@@ -7,12 +7,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .paths import get_agents_dir, get_resume_json_path
+from .paths import get_agents_dir, get_resume_json_path, validate_agent_name
 
 logger = logging.getLogger(__name__)
 
 # Cache for Agent objects: path -> (mtime, Agent)
-_agent_cache: dict[Path, tuple[float, Agent]] = {}
+_agent_cache: dict[str, tuple[float, Agent]] = {}
 
 
 def reset_agents_cache() -> None:
@@ -220,13 +220,14 @@ def _validate_resume_dict(resume_path: Path, data: dict[str, Any]) -> list[str]:
 
 
 def load_agent(base_path: Path, name: str) -> Agent:
-    resume_path = get_resume_json_path(base_path, name)
+    validate_agent_name(name)
+    resume_path_str = os.path.join(str(base_path), "agents", name, "resume.json")
 
     # Optimization: check cache using stat to avoid parsing JSON if unmodified
     try:
-        mtime = resume_path.stat().st_mtime
-        if resume_path in _agent_cache:
-            cached_mtime, cached_agent = _agent_cache[resume_path]
+        mtime = os.stat(resume_path_str).st_mtime
+        if resume_path_str in _agent_cache:
+            cached_mtime, cached_agent = _agent_cache[resume_path_str]
             if cached_mtime == mtime:
                 return cached_agent
     except FileNotFoundError:
@@ -234,6 +235,7 @@ def load_agent(base_path: Path, name: str) -> Agent:
     except OSError:
         pass  # Fallback to loading from disk
 
+    resume_path = get_resume_json_path(base_path, name)
     # Fallback: load from disk
     try:
         data = _load_resume_json(resume_path)
@@ -243,8 +245,8 @@ def load_agent(base_path: Path, name: str) -> Agent:
     agent = Agent.from_resume_data(resume_path, data)
 
     try:
-        mtime = resume_path.stat().st_mtime
-        _agent_cache[resume_path] = (mtime, agent)
+        mtime = os.stat(resume_path_str).st_mtime
+        _agent_cache[resume_path_str] = (mtime, agent)
     except OSError:
         pass
 
@@ -292,6 +294,7 @@ def discover_agents(base_path: Path) -> list[Agent]:
 
         if resume_entry:
             resume_path = Path(resume_entry.path)
+            resume_path_str = resume_entry.path
             folder_name = resume_path.parent.name
 
             # Optimization: check cache using the DirEntry's cached stat
@@ -303,8 +306,8 @@ def discover_agents(base_path: Path) -> list[Agent]:
                 mtime = stat_result.st_mtime
 
                 # If cached and mtime matches, use cached agent
-                if resume_path in _agent_cache:
-                    cached_mtime, cached_agent = _agent_cache[resume_path]
+                if resume_path_str in _agent_cache:
+                    cached_mtime, cached_agent = _agent_cache[resume_path_str]
                     if cached_mtime == mtime:
                         if cached_agent.name in seen_names:
                             logger.warning(
@@ -323,7 +326,7 @@ def discover_agents(base_path: Path) -> list[Agent]:
             except OSError:
                 logger.warning(
                     "resume_stat_failed",
-                    extra={"event": "resume_stat_failed", "path": str(resume_path)},
+                    extra={"event": "resume_stat_failed", "path": resume_path_str},
                 )
                 continue
 
@@ -349,14 +352,14 @@ def discover_agents(base_path: Path) -> list[Agent]:
                         "event": "resume_name_mismatch",
                         "folder": folder_name,
                         "resume": resume_name,
-                        "path": str(resume_path),
+                        "path": resume_path_str,
                     },
                 )
 
             try:
                 agent = Agent.from_resume_data(resume_path, data)
                 # Update cache
-                _agent_cache[resume_path] = (mtime, agent)
+                _agent_cache[resume_path_str] = (mtime, agent)
             except Exception as exc:  # pragma: no cover
                 logger.warning(
                     "resume_invalid",
