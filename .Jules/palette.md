@@ -12,3 +12,7 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+
+## 2025-03-09 - Accessible Disabled State in Chat Submit Buttons
+**Learning:** When building chat input areas, adding `disabled` to the submit button removes it from keyboard navigation, meaning screen reader users might not discover the button or its title/aria-label explaining why they can't submit (e.g. "Type a message to send").
+**Action:** Kept the submit button focusable by removing the `disabled` attribute, applying `aria-disabled`, conditionally setting `opacity-50`, `cursor-wait`, and `cursor-not-allowed`, conditionally enabling `hover:bg-purple-600` only when active, and preventing the `onClick` event with `e.preventDefault()` if `!inputValue.trim() || isSending`.

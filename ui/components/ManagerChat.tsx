@@ -239,7 +239,12 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
               />
               <button
                 type="submit"
-                disabled={!inputValue.trim() || isSending}
+                onClick={(e) => {
+                  if (!inputValue.trim() || isSending) {
+                    e.preventDefault();
+                  }
+                }}
+                aria-disabled={!inputValue.trim() || isSending}
                 aria-label={isSending ? "Sending message..." : "Send message"}
                 title={
                   isSending
@@ -249,10 +254,15 @@ export function ManagerChat({ messages, compact = false }: ManagerChatProps) {
                       : "Send message"
                 }
                 className={clsx(
-                  "p-2 bg-brand-purple text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition-colors h-[38px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+                  "p-2 bg-brand-purple text-white rounded-lg transition-colors h-[38px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+                  !inputValue.trim() || isSending
+                    ? "opacity-50"
+                    : "hover:bg-purple-600",
                   isSending
-                    ? "disabled:cursor-wait"
-                    : "disabled:cursor-not-allowed",
+                    ? "cursor-wait"
+                    : !inputValue.trim()
+                      ? "cursor-not-allowed"
+                      : "",
                 )}
               >
                 {isSending ? (
