@@ -13,3 +13,7 @@
 ## 2025-05-25 - Focus Management in Single Page Wizards
 **Learning:** In multi-step wizards implemented as a single page view, screen reader users often lose context when clicking "Next" because focus remains on the button (which might disappear) or the body.
 **Action:** When the step index changes, programmatically shift focus to the new step's heading (using a `ref` and `useEffect`) so users immediately know where they are.
+
+## 2026-09-22 - Async Button Loading States
+**Learning:** Users often lack confidence during async operations (like saving global config) if the only feedback is a text change (e.g., "SAVING...").
+**Action:** Always include a visual loading indicator (like a spinning icon) alongside text changes in async buttons to clearly communicate that a background process is running.
