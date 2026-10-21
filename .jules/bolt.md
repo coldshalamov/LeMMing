@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## 2025-01-20 - [Batched File I/O for Shared State]
+**Learning:** Writing shared state files (like `credits.json`) synchronously for every agent in a tick causes an O(N) disk I/O bottleneck when many agents fire simultaneously.
+**Action:** When updating shared state across multiple entities in a hot loop (like `run_tick`), defer disk writes by batching them at the end of the loop, using a condition like `if firing_agents:` to avoid redundant writes.
