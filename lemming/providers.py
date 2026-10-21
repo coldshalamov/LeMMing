@@ -106,7 +106,7 @@ class AnthropicProvider(LLMProvider):
         # Combine system messages
         system = "\n\n".join(system_messages) if system_messages else None
 
-        response = self.client.messages.create(
+        response = self.client.messages.create(  # type: ignore[call-overload]
             model=model_name,
             max_tokens=kwargs.get("max_tokens", 4096),
             temperature=temperature,
