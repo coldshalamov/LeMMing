@@ -12,3 +12,6 @@
 ## 2024-05-11 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## $(date +%Y-%m-%d) - Native disabled vs aria-disabled
+**Learning:** While \`aria-disabled\` can be used to keep disabled buttons in the tab sequence, the established design system pattern for this application strictly requires the use of the native \`disabled\` attribute alongside dynamic cursor states and descriptive titles, as screen readers can still struggle with complex custom disabled implementations.
+**Action:** Reverted to using native \`disabled\` for the async tick button but retained the \`cursor-wait\` and focus visible improvements.
