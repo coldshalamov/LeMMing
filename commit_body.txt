@@ -1,0 +1,4 @@
+💡 What: Added dynamic `title` tooltip and appropriate disabled cursor states (`cursor-not-allowed`, `cursor-wait`) to the 'SAVE CONFIG' button in the global settings modal.
+🎯 Why: Improves user feedback by explaining exactly why the button is disabled (e.g. missing API keys or currently saving) and visually distinguishing between a loading state and an invalid state.
+📸 Before/After: Before, the button simply faded to 50% opacity when disabled without a title or custom cursor. Now, it has an informative tooltip and contextual cursor.
+♿ Accessibility: Screen reader users and those exploring via keyboard/mouse will now understand why the action cannot be completed instead of encountering a silently disabled button.
