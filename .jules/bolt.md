@@ -30,3 +30,7 @@
 ## $(date +%Y-%m-%d) - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
+
+## $(date +%Y-%m-%d) - [Optimize Social Graph parsing]
+**Learning:** For performance-critical file I/O operations (like iterating over large directories in hot loops for `analyze_social_graph`), using `pathlib.Path.glob()` creates a massive memory/CPU overhead due to full `Path` object instantiation.
+**Action:** Use `os.scandir()` which yields fast `os.DirEntry` objects instead, and parse filenames before opening the file when evaluating filters to avoid opening and parsing unused JSON objects.
