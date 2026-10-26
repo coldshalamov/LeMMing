@@ -15,3 +15,6 @@
 ## 2026-10-24 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2023-10-26 - Disabled Button Tooltips & Focus States
+**Learning:** Disabled standard and icon-only buttons without tooltips leave users confused as to why they cannot proceed. Native `title` attributes along with Tailwind's disabled cursor styles (`disabled:cursor-wait` vs `disabled:cursor-not-allowed`) provide immediate context. Additionally, users relying on keyboard navigation need explicit `focus-visible` rings on all action buttons.
+**Action:** Added explicit `title` attributes and disabled cursor styles to the Save button in `GlobalSettingsModal`, and applied robust `focus-visible` styles to both the Save and Cancel buttons.
