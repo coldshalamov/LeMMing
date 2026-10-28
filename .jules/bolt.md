@@ -34,3 +34,11 @@
 ## 2026-10-28 - [Pre-filtering static loop targets and Direct Dictionary Access]
 **Learning:** Checking elements against a list in a file reading hot loop creates a quadratic time complexity. Instantiating a `dataclass` is very slow when only basic types (`dict`) are needed.
 **Action:** Extract nested O(N*M) checks by building a pre-filtered `set()` before entering file iterators. Avoid instantiating complete domain objects if directly pulling keys from a parsed dictionary is sufficient.
+
+## 2026-10-28 - [Pre-filtering static loop targets and Direct Dictionary Access]
+**Learning:** Checking elements against a list in a file reading hot loop creates a quadratic time complexity. Instantiating a `dataclass` is very slow when only basic types (`dict`) are needed.
+**Action:** Extract nested O(N*M) checks by building a pre-filtered `set()` before entering file iterators. Avoid instantiating complete domain objects if directly pulling keys from a parsed dictionary is sufficient.
+
+## 2026-10-28 - [Pre-filtering static loop targets and Direct Dictionary Access]
+**Learning:** Checking elements against a list in a file reading hot loop creates a quadratic time complexity. Instantiating a `dataclass` is very slow when only basic types (`dict`) are needed.
+**Action:** Extract nested O(N*M) checks by building a pre-filtered `set()` before entering file iterators. Avoid instantiating complete domain objects if directly pulling keys from a parsed dictionary is sufficient.
