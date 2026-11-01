@@ -15,3 +15,7 @@
 ## 2026-10-24 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2026-11-01 - Ensure Tooltips Show on Form Submit Buttons
+
+**Learning:** When using `aria-disabled="true"` on a form submit button instead of the native `disabled` attribute (so that tooltips via `title` remain visible), the button will still trigger form submission when clicked or when 'Enter' is pressed.
+**Action:** When converting form buttons to use `aria-disabled`, explicitly add an `onClick` handler that checks the disabled condition and calls `e.preventDefault()` to halt submission without swallowing hover events.
