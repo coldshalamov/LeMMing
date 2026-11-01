@@ -30,7 +30,6 @@ result = tool.execute(agent_name, base_path, command="cat")
 print(result.output, end="")
 """
 
-
 def test_shell_tool_stdin_isolation(tmp_path):
     """
     Verify that ShellTool does not inherit stdin from the parent process.
@@ -58,7 +57,7 @@ def test_shell_tool_stdin_isolation(tmp_path):
         text=True,
         cwd=os.getcwd(),
         env=env,
-        timeout=5,
+        timeout=5
     )
 
     if proc.returncode != 0:

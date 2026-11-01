@@ -106,10 +106,11 @@ class AnthropicProvider(LLMProvider):
         # Combine system messages
         system = "\n\n".join(system_messages) if system_messages else None
 
+        # Ignoring temperature kwarg in mypy due to overloaded stub resolution failure
         response = self.client.messages.create(
             model=model_name,
             max_tokens=kwargs.get("max_tokens", 4096),
-            temperature=temperature,
+            temperature=temperature,  # type: ignore[call-overload]
             system=cast(Any, system),
             messages=cast(Any, other_messages),
         )

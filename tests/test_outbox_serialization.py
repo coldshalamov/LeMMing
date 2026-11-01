@@ -1,3 +1,4 @@
+
 from dataclasses import asdict
 
 from lemming.messages import OutboxEntry
@@ -12,7 +13,7 @@ def test_outbox_to_dict_correctness():
         payload={"foo": "bar", "baz": [1, 2, 3]},
         tags=["a", "b"],
         recipients=["other-agent"],
-        meta={"x": 1},
+        meta={"x": 1}
     )
 
     # Calculate expected using standard asdict
@@ -36,10 +37,15 @@ def test_outbox_to_dict_correctness():
     assert actual["recipients"] == entry.recipients
     assert actual["meta"] == entry.meta
 
-
 def test_outbox_to_dict_defaults():
     """Verify handling of default None values."""
-    entry = OutboxEntry.create(agent="test-agent", tick=42, kind="test", payload={}, recipients=None)  # explicit None
+    entry = OutboxEntry.create(
+        agent="test-agent",
+        tick=42,
+        kind="test",
+        payload={},
+        recipients=None # explicit None
+    )
     # create default sets recipients=None if not provided, but create args has it?
     # OutboxEntry.create signature: recipients: list[str] | None = None
 

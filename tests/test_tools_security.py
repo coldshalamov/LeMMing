@@ -106,8 +106,6 @@ def test_shell_tool_absolute_path_argument(tmp_path):
     tool = ShellTool()
 
     # Attempt absolute path
-    import os
-
     if os.name == "nt":
         # Windows: Drive + Root (e.g. C:\Windows)
         abs_path = "C:\\Windows\\System32\\drivers\\etc\\hosts"

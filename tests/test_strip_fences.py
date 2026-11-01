@@ -4,8 +4,8 @@ from lemming.engine import _strip_fences
 
 
 def test_simple_fence():
-    raw = 'preamble\n```json\n{"foo": "bar"}\n```\npostamble'
-    expected = '{"foo": "bar"}'
+    raw = "preamble\n```json\n{\"foo\": \"bar\"}\n```\npostamble"
+    expected = "{\"foo\": \"bar\"}"
     assert _strip_fences(raw) == expected
 
 
@@ -73,7 +73,6 @@ def test_empty_block():
     raw = "```\n```"
     # Fix: Returns empty string (correctly strips fences)
     assert _strip_fences(raw) == ""
-
 
 def test_empty_block_with_lang():
     raw = "```json\n```"
