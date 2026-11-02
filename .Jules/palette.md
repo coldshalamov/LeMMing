@@ -15,3 +15,6 @@
 ## 2026-10-24 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2026-11-02 - [Add focus styles to ToolSelectorModal]
+**Learning:** Custom interactive elements (like modal close, cancel/save, and selection grid buttons) created with Tailwind often lack native keyboard focus visible styles, making keyboard navigation difficult or impossible for screen readers and keyboard users.
+**Action:** Always add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-[color]` to any custom `<button>` elements to ensure clear visual feedback for keyboard navigation. Additionally, ensure `type="button"` is set and `aria-label` is descriptive.
