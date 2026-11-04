@@ -37,3 +37,7 @@
 ## 2026-11-04 - [Optimize Social Graph Analysis]
 **Learning:** `analyze_social_graph` processes every outbox JSON file for every agent, causing quadratic time complexity when computing interaction frequencies. Fully instantiating `OutboxEntry` objects for this adds massive CPU overhead.
 **Action:** Extract targets in O(1) set. Bypass reading out-of-date files using `_tick_from_filename_str(entry.name) < recent_tick_threshold` over fast `os.scandir(outbox_dir)`. Read raw dict instead of instantiating `OutboxEntry`. These optimizations prevent O(N * M) parsing overheads on file I/O operations inside nested loops.
+
+## $(date +%Y-%m-%d) - [Fixing CI issues related to imports]
+**Learning:** `ruff check --fix` might introduce unsafe fixes that can break the CI pipelines.
+**Action:** When fixing CI issues locally, make sure to manually inspect the issues, especially when they are reported as "unsafe fixes available", and fix them individually when necessary.
