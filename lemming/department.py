@@ -15,8 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
 
 logger = logging.getLogger(__name__)
 
@@ -213,24 +211,49 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
         interaction_counts: dict[str, int] = {}
         recent_tick_threshold = max(0, current_tick - 100)
 
-        for outbox_file in outbox_dir.glob("*.json"):
-            try:
-                with outbox_file.open("r", encoding="utf-8") as f:
-                    entry_data = json.load(f)
-                    entry = OutboxEntry.from_dict(entry_data)
+        # Pre-filter relationships related to this agent to avoid quadratic loop overhead
+        agent_rels = [rel for rel in relationships if rel.source == agent.name]
+        if not agent_rels:
+            continue
 
-                    if entry.tick >= recent_tick_threshold:
-                        # Update interaction counts
-                        for rel in relationships:
-                            if rel.source == agent.name and rel.target in entry_data.get("to", []):
-                                interaction_counts[rel.target] = interaction_counts.get(rel.target, 0) + 1
-            except Exception:
-                continue
+        import os
+
+        from lemming.messages import _tick_from_filename_str
+
+        # Optimize by getting targets in a set for O(1) lookup
+        agent_targets = {rel.target for rel in agent_rels}
+
+        try:
+            with os.scandir(outbox_dir) as it:
+                for entry in it:
+                    if not (entry.is_file() and entry.name.endswith(".json")):
+                        continue
+
+                    # Pre-filter by filename tick to skip reading old files
+                    if _tick_from_filename_str(entry.name) < recent_tick_threshold:
+                        continue
+
+                    try:
+                        with open(entry.path, encoding="utf-8") as f:
+                            entry_data = json.load(f)
+
+                            to_list = entry_data.get("to", [])
+                            if not to_list:
+                                continue
+
+                            # Update interaction counts for matching targets
+                            for target in to_list:
+                                if target in agent_targets:
+                                    interaction_counts[target] = interaction_counts.get(target, 0) + 1
+                    except Exception:
+                        continue
+        except OSError:
+            continue
 
         # Update relationship strengths based on interaction frequency
         for target, count in interaction_counts.items():
-            for rel in relationships:
-                if rel.source == agent.name and rel.target == target:
+            for rel in agent_rels:
+                if rel.target == target:
                     rel.interaction_count += count
                     rel.last_interaction_tick = current_tick
                     # Increase strength based on interaction frequency
