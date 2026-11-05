@@ -15,3 +15,6 @@
 ## 2026-10-24 - Dynamic Disabled Button States
 **Learning:** Icon-only async submit buttons in this app often hardcode `disabled:cursor-not-allowed` even when loading, which confuses users into thinking the form is broken rather than processing.
 **Action:** Always conditionally use `cursor-wait` during async operations and provide descriptive `title` tooltips explaining the exact reason a button is disabled.
+## 2024-11-05 - Tooltips and Mouse Events on Disabled Buttons
+**Learning:** Native `disabled` attributes can swallow mouse events in certain browsers, preventing `title` tooltips and cursor styles from rendering properly.
+**Action:** Use `aria-disabled="true"` instead of `disabled`, explicitly block default behavior using `e.preventDefault()`, and update Tailwind styling selectors from `disabled:` to `aria-disabled:`.
