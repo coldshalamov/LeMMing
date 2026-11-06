@@ -18,3 +18,6 @@
 ## 2024-11-05 - Tooltips and Mouse Events on Disabled Buttons
 **Learning:** Native `disabled` attributes can swallow mouse events in certain browsers, preventing `title` tooltips and cursor styles from rendering properly.
 **Action:** Use `aria-disabled="true"` instead of `disabled`, explicitly block default behavior using `e.preventDefault()`, and update Tailwind styling selectors from `disabled:` to `aria-disabled:`.
+## 2024-11-06 - Tooltips and Mouse Events on Disabled Buttons
+**Learning:** Native `disabled` attributes swallow mouse events in certain browsers, preventing `title` tooltips from rendering, and thus preventing users from knowing why a button is disabled.
+**Action:** Used `aria-disabled="true"` instead of `disabled`, explicitly blocked default behavior using `e.preventDefault()`, and updated Tailwind styling selectors from `disabled:` to `aria-disabled:`.
