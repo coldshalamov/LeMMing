@@ -1,0 +1,4 @@
+💡 What: Added aria-disabled and dynamic tooltips to the GlobalSettingsModal Save button.
+🎯 Why: Native disabled attributes swallow mouse events, preventing tooltips from appearing.
+📸 Before/After: Before, disabled button swallowed events. After, tooltips explain exactly why the button is disabled.
+♿ Accessibility: Improved keyboard discoverability and screen reader context for disabled states.
