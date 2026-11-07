@@ -18,3 +18,6 @@
 ## 2024-11-05 - Tooltips and Mouse Events on Disabled Buttons
 **Learning:** Native `disabled` attributes can swallow mouse events in certain browsers, preventing `title` tooltips and cursor styles from rendering properly.
 **Action:** Use `aria-disabled="true"` instead of `disabled`, explicitly block default behavior using `e.preventDefault()`, and update Tailwind styling selectors from `disabled:` to `aria-disabled:`.
+## 2025-05-15 - Missing Focus States on Secondary Actions
+**Learning:** Secondary actions like 'Cancel' in modals often lack `focus-visible` states compared to primary buttons, making keyboard navigation inconsistent and confusing at the end of a form.
+**Action:** Always ensure both primary and secondary/cancel buttons share consistent `focus-visible` ring treatments (e.g. `focus-visible:ring-2`) to provide a clear tab sequence ending.

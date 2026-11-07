@@ -1,0 +1,4 @@
+💡 What: Added `aria-disabled` and descriptive tooltip to the 'Save Config' button, and added `focus-visible` keyboard navigation styles to both footer buttons in the Global Settings Modal.
+🎯 Why: Native `disabled` attributes can swallow tooltips and mouse events, confusing users. Secondary 'Cancel' buttons were missing focus styles entirely, breaking keyboard accessibility.
+📸 Before/After: See attached media in the repository.
+♿ Accessibility: Improved keyboard navigation ending tab sequence with clear focus rings, and made the disabled state discoverable by screen readers with `aria-disabled`.
