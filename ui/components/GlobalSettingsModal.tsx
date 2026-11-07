@@ -159,14 +159,22 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     <div className="p-6 border-t border-white/5 flex items-center justify-end gap-3 bg-black/10">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded"
                         >
                             Cancel
                         </button>
                         <button
-                            onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            onClick={(e) => {
+                                const isDisabled = status === "loading" || (!config.openai_api_key && !config.anthropic_api_key);
+                                if (isDisabled) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                handleSave();
+                            }}
+                            aria-disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
+                            title={status === "loading" ? "Saving..." : (!config.openai_api_key && !config.anthropic_api_key) ? "Enter at least one API key to save" : "Save configuration"}
+                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors aria-disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:hover:bg-brand-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                         >
                             {status === "loading" ? (
                                 <>
