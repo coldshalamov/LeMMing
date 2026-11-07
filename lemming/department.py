@@ -204,7 +204,7 @@ def analyze_social_graph(base_path: Path, current_tick: int) -> list[SocialRelat
     # Pre-filter relationships by source agent to avoid iterating through all inside loops
     import os
 
-    rels_by_source = {}
+    rels_by_source: dict[str, list[SocialRelationship]] = {}
     for rel in relationships:
         if rel.source not in rels_by_source:
             rels_by_source[rel.source] = []
