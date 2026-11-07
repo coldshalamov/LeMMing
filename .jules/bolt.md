@@ -33,3 +33,11 @@
 ## 2026-11-01 - [Lazy Evaluation in dict.get()]
 **Learning:** Using eager evaluation in `dict.get()` with expensive fallback functions (like `json.dumps()`) incurs unnecessary performance overhead (~40x slower) even when the key exists.
 **Action:** Always fetch the value first and conditionally evaluate the fallback to prevent unnecessary processing in hot paths.
+
+## $(date +%Y-%m-%d) - [Optimize Dictionary Key Fetching in Hot Loops]
+**Learning:** Instantiating Dataclasses or Pydantic models (like `OutboxEntry.from_dict()`) just to extract a single key introduces massive O(N) allocation bottlenecks.
+**Action:** When filtering or looping through JSON payloads in bulk I/O, rely strictly on fast dict lookups (`.get()`) without casting to full models unless deep validation is specifically required by the calling context.
+
+## $(date +%Y-%m-%d) - [Pre-filter Relational Targets]
+**Learning:** Using `O(N)` scans within a loop where the search space can be mapped or grouped beforehand yields exponential bottlenecks. Finding items using `target in entry_data.get("to", [])` via nested looping over all relationships creates $O(V \cdot M \cdot E)$ execution.
+**Action:** Always pre-aggregate query items into lists or fast lookup dictionaries outside the hot loop and utilize `set.intersection()` for intersection mapping to flatten computational complexities in graph traversals.
