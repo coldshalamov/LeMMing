@@ -15,8 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, discover_agents
-from .messages import OutboxEntry, collect_readable_outboxes
-from .paths import get_agents_dir
+from .messages import OutboxEntry
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +49,15 @@ class DepartmentMetadata:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DepartmentMetadata:
+        # ⚡ Bolt: Lazy evaluation for expensive fallback
+        created_at = data.get("created_at")
+        if created_at is None:
+            created_at = datetime.now(UTC).isoformat()
         return cls(
             name=data.get("name", ""),
             description=data.get("description", ""),
             version=data.get("version", "1.0.0"),
-            created_at=data.get("created_at", datetime.now(UTC).isoformat()),
+            created_at=created_at,
             dependencies=data.get("dependencies", []),
             tags=data.get("tags", []),
             author=data.get("author", ""),
