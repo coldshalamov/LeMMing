@@ -1,4 +1,0 @@
-💡 What: Converted the "Run one tick" button's native `disabled` attribute to `aria-disabled` and added focus-visible outline for keyboard navigation.
-🎯 Why: Native disabled attributes swallow mouse events in some browsers, preventing tooltips and custom cursors from showing, and remove the element from tab order. This change ensures screen readers keep context and tooltips display correctly even when the button is inactive.
-📸 Before/After: Visual verified via Playwright snapshot.
-♿ Accessibility: Preserved button tab order and focus states while explicitly preventing action execution on disabled state.
