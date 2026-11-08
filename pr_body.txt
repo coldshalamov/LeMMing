@@ -1,4 +1,0 @@
-💡 What: Refactored `DepartmentMetadata.from_dict` to use lazy evaluation for `created_at`.
-🎯 Why: `datetime.now(UTC).isoformat()` was eagerly evaluated for every dictionary parsed, which wastes CPU cycles if the key already exists.
-📊 Impact: Significantly faster execution (up to 40x speedup for the field's parsing) when loading multiple departments from disk.
-🔬 Measurement: See `test_get.py` benchmark from exploration phase.
