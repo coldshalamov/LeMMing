@@ -1,4 +1,0 @@
-💡 What: Replaced native `disabled` attribute with `aria-disabled` on the save button and added `focus-visible` styles to the cancel button in `GlobalSettingsModal`.
-🎯 Why: Native `disabled` swallows mouse events preventing tooltips/cursors, and missing focus styles make keyboard navigation difficult.
-📸 Before/After: Save button now shows cursor-not-allowed and can be focused when disabled.
-♿ Accessibility: Added `aria-disabled` for better screen reader and mouse event support, and improved keyboard focus visibility.
