@@ -5,7 +5,7 @@ import pytest
 from lemming.tools import ShellTool
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="Relies on Unix commands not available as executables on Windows")
+@pytest.mark.skipif(os.name == "nt", reason="Relies on Unix commands not available as executables on Windows")
 def test_shell_tool_env_leak(tmp_path):
     """Ensure ShellTool does not leak sensitive environment variables to the subprocess."""
     base_path = tmp_path / "lemming"
