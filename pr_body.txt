@@ -1,0 +1,5 @@
+🚨 Severity: HIGH
+💡 Vulnerability: In `lemming/api.py`, the `secrets` standard library module was being shadowed by a local variable when `secrets.json` was loaded. This caused subsequent calls to `secrets.compare_digest` in `verify_admin_access` to raise an `AttributeError`.
+🎯 Impact: This results in a Denial of Service (DoS) for all admin-protected endpoints if a `secrets.json` file is present on the server, as the server cannot verify the admin key.
+🔧 Fix: Renamed the local dictionary variable to `loaded_secrets` to avoid shadowing the imported `secrets` module.
+✅ Verification: Tested the application locally by running `pytest` to ensure no regressions were introduced.

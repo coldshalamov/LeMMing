@@ -27,3 +27,8 @@
 **Vulnerability:** `ShellTool` passed `os.environ` (or didn't specify `env`, implying inheritance) when running commands via `subprocess.run()`. This allowed agents to execute tools like `jq -n env` to dump sensitive backend API keys.
 **Learning:** Sandboxed or untrusted commands must never inherit the parent application's full environment variables. However, backend components like `CLIProvider` often require the full environment to function correctly.
 **Prevention:** Explicitly pass a sanitized `env` dictionary retaining only necessary variables like `PATH` when executing untrusted tools via `subprocess.run()`.
+
+## 2024-10-10 - Shadowed Standard Library Module (secrets)
+**Vulnerability:** In `lemming/api.py`, the `secrets` standard library module was shadowed by a local variable named `secrets` during the loading of `secrets.json`. This caused subsequent calls to `secrets.compare_digest` in the `verify_admin_access` middleware to raise an `AttributeError`, resulting in a Denial of Service (DoS) on all admin-protected endpoints when the configuration file exists.
+**Learning:** In Python, avoid shadowing standard library modules with local variables (e.g., naming a configuration dictionary `secrets` when the `secrets` module is imported for cryptographic operations), as this overwrites the module reference.
+**Prevention:** Use distinct, non-conflicting names for local variables (e.g., `loaded_secrets`) to preserve access to standard library modules.
