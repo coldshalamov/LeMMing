@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Key, Shield, Check, AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEngineConfig, updateEngineConfig } from "@/lib/api";
+import clsx from "clsx";
 
 interface GlobalSettingsModalProps {
     onClose: () => void;
@@ -35,7 +36,12 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [onClose]);
 
-    const handleSave = async () => {
+    const isSaveDisabled = status === "loading" || (!config.openai_api_key && !config.anthropic_api_key);
+
+    const handleSave = async (e?: React.MouseEvent) => {
+        e?.preventDefault();
+        if (isSaveDisabled) return;
+
         setStatus("loading");
         try {
             await updateEngineConfig(config);
@@ -165,8 +171,22 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={status === "loading" || (!config.openai_api_key && !config.anthropic_api_key)}
-                            className="px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 hover:bg-cyan-300 transition-colors disabled:opacity-50"
+                            aria-disabled={isSaveDisabled}
+                            title={
+                                status === "loading"
+                                    ? "Saving configuration..."
+                                    : (!config.openai_api_key && !config.anthropic_api_key)
+                                        ? "Enter at least one API key to save"
+                                        : "Save configuration"
+                            }
+                            className={clsx(
+                                "px-6 py-2 bg-brand-cyan text-black font-bold rounded flex items-center gap-2 transition-colors",
+                                isSaveDisabled
+                                    ? status === "loading"
+                                        ? "opacity-50 aria-disabled:cursor-wait"
+                                        : "opacity-50 aria-disabled:cursor-not-allowed"
+                                    : "hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neo-panel"
+                            )}
                         >
                             {status === "loading" ? (
                                 <>
