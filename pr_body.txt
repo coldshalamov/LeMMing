@@ -1,0 +1,4 @@
+💡 What: Replaced native `disabled` attribute with `aria-disabled` on the Global Settings save button and added a descriptive `title` tooltip.
+🎯 Why: Native `disabled` attributes can swallow mouse events in some browsers, preventing tooltips and cursor styles from rendering. Using `aria-disabled` ensures the disabled state is discoverable and provides clear visual feedback on why the button cannot be clicked.
+📸 Before/After: Visual change ensures cursor updates to `cursor-not-allowed` or `cursor-wait` as appropriate, and displays a tooltip when hovered.
+♿ Accessibility: Keeps the button focusable and exposes its disabled state securely to screen readers via `aria-disabled="true"`.
