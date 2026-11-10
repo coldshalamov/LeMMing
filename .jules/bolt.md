@@ -24,12 +24,16 @@
 **Learning:** `pathlib.Path` instantiation has overhead that is noticeably slower in hot loops than plain strings with `os.path.join`. We can gain a performance improvement by bypassing `Path` instantiation in internal paths when we just need to pass it to Python's built-in `open()`.
 **Action:** When working in hot loops for file I/O operations like loading cached outbox entries, use `open()` with string paths instead of `Path` objects.
 
-## $(date +%Y-%m-%d) - [Optimizing load_agent Caching]
+## 2026-11-10 - [Optimizing load_agent Caching]
 **Learning:** `load_agent` parses identical `resume.json` files recursively despite the `_agent_cache` initialized and used in `discover_agents`. Bypassing disk I/O reads by checking `st_mtime` can significantly decrease repetitive loading overheads.
 **Action:** When working on caching functions, check if an existing cache dictionary can be reused for parallel/repeated calls rather than reparsing.
-## $(date +%Y-%m-%d) - [ModelRegistry Caching]
+## 2026-11-10 - [ModelRegistry Caching]
 **Learning:** Repetitive file reading and JSON parsing along with schema validation (`validate_models`) created a bottleneck when repeatedly instantiating `ModelRegistry`.
 **Action:** Implemented an `mtime`-based cache (`_registry_cache`) keyed by the resolved configuration directory `self.config_dir.resolve()` to avoid redundant processing while supporting hot-reloading. Prevented cache poisoning by preserving the initial `mtime` read prior to blocking IO (`json.load`), falling back to `0` instead of breaking. Protected cached objects from mutation by returning deep `.copy()` from `self._models`.
 ## 2026-11-01 - [Lazy Evaluation in dict.get()]
 **Learning:** Using eager evaluation in `dict.get()` with expensive fallback functions (like `json.dumps()`) incurs unnecessary performance overhead (~40x slower) even when the key exists.
 **Action:** Always fetch the value first and conditionally evaluate the fallback to prevent unnecessary processing in hot paths.
+
+## 2026-11-10 - [Optimize Outbox Scanning in Hot Loops]
+**Learning:** Repetitive outbox scanning operations within loops (like in `analyze_social_graph`) can encounter O(N*M) time complexity if static relationships/collections aren't pre-filtered before scanning the directory. Furthermore, fully instantiating `OutboxEntry` domain objects via `.from_dict()` and utilizing `pathlib.glob()` creates immense overhead during large-scale filesystem reads due to object allocation.
+**Action:** When performing file analysis inside hot loops, pre-filter static data (e.g., specific agent relationships) BEFORE the I/O boundary. Opt for `os.scandir` instead of `pathlib.glob()` to avoid object instantiation, and directly interact with raw `json.load()` dictionaries bypassing domain object factories like `OutboxEntry.from_dict()`. Use early `continue` clauses on empty lists to bypass the expensive file operations entirely.
