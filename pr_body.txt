@@ -1,0 +1,4 @@
+💡 What: Updated the "Run one tick" button to use `aria-disabled` instead of the native `disabled` attribute. Added an explicit `e.preventDefault()` block in the `onClick` handler.
+🎯 Why: Native `disabled` attributes can swallow mouse events, preventing `title` tooltips and hover cursors from rendering correctly when the button is inactive.
+📸 Before/After: Visual behavior handles disabled styling correctly without blocking tooltip discovery.
+♿ Accessibility: Screen reader users and mouse users can now read the tooltip and focus the button even during a tick process.
