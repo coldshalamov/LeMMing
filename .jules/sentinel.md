@@ -27,3 +27,8 @@
 **Vulnerability:** `ShellTool` passed `os.environ` (or didn't specify `env`, implying inheritance) when running commands via `subprocess.run()`. This allowed agents to execute tools like `jq -n env` to dump sensitive backend API keys.
 **Learning:** Sandboxed or untrusted commands must never inherit the parent application's full environment variables. However, backend components like `CLIProvider` often require the full environment to function correctly.
 **Prevention:** Explicitly pass a sanitized `env` dictionary retaining only necessary variables like `PATH` when executing untrusted tools via `subprocess.run()`.
+
+## 2026-10-31 - Variable Shadowing Breaking Auth Mechanics
+**Vulnerability:** The Python `secrets` module, used for constant-time string comparison (`secrets.compare_digest`), was shadowed by a local dictionary variable loaded from `secrets.json`. This caused all authenticated endpoints to crash with an `AttributeError` when `secrets.json` existed, breaking the security mechanic and denying access.
+**Learning:** Using common terms like `secrets` as variable names can silently shadow critical built-in modules used for security functions.
+**Prevention:** Always use specific, context-aware variable names (like `loaded_secrets` or `config_secrets`) for data structures, especially when they share names with standard library modules.
