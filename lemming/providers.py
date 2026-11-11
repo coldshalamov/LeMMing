@@ -227,7 +227,7 @@ class CLIProvider(LLMProvider):
 
         try:
             # Merge env
-            run_env = os.environ.copy()
+            run_env = {"PATH": os.environ.get("PATH", "")}
             if self.env:
                 run_env.update(self.env)
 
